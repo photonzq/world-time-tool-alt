@@ -856,7 +856,26 @@ export async function runSelfTests() {
     assert('Top bar live clock test', false, e.message);
   }
 
-  // 36. URL Shortening & Hash State Serialization Suite
+  // 37. Favicon, Apple Touch Icon & Meta Configuration Suite
+  try {
+    const svgIcon = document.querySelector('link[rel="icon"][type="image/svg+xml"]');
+    const pngIcon32 = document.querySelector('link[rel="icon"][sizes="32x32"]');
+    const pngIcon16 = document.querySelector('link[rel="icon"][sizes="16x16"]');
+    const shortcutIcon = document.querySelector('link[rel="shortcut icon"]');
+    const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+
+    assert('SVG favicon link tag exists', Boolean(svgIcon), 'link[rel="icon"][type="image/svg+xml"]');
+    assert('32x32 PNG favicon link tag exists', Boolean(pngIcon32), 'link[rel="icon"][sizes="32x32"]');
+    assert('16x16 PNG favicon link tag exists', Boolean(pngIcon16), 'link[rel="icon"][sizes="16x16"]');
+    assert('Shortcut icon link tag exists', Boolean(shortcutIcon), 'link[rel="shortcut icon"]');
+    assert('Apple touch icon link tag exists', Boolean(appleIcon), 'link[rel="apple-touch-icon"]');
+    assert('Meta theme-color is set to #2563eb', themeColor && themeColor.content === '#2563eb', themeColor?.content);
+  } catch (e) {
+    assert('Favicon and meta configuration test', false, e.message);
+  }
+
+  // 38. URL Shortening & Hash State Serialization Suite
   try {
     if (window.app) {
       const app = window.app;
