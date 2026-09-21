@@ -605,9 +605,9 @@ class WTBApp {
 
     // Start live clock ticking and current time needle updates (1 second interval for live seconds)
     setInterval(() => {
-      this.updateLiveClocks();
-      this.updateTopLiveClock();
-      this.updateNowMarker();
+      try { this.updateLiveClocks(); } catch (e) { console.warn('Ticker error (updateLiveClocks):', e); }
+      try { this.updateTopLiveClock(); } catch (e) { console.warn('Ticker error (updateTopLiveClock):', e); }
+      try { this.updateNowMarker(); } catch (e) { console.warn('Ticker error (updateNowMarker):', e); }
     }, 1000);
 
     // Auto-scroll timeline so current hour or pinned hour is centered
@@ -1936,90 +1936,95 @@ class WTBApp {
   updateNowMarker() {
     if (!this.rulerNow) return;
 
-    const homeZone = this.getHomeZone();
-    const todayStr = this.getTodayDateString(homeZone.iana);
+    try {
+      const homeZone = this.getHomeZone();
+      const todayStr = this.getTodayDateString(homeZone.iana);
 
-    // If user is viewing a different date, hide the real-time needle & current-hour styles
-    if (this.currentDate !== todayStr) {
-      this.rulerNow.classList.remove('visible');
-      document.querySelectorAll('.hour-header-cell.is-current-hour').forEach(el => el.classList.remove('is-current-hour'));
-      return;
-    }
-
-    const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
-    const nowMs = Date.now();
-
-    // Find which column in columnInstants contains the current moment
-    let targetColIdx = -1;
-    let fraction = 0;
-
-    for (let k = 0; k < columnInstants.length; k++) {
-      const colStartMs = Number(columnInstants[k].epochMilliseconds || (columnInstants[k].epochNanoseconds / 1000000n));
-      const nextStartMs = (k + 1 < columnInstants.length)
-        ? Number(columnInstants[k + 1].epochMilliseconds || (columnInstants[k + 1].epochNanoseconds / 1000000n))
-        : colStartMs + 3600000;
-
-      if (nowMs >= colStartMs && nowMs < nextStartMs) {
-        targetColIdx = k;
-        fraction = Math.max(0, Math.min(1, (nowMs - colStartMs) / (nextStartMs - colStartMs)));
-        break;
+      // If user is viewing a different date, hide the real-time needle & current-hour styles
+      if (this.currentDate !== todayStr) {
+        this.rulerNow.classList.remove('visible');
+        document.querySelectorAll('.hour-header-cell.is-current-hour').forEach(el => el.classList.remove('is-current-hour'));
+        return;
       }
-    }
 
-    if (targetColIdx === -1) {
-      this.rulerNow.classList.remove('visible');
-      return;
-    }
+      const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+      const nowMs = Date.now();
 
-    // Toggle .is-current-hour class on header cells
-    document.querySelectorAll('.hour-header-cell').forEach(el => {
-      const cIdx = parseInt(el.dataset.col, 10);
-      el.classList.toggle('is-current-hour', cIdx === targetColIdx);
-    });
+      // Find which column in columnInstants contains the current moment
+      let targetColIdx = -1;
+      let fraction = 0;
 
-    const contentContainer = document.querySelector('.timeline-content');
-    const headerCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${targetColIdx}"]`);
+      for (let k = 0; k < columnInstants.length; k++) {
+        const colStartMs = Number(columnInstants[k].epochMilliseconds || (columnInstants[k].epochNanoseconds / 1000000n));
+        const nextStartMs = (k + 1 < columnInstants.length)
+          ? Number(columnInstants[k + 1].epochMilliseconds || (columnInstants[k + 1].epochNanoseconds / 1000000n))
+          : colStartMs + 3600000;
 
-    if (headerCell && contentContainer) {
-      const xPos = headerCell.offsetLeft + fraction * headerCell.offsetWidth;
-
-      this.rulerNow.style.left = `${xPos}px`;
-      this.rulerNow.classList.add('visible');
-
-      const pill = this.rulerNow.querySelector('.now-pill');
-      if (pill) {
-        if (xPos + 50 > contentRect.width) {
-          pill.style.left = 'auto';
-          pill.style.right = '0px';
-          pill.style.transform = 'none';
-        } else if (xPos < 25) {
-          pill.style.left = '0px';
-          pill.style.right = 'auto';
-          pill.style.transform = 'none';
-        } else {
-          pill.style.left = '50%';
-          pill.style.right = 'auto';
-          pill.style.transform = 'translateX(-50%)';
+        if (nowMs >= colStartMs && nowMs < nextStartMs) {
+          targetColIdx = k;
+          fraction = Math.max(0, Math.min(1, (nowMs - colStartMs) / (nextStartMs - colStartMs)));
+          break;
         }
       }
 
-      const nowTextEl = document.getElementById('now-time-text');
-      try {
-        const homeIs24 = this.isZone24Hour(homeZone.iana);
-        const homeTimeStr = new Intl.DateTimeFormat('en-US', {
-          timeZone: homeZone.iana,
-          hour: homeIs24 ? '2-digit' : 'numeric',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: !homeIs24
-        }).format(new Date(nowMs));
-        this.rulerNow.title = `Current Time: ${homeTimeStr} (${homeZone.label})`;
-      } catch {
-        this.rulerNow.title = 'Current Time';
+      if (targetColIdx === -1) {
+        this.rulerNow.classList.remove('visible');
+        return;
       }
-      if (nowTextEl) {
-        nowTextEl.textContent = 'NOW';
+
+      // Toggle .is-current-hour class on header cells
+      document.querySelectorAll('.hour-header-cell').forEach(el => {
+        const cIdx = parseInt(el.dataset.col, 10);
+        el.classList.toggle('is-current-hour', cIdx === targetColIdx);
+      });
+
+      const contentContainer = document.querySelector('.timeline-content');
+      const headerCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${targetColIdx}"]`);
+
+      if (headerCell && contentContainer) {
+        const contentRect = contentContainer.getBoundingClientRect();
+        const xPos = headerCell.offsetLeft + fraction * headerCell.offsetWidth;
+
+        this.rulerNow.style.left = `${xPos}px`;
+        this.rulerNow.classList.add('visible');
+
+        const pill = this.rulerNow.querySelector('.now-pill');
+        if (pill) {
+          if (xPos + 50 > contentRect.width) {
+            pill.style.left = 'auto';
+            pill.style.right = '0px';
+            pill.style.transform = 'none';
+          } else if (xPos < 25) {
+            pill.style.left = '0px';
+            pill.style.right = 'auto';
+            pill.style.transform = 'none';
+          } else {
+            pill.style.left = '50%';
+            pill.style.right = 'auto';
+            pill.style.transform = 'translateX(-50%)';
+          }
+        }
+
+        const nowTextEl = document.getElementById('now-time-text');
+        try {
+          const homeIs24 = this.isZone24Hour(homeZone.iana);
+          const homeTimeStr = new Intl.DateTimeFormat('en-US', {
+            timeZone: homeZone.iana,
+            hour: homeIs24 ? '2-digit' : 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: !homeIs24
+          }).format(new Date(nowMs));
+          this.rulerNow.title = `Current Time: ${homeTimeStr} (${homeZone.label})`;
+        } catch {
+          this.rulerNow.title = 'Current Time';
+        }
+        if (nowTextEl) {
+          nowTextEl.textContent = 'NOW';
+        }
       }
+    } catch (e) {
+      console.warn('Error updating now marker:', e);
     }
   }
 
@@ -2126,47 +2131,87 @@ class WTBApp {
   }
 
   updateLiveClocks() {
-    const now = Temporal.Now.instant();
-    document.querySelectorAll('.zone-live-time').forEach(el => {
-      const iana = el.dataset.iana;
-      if (!iana) return;
+    try {
+      const hasTemporal = (typeof Temporal === 'object' && typeof Temporal.Now === 'object' && typeof Temporal.Now.instant === 'function');
+      const nowInstant = hasTemporal ? Temporal.Now.instant() : null;
+      const nowDate = hasTemporal ? null : new Date();
 
-      try {
-        const zdt = now.toZonedDateTimeISO(iana);
-        const is24 = this.isZone24Hour(iana);
-        const timeDigits = zdt.toLocaleString('en-US', {
-          hour: is24 ? '2-digit' : 'numeric',
-          minute: '2-digit',
-          hour12: !is24
-        });
-        const dayStr = zdt.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      document.querySelectorAll('.zone-live-time').forEach(el => {
+        const iana = el.dataset.iana;
+        if (!iana) return;
 
-        const digitsEl = el.querySelector('.zone-time-digits');
-        const dayEl = el.querySelector('.zone-time-day');
-        if (digitsEl) digitsEl.textContent = timeDigits;
-        if (dayEl) dayEl.textContent = dayStr;
-      } catch (e) {
-        console.warn(`Clock error for ${iana}:`, e);
-      }
-    });
+        try {
+          let timeDigits, dayStr;
+          const is24 = this.isZone24Hour(iana);
+
+          if (hasTemporal) {
+            const zdt = nowInstant.toZonedDateTimeISO(iana);
+            timeDigits = zdt.toLocaleString('en-US', {
+              hour: is24 ? '2-digit' : 'numeric',
+              minute: '2-digit',
+              hour12: !is24
+            });
+            dayStr = zdt.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          } else {
+            timeDigits = new Intl.DateTimeFormat('en-US', {
+              timeZone: iana,
+              hour: is24 ? '2-digit' : 'numeric',
+              minute: '2-digit',
+              hour12: !is24
+            }).format(nowDate);
+            dayStr = new Intl.DateTimeFormat('en-US', {
+              timeZone: iana,
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric'
+            }).format(nowDate);
+          }
+
+          const digitsEl = el.querySelector('.zone-time-digits');
+          const dayEl = el.querySelector('.zone-time-day');
+          if (digitsEl) digitsEl.textContent = timeDigits;
+          if (dayEl) dayEl.textContent = dayStr;
+        } catch (e) {
+          console.warn(`Clock error for ${iana}:`, e);
+        }
+      });
+    } catch (e) {
+      console.warn('Error updating live clocks:', e);
+    }
   }
 
   updateTopLiveClock() {
     if (!this.topClockTime || !this.topClockTz || !this.topClockWeekNum) return;
     try {
-      const now = Temporal.Now.instant();
       const homeZone = this.getHomeZone();
-      const zdt = now.toZonedDateTimeISO(homeZone.iana);
       const is24 = this.isZone24Hour(homeZone.iana);
+      let timeStr, tzAbbrev, weekNum;
 
-      const timeStr = zdt.toLocaleString('en-US', {
-        hour: is24 ? '2-digit' : 'numeric',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: !is24
-      });
-      const tzAbbrev = this.getTimezoneAbbrev(homeZone.iana, now);
-      const weekNum = zdt.weekOfYear || (window.getISOWeekNumber ? window.getISOWeekNumber() : 38);
+      const hasTemporal = (typeof Temporal === 'object' && typeof Temporal.Now === 'object' && typeof Temporal.Now.instant === 'function');
+
+      if (hasTemporal) {
+        const now = Temporal.Now.instant();
+        const zdt = now.toZonedDateTimeISO(homeZone.iana);
+        timeStr = zdt.toLocaleString('en-US', {
+          hour: is24 ? '2-digit' : 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: !is24
+        });
+        tzAbbrev = this.getTimezoneAbbrev(homeZone.iana, now);
+        weekNum = zdt.weekOfYear || (window.getISOWeekNumber ? window.getISOWeekNumber() : 38);
+      } else {
+        const now = new Date();
+        timeStr = new Intl.DateTimeFormat('en-US', {
+          timeZone: homeZone.iana,
+          hour: is24 ? '2-digit' : 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: !is24
+        }).format(now);
+        tzAbbrev = this.getTimezoneAbbrev(homeZone.iana, now);
+        weekNum = window.getISOWeekNumber ? window.getISOWeekNumber(now) : 38;
+      }
 
       this.topClockTime.textContent = timeStr;
       this.topClockTz.textContent = tzAbbrev || homeZone.label;

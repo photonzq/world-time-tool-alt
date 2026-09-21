@@ -823,6 +823,19 @@ export async function runSelfTests() {
       const styles = getComputedStyle(clockEl);
       assert('Top live clock has flex-shrink: 0 to prevent squishing', parseFloat(styles.flexShrink) === 0, `flex-shrink: ${styles.flexShrink}`);
     }
+
+    // Verify live tickers execute without exception
+    if (window.app) {
+      let threw = false;
+      try {
+        window.app.updateNowMarker();
+        window.app.updateLiveClocks();
+        window.app.updateTopLiveClock();
+      } catch (err) {
+        threw = true;
+      }
+      assert('Live tickers (updateNowMarker, updateLiveClocks, updateTopLiveClock) execute without exception', !threw);
+    }
   } catch (e) {
     assert('Top bar live clock test', false, e.message);
   }
