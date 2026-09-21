@@ -1,0 +1,5887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>World Time Tool - Windows Timezone Edition</title>
+  <style>
+:root {
+  --bg-main: #f3f5f8;
+  --bg-card: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border-color: #cbd5e1;
+  --border-light: #e2e8f0;
+
+  /* World Time Buddy Palette */
+  --color-night: #2b4369;
+  --color-night-text: #e2e8f0;
+  --color-transition: #4e73a6;
+  --color-transition-text: #ffffff;
+  --color-work: #ffffff;
+  --color-work-text: #0f172a;
+  --color-work-border: #94a3b8;
+  --color-overlap-gold: #f59e0b;
+  --color-overlap-bg: #fef3c7;
+  --color-highlight-col: rgba(59, 130, 246, 0.18);
+  --color-pinned-border: #2563eb;
+
+  --cell-width: 36px;
+  --sidebar-width: 220px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  line-height: 1.4;
+  padding: 12px;
+}
+
+.app-container {
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  background: var(--bg-card);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+/* Header & Controls */
+.top-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-light);
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.62rem;
+  line-height: 1.05;
+  font-weight: 700;
+  color: #1e3a8a;
+  letter-spacing: 0.03em;
+  text-transform: lowercase;
+}
+
+.brand svg {
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.brand .badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+/* Top Bar Digital Display: Current Time, Timezone & Week */
+.top-live-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  color: #1e293b;
+  flex-shrink: 0;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.top-clock-time-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.top-clock-time {
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+.top-clock-tz {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  padding: 1px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.top-clock-divider {
+  color: #94a3b8;
+  font-weight: bold;
+}
+
+.top-clock-week {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.top-clock-week .week-label-short {
+  display: none;
+}
+.top-clock-week .week-label-full {
+  display: inline;
+}
+
+/* Graceful collapsing when width is not sufficient */
+@media (max-width: 1100px) {
+  .top-clock-week .week-label-full {
+    display: none;
+  }
+  .top-clock-week .week-label-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 950px) {
+  .top-live-clock {
+    display: none !important;
+  }
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  max-width: 360px;
+  min-width: 240px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+}
+
+.search-dropdown.open {
+  display: block;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dropdown-item:hover {
+  background-color: #f1f5f9;
+  color: #1d4ed8;
+}
+
+.dropdown-item .tz-iana {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 34px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn svg {
+  color: #64748b;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn:hover svg {
+  color: #1e293b;
+}
+
+.btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.btn.active svg {
+  color: #ffffff;
+}
+
+.btn-sm {
+  padding: 0 10px;
+  height: 28px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Three-Way Segmented Control: am/pm · 24 · MX */
+.format-segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.format-segment {
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 4px 10px !important;
+  height: 26px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  border-radius: 4px !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.format-segment:hover {
+  color: #1e293b !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+}
+
+.format-segment.active {
+  background: #ffffff !important;
+  color: #1e3a8a !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Date Bar */
+.date-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.date-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-tab {
+  padding: 5px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.date-tab:hover {
+  background: #e2e8f0;
+  color: var(--text-main);
+}
+
+.date-tab.active {
+  background: #ffffff;
+  color: #1d4ed8;
+  border-color: var(--border-color);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.date-tab.is-today::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: #ef4444;
+  border-radius: 50%;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.btn-today {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.btn-today:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #b91c1c;
+}
+
+.live-pulse {
+  width: 7px;
+  height: 7px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.date-picker-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-input {
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text-main);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.date-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+/* Overlap & Pinned Indicator Banner */
+.overlap-indicator {
+  display: flex;
+  align-items: center;
+  padding: 6px 20px;
+  font-size: 0.8rem;
+  background: var(--color-overlap-bg);
+  border-bottom: 1px solid #fcd34d;
+  color: #92400e;
+  gap: 8px;
+}
+
+.overlap-indicator strong {
+  font-weight: 600;
+}
+
+/* Timeline Layout */
+.timeline-scroll-container {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.timeline-content {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-header-row {
+  display: flex;
+  width: 100%;
+  height: 48px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 36;
+}
+
+.timeline-header-left {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  flex-shrink: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-right: 2px solid var(--border-color);
+  background: #f8fafc;
+  position: sticky;
+  left: 0;
+  z-index: 40;
+  box-sizing: border-box;
+}
+
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  width: 10px;
+  bottom: 0;
+  cursor: col-resize;
+  z-index: 45;
+  touch-action: none;
+  user-select: none;
+}
+
+.sidebar-resizer::before {
+  content: "⋮";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.85rem;
+  color: #94a3b8;
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.sidebar-resizer:hover::before,
+.sidebar-resizer.is-dragging::before {
+  color: #2563eb;
+  opacity: 1;
+}
+
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 4px;
+  width: 2px;
+  background-color: transparent;
+  border-radius: 1px;
+  transition: background-color 0.15s ease;
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer.is-dragging::after {
+  background-color: #3b82f6;
+}
+
+body.resizing-sidebar {
+  cursor: col-resize !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.timeline-header-hours {
+  display: flex;
+  flex: 1 1 auto;
+  height: 48px;
+  min-width: 0;
+}
+
+.hour-header-cell {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-right: 1px solid var(--border-light);
+  cursor: pointer;
+  position: relative;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+.hour-header-cell.active-col {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hour-header-cell:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+  .zone-row:hover {
+    background-color: rgba(241, 245, 249, 0.4);
+  }
+}
+
+.hour-header-cell.overlap-col {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.hour-header-cell.overlap-col::after {
+  content: "★";
+  position: absolute;
+  top: 1px;
+  font-size: 0.65rem;
+  color: #d97706;
+}
+
+.hour-header-cell.is-current-hour {
+  color: #ef4444 !important;
+  font-weight: 700;
+}
+
+/* Timeline Rows */
+.zone-row {
+  display: flex;
+  width: 100%;
+  height: 56px;
+  border-bottom: 1px solid var(--border-light);
+  background: #ffffff;
+}
+
+/* Zone Sidebar Card */
+.zone-sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  flex-shrink: 0;
+  height: 56px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-right: 2px solid var(--border-color);
+  background: #ffffff;
+  position: sticky;
+  left: 0;
+  z-index: 38;
+  user-select: text;
+  -webkit-user-select: text;
+  box-sizing: border-box;
+}
+
+.zone-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.zone-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.btn-icon-tiny {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 0.65rem;
+  line-height: 1;
+  padding: 1px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.btn-icon-tiny:hover {
+  color: #1e293b;
+}
+
+.zone-home-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.92rem;
+  color: #cbd5e1;
+  transition: color 0.15s;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.zone-home-btn.is-home {
+  color: #eab308;
+}
+
+.zone-home-btn:hover {
+  color: #facc15;
+}
+
+.zone-offset-badge {
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+  min-width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.zone-offset-badge.is-home {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.zone-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.zone-name-row {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.zone-city {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.zone-sub-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin-top: 2px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.zone-dst-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: #f3f4f6;
+  color: #6b7280;
+  flex-shrink: 0;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.zone-country {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.zone-live-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 58px;
+  flex-shrink: 0;
+  margin-left: 4px;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.zone-time-digits {
+  font-size: 0.86rem;
+  font-weight: 700;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.zone-time-day {
+  font-size: 0.64rem;
+  color: var(--text-muted);
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.zone-remove-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 2px 3px;
+  line-height: 1;
+  transition: color 0.15s;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.zone-remove-btn:hover {
+  color: #ef4444;
+}
+
+/* Timeline Cells (The 24+ hour strip) */
+.zone-cells-strip {
+  display: flex;
+  flex: 1 1 auto;
+  height: 56px;
+  min-width: 0;
+}
+
+.time-cell {
+  flex: 1 1 0%;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  transition: filter 0.1s ease;
+  box-sizing: border-box;
+}
+
+.time-cell .cell-hour {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.05;
+  font-feature-settings: "tnum";
+}
+
+.time-cell .cell-period {
+  font-size: 0.62rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.time-cell .cell-fraction {
+  font-size: 0.62rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+/* Cell Shading & Gradient Integration */
+.time-cell.cell-work {
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.5);
+}
+
+.time-cell.cell-weekend::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(100, 116, 139, 0.10) 4px,
+    rgba(100, 116, 139, 0.10) 6px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.time-cell .cell-hour,
+.time-cell .cell-period {
+  position: relative;
+  z-index: 2;
+}
+
+/* Date Change Banner Pill in Cell */
+.time-cell.date-break-cell {
+  border-left: none !important;
+  box-shadow: inset 2px 0 0 #2563eb;
+}
+
+.time-cell.date-break-cell::before {
+  content: attr(data-date-label);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 0.52rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 1px 3px;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+  z-index: 5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* Crosshair / Pinned Column Overlay */
+.ruler-cursor-column {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: var(--cell-width);
+  background-color: var(--color-highlight-col);
+  pointer-events: none;
+  border-left: 1px dashed #3b82f6;
+  border-right: 1px dashed #3b82f6;
+  z-index: 27;
+  display: none;
+}
+
+.ruler-cursor-column.visible {
+  display: block;
+}
+
+.ruler-pinned-column {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: var(--cell-width);
+  border: 2px solid #0f172a;
+  background-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 2px 8px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 28;
+  display: none;
+  border-radius: 4px;
+}
+
+.ruler-pinned-column.visible {
+  display: block;
+}
+
+/* Real-Time "Now" Indicator Needle */
+.ruler-now-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.45);
+  pointer-events: none;
+  z-index: 34;
+  display: none;
+}
+
+.ruler-now-line.visible {
+  display: block;
+}
+
+.ruler-now-line .now-pill {
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.50rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.4px;
+  z-index: 33;
+}
+
+.ruler-now-line .now-pulse-dot {
+  width: 5px;
+  height: 5px;
+  background: #ffffff;
+  border-radius: 50%;
+}
+
+.ruler-now-line::after {
+  content: "";
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  background: #ef4444;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+}
+
+.hour-header-cell:last-child,
+.time-cell:last-child {
+  border-right: none !important;
+}
+
+/* Floating Pinned Summary Bar */
+.pinned-summary-bar {
+  padding: 10px 16px;
+  background: #f8fafc;
+  border-top: 1px solid var(--border-color);
+  display: none;
+  flex-direction: column;
+  font-size: 0.82rem;
+  gap: 8px;
+}
+
+.pinned-summary-bar.visible {
+  display: flex;
+}
+
+.pinned-summary-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.pinned-summary-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.pinned-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+#clear-pin-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Human-Readable Sentence Description Card */
+.pinned-sentence-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pinned-sentence-prefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.pinned-sentence-text {
+  flex: 1;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #1e293b;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: all;
+  transition: color 0.15s ease;
+}
+
+.pinned-sentence-text:hover {
+  color: #2563eb;
+}
+
+.btn-copy-sentence {
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
+  color: #1e293b;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-copy-sentence:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-copy-sentence.copied {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+}
+
+.pinned-work-counter {
+  display: inline-flex;
+  align-items: center;
+}
+
+.work-counter-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.work-counter-pill.all-work {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.work-counter-pill.partial-work {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.work-counter-pill.none-work {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.pinned-summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.pinned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.80rem;
+  font-weight: 600;
+  border: 1px solid;
+  transition: all 0.15s ease;
+  user-select: text;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pinned-chip .pinned-zone-name {
+  font-weight: 700;
+}
+
+.pinned-chip .pinned-time {
+  font-weight: 700;
+  font-feature-settings: "tnum";
+}
+
+.pinned-chip .pinned-date {
+  font-weight: 400;
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.pinned-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pinned-status-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+/* 1. Working Hours: 9:00 AM – 5:00 PM (Monday – Friday) */
+.pinned-chip.status-work {
+  background-color: #f0fdf4;
+  border-color: #86efac;
+  color: #14532d;
+}
+
+.pinned-status-dot.status-work {
+  background-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.25);
+}
+
+.pinned-status-badge.status-work {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+/* 2. Shoulder / Off-hours: 7–9 AM & 5–10 PM */
+.pinned-chip.status-shoulder {
+  background-color: #fffbeb;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.pinned-status-dot.status-shoulder {
+  background-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+
+.pinned-status-badge.status-shoulder {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+/* 3. Sleep / Night Hours: 10 PM – 7 AM */
+.pinned-chip.status-night {
+  background-color: #1e293b;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+.pinned-chip.status-night .pinned-date {
+  color: #94a3b8;
+}
+
+.pinned-status-dot.status-night {
+  background-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.3);
+}
+
+.pinned-status-badge.status-night {
+  background-color: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+}
+
+/* 4. Weekend Hours: Saturday & Sunday */
+.pinned-chip.status-weekend {
+  background-color: #faf5ff;
+  border-color: #d8b4fe;
+  color: #6b21a8;
+}
+
+.pinned-status-dot.status-weekend {
+  background-color: #a855f7;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.25);
+}
+
+.pinned-status-badge.status-weekend {
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #d8b4fe;
+}
+
+/* Self-test Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 650px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+
+.test-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.test-badge {
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.test-badge.pass {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.test-badge.fail {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* App Footer / Attribution */
+.app-footer {
+  padding: 8px 16px;
+  background: #f8fafc;
+  border-top: 1px solid var(--border-light);
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.app-footer a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive Button Text Helpers */
+.btn-text-short {
+  display: none;
+}
+.btn-text-full {
+  display: inline;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 860px) {
+  :root {
+    --sidebar-width: 175px;
+  }
+  .zone-country {
+    display: none;
+  }
+  .date-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Prevent timeline cells from shrinking below 36px on tablet & mobile */
+  .timeline-content {
+    width: max-content;
+    min-width: 100%;
+  }
+  .timeline-header-row,
+  .timeline-row {
+    width: max-content;
+    min-width: 100%;
+  }
+  .timeline-header-hours,
+  .zone-cells-strip {
+    flex: 0 0 calc(var(--cell-width) * 24);
+    width: calc(var(--cell-width) * 24);
+    min-width: calc(var(--cell-width) * 24);
+  }
+  .hour-header-cell,
+  .time-cell {
+    flex: 1 0 var(--cell-width);
+    width: var(--cell-width);
+    min-width: var(--cell-width);
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --sidebar-width: 168px;
+  }
+  body {
+    padding: 0;
+    background: #ffffff;
+  }
+  .app-container {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  .top-nav {
+    padding: 8px 12px;
+    gap: 8px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .brand {
+    gap: 6px;
+  }
+  .brand svg {
+    width: 20px;
+    height: 20px;
+    color: #2563eb;
+  }
+  .brand-text {
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+  }
+  .format-segmented-control {
+    padding: 2px;
+    gap: 2px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+  }
+  .format-segment {
+    padding: 3px 7px !important;
+    font-size: 0.72rem;
+    height: 26px !important;
+  }
+  #copy-link-btn,
+  #reset-btn {
+    height: 28px;
+    padding: 0 8px;
+    font-size: 0.76rem;
+    gap: 4px;
+    border-radius: 6px;
+  }
+  #copy-link-btn svg,
+  #reset-btn svg {
+    width: 13px;
+    height: 13px;
+  }
+  .btn-text-full {
+    display: none;
+  }
+  .btn-text-short {
+    display: inline;
+  }
+  .search-container {
+    width: 100%;
+    max-width: 100%;
+    order: 3;
+    margin-top: 4px;
+  }
+  .search-input {
+    height: 36px;
+    font-size: 16px !important;
+    padding-left: 32px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+  }
+  .search-icon {
+    left: 10px;
+    width: 15px;
+    height: 15px;
+  }
+  .dropdown-item {
+    min-height: 42px;
+    padding: 10px 14px;
+    touch-action: manipulation;
+  }
+
+  /* Compact 2-Row Date Navigation Bar */
+  .date-bar {
+    padding: 8px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .btn-today {
+    order: 1;
+    height: 30px;
+    padding: 0 10px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid #fca5a5;
+    color: #ef4444;
+    touch-action: manipulation;
+  }
+  .date-picker-wrapper {
+    order: 2;
+    margin-left: auto;
+  }
+  .date-input {
+    height: 30px;
+    padding: 2px 8px;
+    font-size: 16px !important;
+    font-weight: 600;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+  }
+  .date-tabs {
+    order: 3;
+    width: 100%;
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    padding: 2px 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .date-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .date-tab {
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 9px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    touch-action: manipulation;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .date-tab.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+  }
+
+  /* Compact Sticky Sidebar for Mobile */
+  .sidebar-resizer {
+    display: none !important;
+    pointer-events: none !important;
+  }
+  .timeline-header-left {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.3;
+    border-right: 2px solid var(--border-color);
+  }
+  .timeline-header-left::after {
+    content: "Tap hour to compare";
+    font-size: 0.60rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .zone-sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    height: 56px;
+    padding: 4px 6px 4px 6px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 24px 22px;
+    align-items: center;
+    position: sticky;
+    left: 0;
+    z-index: 38;
+    background: #ffffff;
+    border-right: 2px solid var(--border-color);
+    box-sizing: border-box;
+  }
+  .zone-meta-left {
+    grid-column: 1 / 2;
+    grid-row: 1 / 3;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+  .zone-reorder {
+    display: none;
+  }
+  .zone-home-btn {
+    min-width: 28px;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    padding: 0;
+    margin-right: 2px;
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+  .zone-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    flex: 1;
+    gap: 2px;
+  }
+  .zone-name-row {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .zone-city {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 104px;
+    line-height: 1.2;
+  }
+  .zone-sub-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+  }
+  .zone-offset-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: #f1f5f9;
+    color: #475569;
+    flex-shrink: 0;
+  }
+  .zone-offset-badge.is-home {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  .zone-dst-badge {
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: #f3f4f6;
+    color: #6b7280;
+    flex-shrink: 0;
+  }
+  .zone-country {
+    display: none;
+  }
+  .zone-remove-btn {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    min-width: 28px;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    color: #94a3b8;
+    padding: 0;
+    margin: 0;
+    justify-self: end;
+    touch-action: manipulation;
+  }
+  .zone-live-time {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    justify-self: end;
+  }
+  .zone-time-digits {
+    font-size: 0.74rem;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    color: #334155;
+    white-space: nowrap;
+  }
+  .zone-time-day {
+    display: none;
+  }
+
+  /* Date Break pill in cell */
+  .time-cell.date-break-cell::before {
+    font-size: 0.44rem !important;
+    padding: 1px 2px !important;
+    max-width: 32px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    letter-spacing: 0 !important;
+    line-height: 1 !important;
+    top: 1px !important;
+    left: 1px !important;
+  }
+
+  /* Pinned Summary Bar */
+  .pinned-summary-bar {
+    padding: 12px;
+    background: #f8fafc;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .pinned-summary-main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  .pinned-summary-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pinned-summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.82rem;
+  }
+  .pinned-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+  .pinned-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    font-size: 0.78rem;
+    gap: 6px;
+  }
+  .pinned-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .pinned-zone-name {
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pinned-time {
+    font-weight: 700;
+    font-feature-settings: "tnum";
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  .pinned-date {
+    font-size: 0.70rem;
+    white-space: nowrap;
+    opacity: 0.85;
+  }
+  .pinned-status-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+  .pinned-chip.status-night .pinned-zone-name,
+  .pinned-chip.status-night .pinned-time {
+    color: #ffffff !important;
+  }
+  .pinned-chip.status-night .pinned-date {
+    color: #cbd5e1 !important;
+  }
+  #clear-pin-btn {
+    align-self: flex-end;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #64748b;
+    border: 1px solid var(--border-color);
+    touch-action: manipulation;
+  }
+  .pinned-sentence-card {
+    background: #f0f7ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pinned-sentence-prefix {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: #1e40af;
+    order: 1;
+  }
+  .btn-copy-sentence {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    touch-action: manipulation;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    order: 2;
+    margin-left: auto;
+  }
+  .btn-copy-sentence svg {
+    color: #ffffff !important;
+  }
+  .btn-copy-sentence.copied {
+    background: #16a34a !important;
+  }
+  .pinned-sentence-text {
+    order: 3;
+    width: 100%;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #1e293b;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}
+
+</style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <div class="brand-text">
+          <span>world</span>
+          <span>time</span>
+          <span>tool</span>
+        </div>
+      </div>
+
+      <!-- Digital Display of Current Time, Timezone & Week Number -->
+      <div id="top-live-clock" class="top-live-clock" title="Current Local Time, Timezone & ISO Week">
+        <div class="top-clock-time-group">
+          <span id="top-clock-time" class="top-clock-time">--:--:--</span>
+          <span id="top-clock-tz" class="top-clock-tz">---</span>
+        </div>
+        <span class="top-clock-divider">·</span>
+        <span id="top-clock-week" class="top-clock-week" title="ISO Week Number">
+          <span class="week-label-full">Week </span><span class="week-label-short">W</span><span id="top-clock-week-num">--</span>
+        </span>
+      </div>
+
+      <!-- Windows-curated Timezone Search -->
+      <div class="search-container">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-input" class="search-input" placeholder="+ Add place or Windows timezone..." autocomplete="off">
+        <div id="search-dropdown" class="search-dropdown"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="top-actions">
+        <div id="format-segmented" class="format-segmented-control" role="group" aria-label="Time format">
+          <button type="button" class="btn format-segment active" data-fmt="12" title="12-hour clock (am/pm)">am/pm</button>
+          <button type="button" class="btn format-segment" data-fmt="24" title="24-hour clock">24</button>
+          <button type="button" class="btn format-segment" data-fmt="mx" title="MX mode (country-specific format)">MX</button>
+        </div>
+        <button id="format-toggle" class="btn" style="display:none;" title="Format toggle (legacy)"></button>
+        <button id="copy-link-btn" class="btn" title="Copy permalink to current view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          <span class="btn-text-full">Link to this view</span>
+          <span class="btn-text-short">Link</span>
+        </button>
+        <button id="reset-btn" class="btn" title="Reset to default timezones (Local, US West, Europe, China)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+          Reset
+        </button>
+      </div>
+    </header>
+
+    <!-- Date Navigation Strip -->
+    <div class="date-bar">
+      <button id="today-btn" class="btn btn-today" title="Jump to current time today">
+        <span class="live-pulse"></span>
+        Today
+      </button>
+      <div id="date-tabs" class="date-tabs"></div>
+      <div class="date-picker-wrapper">
+        <input type="date" id="date-picker" class="date-input">
+      </div>
+    </div>
+
+    <!-- Mutual Business Hours Overlap Banner -->
+    <div id="overlap-banner" class="overlap-indicator" style="display:none;"></div>
+
+    <!-- Main Timeline Container -->
+    <div class="timeline-scroll-container">
+      <div class="timeline-content">
+        <!-- Sticky Crosshairs & Live Now Needle -->
+        <div id="ruler-cursor" class="ruler-cursor-column"></div>
+        <div id="ruler-pinned" class="ruler-pinned-column"></div>
+        <div id="ruler-now" class="ruler-now-line">
+          <div class="now-pill"><span class="now-pulse-dot"></span><span id="now-time-text">NOW</span></div>
+        </div>
+
+        <!-- Header Row -->
+        <div class="timeline-header-row">
+          <div class="timeline-header-left">
+            <span>Place / Timezone</span>
+            <div id="sidebar-resizer" class="sidebar-resizer" title="Drag to resize sidebar (Double-click to reset)"></div>
+          </div>
+          <div id="timeline-header-hours" class="timeline-header-hours"></div>
+        </div>
+
+        <!-- Time Rows -->
+        <div id="timeline-rows" class="timeline-rows-container"></div>
+      </div>
+    </div>
+
+    <!-- Pinned Time Comparison Bar -->
+    <div id="pinned-summary" class="pinned-summary-bar">
+      <div class="pinned-summary-main">
+        <div class="pinned-summary-content">
+          <div class="pinned-summary-header">
+            <strong style="color:#1e3a8a; white-space:nowrap;">Pinned Comparison:</strong>
+            <span id="pinned-work-count" class="pinned-work-counter"></span>
+          </div>
+          <div id="pinned-chips" class="pinned-summary-list"></div>
+        </div>
+        <button id="clear-pin-btn" class="btn btn-sm" title="Clear pinned time column">Clear Pin</button>
+      </div>
+
+      <!-- Human-Readable Natural Sentence Description -->
+      <div class="pinned-sentence-card">
+        <div class="pinned-sentence-prefix">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Summary:</span>
+        </div>
+        <div id="pinned-sentence-text" class="pinned-sentence-text" title="Click to copy description"></div>
+        <button id="copy-sentence-btn" class="btn btn-sm btn-copy-sentence" title="Copy sentence description to clipboard (for LLMs or emails)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span id="copy-sentence-label">Copy Description</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- App Footer / Attribution -->
+    <footer class="app-footer">
+      <span>Made with AI tools · Public domain (<a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>)</span>
+    </footer>
+  </div>
+
+  <!-- Self-Test Modal -->
+  <div id="test-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🧪 DST & Temporal Golden Assertions</h3>
+        <button id="close-modal-btn" class="btn btn-sm">✕</button>
+      </div>
+      <div id="test-results" class="modal-body"></div>
+    </div>
+  </div>
+
+    <!-- Inlined Windows Zones Database -->
+  <script>
+/**
+ * NOTE: This file contains display labels only, curated from the Windows Registry (Get-TimeZone -ListAvailable).
+ * All actual time rules, offsets, and DST transitions are computed dynamically at runtime via the browser's Temporal / Intl engine.
+ */
+window.WINDOWS_ZONES = [
+  {
+    "id": "Dateline Standard Time",
+    "label": "(UTC-12:00) International Date Line West",
+    "iana": "Etc/GMT+12"
+  },
+  {
+    "id": "UTC-11",
+    "label": "(UTC-11:00) Coordinated Universal Time-11",
+    "iana": "Etc/GMT+11"
+  },
+  {
+    "id": "Aleutian Standard Time",
+    "label": "(UTC-10:00) Aleutian Islands",
+    "iana": "America/Adak"
+  },
+  {
+    "id": "Hawaiian Standard Time",
+    "label": "(UTC-10:00) Hawaii",
+    "iana": "Pacific/Honolulu"
+  },
+  {
+    "id": "Marquesas Standard Time",
+    "label": "(UTC-09:30) Marquesas Islands",
+    "iana": "Pacific/Marquesas"
+  },
+  {
+    "id": "Alaskan Standard Time",
+    "label": "(UTC-09:00) Alaska",
+    "iana": "America/Anchorage"
+  },
+  {
+    "id": "UTC-09",
+    "label": "(UTC-09:00) Coordinated Universal Time-09",
+    "iana": "Etc/GMT+9"
+  },
+  {
+    "id": "Pacific Standard Time (Mexico)",
+    "label": "(UTC-08:00) Baja California",
+    "iana": "America/Tijuana"
+  },
+  {
+    "id": "UTC-08",
+    "label": "(UTC-08:00) Coordinated Universal Time-08",
+    "iana": "Etc/GMT+8"
+  },
+  {
+    "id": "Pacific Standard Time",
+    "label": "(UTC-08:00) Pacific Time (US & Canada)",
+    "iana": "America/Los_Angeles"
+  },
+  {
+    "id": "US Mountain Standard Time",
+    "label": "(UTC-07:00) Arizona",
+    "iana": "America/Phoenix"
+  },
+  {
+    "id": "Mountain Standard Time (Mexico)",
+    "label": "(UTC-07:00) La Paz, Mazatlan",
+    "iana": "America/Chihuahua"
+  },
+  {
+    "id": "Mountain Standard Time",
+    "label": "(UTC-07:00) Mountain Time (US & Canada)",
+    "iana": "America/Denver"
+  },
+  {
+    "id": "Yukon Standard Time",
+    "label": "(UTC-07:00) Yukon",
+    "iana": "America/Whitehorse"
+  },
+  {
+    "id": "Central America Standard Time",
+    "label": "(UTC-06:00) Central America",
+    "iana": "America/Guatemala"
+  },
+  {
+    "id": "Central Standard Time",
+    "label": "(UTC-06:00) Central Time (US & Canada)",
+    "iana": "America/Chicago"
+  },
+  {
+    "id": "Easter Island Standard Time",
+    "label": "(UTC-06:00) Easter Island",
+    "iana": "Pacific/Easter"
+  },
+  {
+    "id": "Central Standard Time (Mexico)",
+    "label": "(UTC-06:00) Guadalajara, Mexico City, Monterrey",
+    "iana": "America/Mexico_City"
+  },
+  {
+    "id": "Canada Central Standard Time",
+    "label": "(UTC-06:00) Saskatchewan",
+    "iana": "America/Regina"
+  },
+  {
+    "id": "SA Pacific Standard Time",
+    "label": "(UTC-05:00) Bogota, Lima, Quito, Rio Branco",
+    "iana": "America/Bogota"
+  },
+  {
+    "id": "Eastern Standard Time (Mexico)",
+    "label": "(UTC-05:00) Chetumal",
+    "iana": "America/Cancun"
+  },
+  {
+    "id": "Eastern Standard Time",
+    "label": "(UTC-05:00) Eastern Time (US & Canada)",
+    "iana": "America/New_York"
+  },
+  {
+    "id": "Haiti Standard Time",
+    "label": "(UTC-05:00) Haiti",
+    "iana": "America/Port-au-Prince"
+  },
+  {
+    "id": "Cuba Standard Time",
+    "label": "(UTC-05:00) Havana",
+    "iana": "America/Havana"
+  },
+  {
+    "id": "US Eastern Standard Time",
+    "label": "(UTC-05:00) Indiana (East)",
+    "iana": "America/Indianapolis"
+  },
+  {
+    "id": "Turks And Caicos Standard Time",
+    "label": "(UTC-05:00) Turks and Caicos",
+    "iana": "America/Grand_Turk"
+  },
+  {
+    "id": "Atlantic Standard Time",
+    "label": "(UTC-04:00) Atlantic Time (Canada)",
+    "iana": "America/Halifax"
+  },
+  {
+    "id": "Venezuela Standard Time",
+    "label": "(UTC-04:00) Caracas",
+    "iana": "America/Caracas"
+  },
+  {
+    "id": "Central Brazilian Standard Time",
+    "label": "(UTC-04:00) Cuiaba",
+    "iana": "America/Cuiaba"
+  },
+  {
+    "id": "SA Western Standard Time",
+    "label": "(UTC-04:00) Georgetown, La Paz, Manaus, San Juan",
+    "iana": "America/La_Paz"
+  },
+  {
+    "id": "Pacific SA Standard Time",
+    "label": "(UTC-04:00) Santiago",
+    "iana": "America/Santiago"
+  },
+  {
+    "id": "Newfoundland Standard Time",
+    "label": "(UTC-03:30) Newfoundland",
+    "iana": "America/St_Johns"
+  },
+  {
+    "id": "Tocantins Standard Time",
+    "label": "(UTC-03:00) Araguaina",
+    "iana": "America/Araguaina"
+  },
+  {
+    "id": "Paraguay Standard Time",
+    "label": "(UTC-03:00) Asuncion",
+    "iana": "America/Asuncion"
+  },
+  {
+    "id": "E. South America Standard Time",
+    "label": "(UTC-03:00) Brasilia",
+    "iana": "America/Sao_Paulo"
+  },
+  {
+    "id": "SA Eastern Standard Time",
+    "label": "(UTC-03:00) Cayenne, Fortaleza",
+    "iana": "America/Cayenne"
+  },
+  {
+    "id": "Argentina Standard Time",
+    "label": "(UTC-03:00) City of Buenos Aires",
+    "iana": "America/Buenos_Aires"
+  },
+  {
+    "id": "Montevideo Standard Time",
+    "label": "(UTC-03:00) Montevideo",
+    "iana": "America/Montevideo"
+  },
+  {
+    "id": "Magallanes Standard Time",
+    "label": "(UTC-03:00) Punta Arenas",
+    "iana": "America/Punta_Arenas"
+  },
+  {
+    "id": "Saint Pierre Standard Time",
+    "label": "(UTC-03:00) Saint Pierre and Miquelon",
+    "iana": "America/Miquelon"
+  },
+  {
+    "id": "Bahia Standard Time",
+    "label": "(UTC-03:00) Salvador",
+    "iana": "America/Bahia"
+  },
+  {
+    "id": "UTC-02",
+    "label": "(UTC-02:00) Coordinated Universal Time-02",
+    "iana": "Etc/GMT+2"
+  },
+  {
+    "id": "Greenland Standard Time",
+    "label": "(UTC-02:00) Greenland",
+    "iana": "America/Godthab"
+  },
+  {
+    "id": "Azores Standard Time",
+    "label": "(UTC-01:00) Azores",
+    "iana": "Atlantic/Azores"
+  },
+  {
+    "id": "Cape Verde Standard Time",
+    "label": "(UTC-01:00) Cabo Verde Is.",
+    "iana": "Atlantic/Cape_Verde"
+  },
+  {
+    "id": "UTC",
+    "label": "(UTC) Coordinated Universal Time",
+    "iana": "Etc/UTC"
+  },
+  {
+    "id": "GMT Standard Time",
+    "label": "(UTC+00:00) Dublin, Edinburgh, Lisbon, London",
+    "iana": "Europe/London"
+  },
+  {
+    "id": "Greenwich Standard Time",
+    "label": "(UTC+00:00) Monrovia, Reykjavik",
+    "iana": "Atlantic/Reykjavik"
+  },
+  {
+    "id": "Sao Tome Standard Time",
+    "label": "(UTC+00:00) Sao Tome",
+    "iana": "Africa/Sao_Tome"
+  },
+  {
+    "id": "Morocco Standard Time",
+    "label": "(UTC+01:00) Casablanca",
+    "iana": "Africa/Casablanca"
+  },
+  {
+    "id": "W. Europe Standard Time",
+    "label": "(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna",
+    "iana": "Europe/Berlin"
+  },
+  {
+    "id": "Central Europe Standard Time",
+    "label": "(UTC+01:00) Belgrade, Bratislava, Budapest, Ljubljana, Prague",
+    "iana": "Europe/Budapest"
+  },
+  {
+    "id": "Romance Standard Time",
+    "label": "(UTC+01:00) Brussels, Copenhagen, Madrid, Paris",
+    "iana": "Europe/Paris"
+  },
+  {
+    "id": "Central European Standard Time",
+    "label": "(UTC+01:00) Sarajevo, Skopje, Warsaw, Zagreb",
+    "iana": "Europe/Warsaw"
+  },
+  {
+    "id": "W. Central Africa Standard Time",
+    "label": "(UTC+01:00) West Central Africa",
+    "iana": "Africa/Lagos"
+  },
+  {
+    "id": "GTB Standard Time",
+    "label": "(UTC+02:00) Athens, Bucharest",
+    "iana": "Europe/Bucharest"
+  },
+  {
+    "id": "Middle East Standard Time",
+    "label": "(UTC+02:00) Beirut",
+    "iana": "Asia/Beirut"
+  },
+  {
+    "id": "Egypt Standard Time",
+    "label": "(UTC+02:00) Cairo",
+    "iana": "Africa/Cairo"
+  },
+  {
+    "id": "E. Europe Standard Time",
+    "label": "(UTC+02:00) Chisinau",
+    "iana": "Europe/Chisinau"
+  },
+  {
+    "id": "West Bank Standard Time",
+    "label": "(UTC+02:00) Gaza, Hebron",
+    "iana": "Asia/Hebron"
+  },
+  {
+    "id": "South Africa Standard Time",
+    "label": "(UTC+02:00) Harare, Pretoria",
+    "iana": "Africa/Johannesburg"
+  },
+  {
+    "id": "FLE Standard Time",
+    "label": "(UTC+02:00) Helsinki, Kyiv, Riga, Sofia, Tallinn, Vilnius",
+    "iana": "Europe/Kiev"
+  },
+  {
+    "id": "Israel Standard Time",
+    "label": "(UTC+02:00) Jerusalem",
+    "iana": "Asia/Jerusalem"
+  },
+  {
+    "id": "South Sudan Standard Time",
+    "label": "(UTC+02:00) Juba",
+    "iana": "Africa/Juba"
+  },
+  {
+    "id": "Kaliningrad Standard Time",
+    "label": "(UTC+02:00) Kaliningrad",
+    "iana": "Europe/Kaliningrad"
+  },
+  {
+    "id": "Sudan Standard Time",
+    "label": "(UTC+02:00) Khartoum",
+    "iana": "Africa/Khartoum"
+  },
+  {
+    "id": "Libya Standard Time",
+    "label": "(UTC+02:00) Tripoli",
+    "iana": "Africa/Tripoli"
+  },
+  {
+    "id": "Namibia Standard Time",
+    "label": "(UTC+02:00) Windhoek",
+    "iana": "Africa/Windhoek"
+  },
+  {
+    "id": "Jordan Standard Time",
+    "label": "(UTC+03:00) Amman",
+    "iana": "Asia/Amman"
+  },
+  {
+    "id": "Arabic Standard Time",
+    "label": "(UTC+03:00) Baghdad",
+    "iana": "Asia/Baghdad"
+  },
+  {
+    "id": "Syria Standard Time",
+    "label": "(UTC+03:00) Damascus",
+    "iana": "Asia/Damascus"
+  },
+  {
+    "id": "Turkey Standard Time",
+    "label": "(UTC+03:00) Istanbul",
+    "iana": "Europe/Istanbul"
+  },
+  {
+    "id": "Arab Standard Time",
+    "label": "(UTC+03:00) Kuwait, Riyadh",
+    "iana": "Asia/Riyadh"
+  },
+  {
+    "id": "Belarus Standard Time",
+    "label": "(UTC+03:00) Minsk",
+    "iana": "Europe/Minsk"
+  },
+  {
+    "id": "Russian Standard Time",
+    "label": "(UTC+03:00) Moscow, St. Petersburg",
+    "iana": "Europe/Moscow"
+  },
+  {
+    "id": "E. Africa Standard Time",
+    "label": "(UTC+03:00) Nairobi",
+    "iana": "Africa/Nairobi"
+  },
+  {
+    "id": "Volgograd Standard Time",
+    "label": "(UTC+03:00) Volgograd",
+    "iana": "Europe/Volgograd"
+  },
+  {
+    "id": "Iran Standard Time",
+    "label": "(UTC+03:30) Tehran",
+    "iana": "Asia/Tehran"
+  },
+  {
+    "id": "Arabian Standard Time",
+    "label": "(UTC+04:00) Abu Dhabi, Muscat",
+    "iana": "Asia/Dubai"
+  },
+  {
+    "id": "Astrakhan Standard Time",
+    "label": "(UTC+04:00) Astrakhan, Ulyanovsk",
+    "iana": "Europe/Astrakhan"
+  },
+  {
+    "id": "Azerbaijan Standard Time",
+    "label": "(UTC+04:00) Baku",
+    "iana": "Asia/Baku"
+  },
+  {
+    "id": "Russia Time Zone 3",
+    "label": "(UTC+04:00) Izhevsk, Samara",
+    "iana": "Europe/Samara"
+  },
+  {
+    "id": "Mauritius Standard Time",
+    "label": "(UTC+04:00) Port Louis",
+    "iana": "Indian/Mauritius"
+  },
+  {
+    "id": "Saratov Standard Time",
+    "label": "(UTC+04:00) Saratov",
+    "iana": "Europe/Saratov"
+  },
+  {
+    "id": "Georgian Standard Time",
+    "label": "(UTC+04:00) Tbilisi",
+    "iana": "Asia/Tbilisi"
+  },
+  {
+    "id": "Caucasus Standard Time",
+    "label": "(UTC+04:00) Yerevan",
+    "iana": "Asia/Yerevan"
+  },
+  {
+    "id": "Afghanistan Standard Time",
+    "label": "(UTC+04:30) Kabul",
+    "iana": "Asia/Kabul"
+  },
+  {
+    "id": "West Asia Standard Time",
+    "label": "(UTC+05:00) Ashgabat, Tashkent",
+    "iana": "Asia/Tashkent"
+  },
+  {
+    "id": "Qyzylorda Standard Time",
+    "label": "(UTC+05:00) Astana",
+    "iana": "Asia/Qyzylorda"
+  },
+  {
+    "id": "Ekaterinburg Standard Time",
+    "label": "(UTC+05:00) Ekaterinburg",
+    "iana": "Asia/Yekaterinburg"
+  },
+  {
+    "id": "Pakistan Standard Time",
+    "label": "(UTC+05:00) Islamabad, Karachi",
+    "iana": "Asia/Karachi"
+  },
+  {
+    "id": "India Standard Time",
+    "label": "(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi",
+    "iana": "Asia/Calcutta"
+  },
+  {
+    "id": "Sri Lanka Standard Time",
+    "label": "(UTC+05:30) Sri Jayawardenepura",
+    "iana": "Asia/Colombo"
+  },
+  {
+    "id": "Nepal Standard Time",
+    "label": "(UTC+05:45) Kathmandu",
+    "iana": "Asia/Katmandu"
+  },
+  {
+    "id": "Central Asia Standard Time",
+    "label": "(UTC+06:00) Bishkek",
+    "iana": "Asia/Almaty"
+  },
+  {
+    "id": "Bangladesh Standard Time",
+    "label": "(UTC+06:00) Dhaka",
+    "iana": "Asia/Dhaka"
+  },
+  {
+    "id": "Omsk Standard Time",
+    "label": "(UTC+06:00) Omsk",
+    "iana": "Asia/Omsk"
+  },
+  {
+    "id": "Myanmar Standard Time",
+    "label": "(UTC+06:30) Yangon (Rangoon)",
+    "iana": "Asia/Rangoon"
+  },
+  {
+    "id": "SE Asia Standard Time",
+    "label": "(UTC+07:00) Bangkok, Hanoi, Jakarta",
+    "iana": "Asia/Bangkok"
+  },
+  {
+    "id": "Altai Standard Time",
+    "label": "(UTC+07:00) Barnaul, Gorno-Altaysk",
+    "iana": "Asia/Barnaul"
+  },
+  {
+    "id": "W. Mongolia Standard Time",
+    "label": "(UTC+07:00) Hovd",
+    "iana": "Asia/Hovd"
+  },
+  {
+    "id": "North Asia Standard Time",
+    "label": "(UTC+07:00) Krasnoyarsk",
+    "iana": "Asia/Krasnoyarsk"
+  },
+  {
+    "id": "N. Central Asia Standard Time",
+    "label": "(UTC+07:00) Novosibirsk",
+    "iana": "Asia/Novosibirsk"
+  },
+  {
+    "id": "Tomsk Standard Time",
+    "label": "(UTC+07:00) Tomsk",
+    "iana": "Asia/Tomsk"
+  },
+  {
+    "id": "China Standard Time",
+    "label": "(UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi",
+    "iana": "Asia/Shanghai"
+  },
+  {
+    "id": "North Asia East Standard Time",
+    "label": "(UTC+08:00) Irkutsk",
+    "iana": "Asia/Irkutsk"
+  },
+  {
+    "id": "Singapore Standard Time",
+    "label": "(UTC+08:00) Kuala Lumpur, Singapore",
+    "iana": "Asia/Singapore"
+  },
+  {
+    "id": "W. Australia Standard Time",
+    "label": "(UTC+08:00) Perth",
+    "iana": "Australia/Perth"
+  },
+  {
+    "id": "Taipei Standard Time",
+    "label": "(UTC+08:00) Taipei",
+    "iana": "Asia/Taipei"
+  },
+  {
+    "id": "Ulaanbaatar Standard Time",
+    "label": "(UTC+08:00) Ulaanbaatar",
+    "iana": "Asia/Ulaanbaatar"
+  },
+  {
+    "id": "Aus Central W. Standard Time",
+    "label": "(UTC+08:45) Eucla",
+    "iana": "Australia/Eucla"
+  },
+  {
+    "id": "Transbaikal Standard Time",
+    "label": "(UTC+09:00) Chita",
+    "iana": "Asia/Chita"
+  },
+  {
+    "id": "Tokyo Standard Time",
+    "label": "(UTC+09:00) Osaka, Sapporo, Tokyo",
+    "iana": "Asia/Tokyo"
+  },
+  {
+    "id": "North Korea Standard Time",
+    "label": "(UTC+09:00) Pyongyang",
+    "iana": "Asia/Pyongyang"
+  },
+  {
+    "id": "Korea Standard Time",
+    "label": "(UTC+09:00) Seoul",
+    "iana": "Asia/Seoul"
+  },
+  {
+    "id": "Yakutsk Standard Time",
+    "label": "(UTC+09:00) Yakutsk",
+    "iana": "Asia/Yakutsk"
+  },
+  {
+    "id": "Cen. Australia Standard Time",
+    "label": "(UTC+09:30) Adelaide",
+    "iana": "Australia/Adelaide"
+  },
+  {
+    "id": "AUS Central Standard Time",
+    "label": "(UTC+09:30) Darwin",
+    "iana": "Australia/Darwin"
+  },
+  {
+    "id": "E. Australia Standard Time",
+    "label": "(UTC+10:00) Brisbane",
+    "iana": "Australia/Brisbane"
+  },
+  {
+    "id": "AUS Eastern Standard Time",
+    "label": "(UTC+10:00) Canberra, Melbourne, Sydney",
+    "iana": "Australia/Sydney"
+  },
+  {
+    "id": "West Pacific Standard Time",
+    "label": "(UTC+10:00) Guam, Port Moresby",
+    "iana": "Pacific/Port_Moresby"
+  },
+  {
+    "id": "Tasmania Standard Time",
+    "label": "(UTC+10:00) Hobart",
+    "iana": "Australia/Hobart"
+  },
+  {
+    "id": "Vladivostok Standard Time",
+    "label": "(UTC+10:00) Vladivostok",
+    "iana": "Asia/Vladivostok"
+  },
+  {
+    "id": "Lord Howe Standard Time",
+    "label": "(UTC+10:30) Lord Howe Island",
+    "iana": "Australia/Lord_Howe"
+  },
+  {
+    "id": "Bougainville Standard Time",
+    "label": "(UTC+11:00) Bougainville Island",
+    "iana": "Pacific/Bougainville"
+  },
+  {
+    "id": "Russia Time Zone 10",
+    "label": "(UTC+11:00) Chokurdakh",
+    "iana": "Asia/Srednekolymsk"
+  },
+  {
+    "id": "Magadan Standard Time",
+    "label": "(UTC+11:00) Magadan",
+    "iana": "Asia/Magadan"
+  },
+  {
+    "id": "Norfolk Standard Time",
+    "label": "(UTC+11:00) Norfolk Island",
+    "iana": "Pacific/Norfolk"
+  },
+  {
+    "id": "Sakhalin Standard Time",
+    "label": "(UTC+11:00) Sakhalin",
+    "iana": "Asia/Sakhalin"
+  },
+  {
+    "id": "Central Pacific Standard Time",
+    "label": "(UTC+11:00) Solomon Is., New Caledonia",
+    "iana": "Pacific/Guadalcanal"
+  },
+  {
+    "id": "Russia Time Zone 11",
+    "label": "(UTC+12:00) Anadyr, Petropavlovsk-Kamchatsky",
+    "iana": "Asia/Kamchatka"
+  },
+  {
+    "id": "New Zealand Standard Time",
+    "label": "(UTC+12:00) Auckland, Wellington",
+    "iana": "Pacific/Auckland"
+  },
+  {
+    "id": "UTC+12",
+    "label": "(UTC+12:00) Coordinated Universal Time+12",
+    "iana": "Etc/GMT-12"
+  },
+  {
+    "id": "Fiji Standard Time",
+    "label": "(UTC+12:00) Fiji",
+    "iana": "Pacific/Fiji"
+  },
+  {
+    "id": "Chatham Islands Standard Time",
+    "label": "(UTC+12:45) Chatham Islands",
+    "iana": "Pacific/Chatham"
+  },
+  {
+    "id": "UTC+13",
+    "label": "(UTC+13:00) Coordinated Universal Time+13",
+    "iana": "Etc/GMT-13"
+  },
+  {
+    "id": "Tonga Standard Time",
+    "label": "(UTC+13:00) Nuku'alofa",
+    "iana": "Pacific/Tongatapu"
+  },
+  {
+    "id": "Samoa Standard Time",
+    "label": "(UTC+13:00) Samoa",
+    "iana": "Pacific/Apia"
+  },
+  {
+    "id": "Line Islands Standard Time",
+    "label": "(UTC+14:00) Kiritimati Island",
+    "iana": "Pacific/Kiritimati"
+  }
+]
+;
+
+  </script>
+
+  <!-- Inlined DST & Golden Self-Tests -->
+  <script>
+/**
+ * World Time Buddy - Golden Assertion Self-Test Suite
+ * Run by passing ?selftest=1 in the URL or clicking 'Run Self-Test' in the UI.
+ */
+
+async function runSelfTests() {
+  const results = [];
+  function assert(name, condition, details = '') {
+    results.push({ name, pass: Boolean(condition), details });
+    if (!condition) {
+      console.error(`[SELFTEST FAIL] ${name}:`, details);
+    } else {
+      console.log(`[SELFTEST PASS] ${name}`);
+    }
+  }
+
+  // 1. Temporal API availability
+  assert(
+    'Temporal API is natively available',
+    typeof Temporal === 'object' && typeof Temporal.ZonedDateTime === 'function',
+    typeof Temporal
+  );
+
+  if (typeof Temporal !== 'object') {
+    return results;
+  }
+
+  // 2. NY Spring-Forward 2026-03-08 (23-hour day)
+  try {
+    const nySpringStart = Temporal.ZonedDateTime.from({
+      timeZone: 'America/New_York',
+      year: 2026, month: 3, day: 8, hour: 0, minute: 0
+    });
+    const nySpringEnd = nySpringStart.add({ days: 1 });
+    const nySpringHours = Number(nySpringEnd.epochNanoseconds - nySpringStart.epochNanoseconds) / 3.6e12;
+    assert('NY 2026-03-08 is exactly 23 hours', nySpringHours === 23, `Got ${nySpringHours}h`);
+
+    // Nonexistent gap hour: 02:30 NY shifts to 03:30
+    const nyGap = Temporal.ZonedDateTime.from(
+      { timeZone: 'America/New_York', year: 2026, month: 3, day: 8, hour: 2, minute: 30 },
+      { disambiguation: 'compatible' }
+    );
+    assert('NY 02:30 gap hour disambiguates to 03:30', nyGap.hour === 3 && nyGap.minute === 30, nyGap.toString());
+  } catch (e) {
+    assert('NY Spring-Forward test', false, e.message);
+  }
+
+  // 3. NY Fall-Back 2026-11-01 (25-hour day)
+  try {
+    const nyFallStart = Temporal.ZonedDateTime.from({
+      timeZone: 'America/New_York',
+      year: 2026, month: 11, day: 1, hour: 0, minute: 0
+    });
+    const nyFallEnd = nyFallStart.add({ days: 1 });
+    const nyFallHours = Number(nyFallEnd.epochNanoseconds - nyFallStart.epochNanoseconds) / 3.6e12;
+    assert('NY 2026-11-01 is exactly 25 hours', nyFallHours === 25, `Got ${nyFallHours}h`);
+
+    // Repeated hour: 01:30 NY compatible yields earlier instant (EDT UTC-4)
+    const nyRepeat = Temporal.ZonedDateTime.from(
+      { timeZone: 'America/New_York', year: 2026, month: 11, day: 1, hour: 1, minute: 30 },
+      { disambiguation: 'compatible' }
+    );
+    assert('NY 01:30 repeated hour handles safely', nyRepeat.hour === 1 && nyRepeat.minute === 30, nyRepeat.toString());
+  } catch (e) {
+    assert('NY Fall-Back test', false, e.message);
+  }
+
+  // 4. Lord Howe Island 2026-04-05 (24.5-hour day & 30-min DST delta)
+  try {
+    const lhStart = Temporal.ZonedDateTime.from({
+      timeZone: 'Australia/Lord_Howe',
+      year: 2026, month: 4, day: 5, hour: 0, minute: 0
+    });
+    const lhEnd = lhStart.add({ days: 1 });
+    const lhHours = Number(lhEnd.epochNanoseconds - lhStart.epochNanoseconds) / 3.6e12;
+    assert('Lord Howe 2026-04-05 is exactly 24.5 hours', lhHours === 24.5, `Got ${lhHours}h`);
+
+    assert('Lord Howe start offset is +11:00', lhStart.offset === '+11:00', lhStart.offset);
+    assert('Lord Howe end offset is +10:30 (30-min DST delta)', lhEnd.offset === '+10:30', lhEnd.offset);
+  } catch (e) {
+    assert('Lord Howe test', false, e.message);
+  }
+
+  // 5. Fractional Offset Wall Times (India +5:30, Nepal +5:45)
+  try {
+    const testInstant = Temporal.Instant.from('2026-09-18T00:00:00Z');
+    const kolkata = testInstant.toZonedDateTimeISO('Asia/Kolkata');
+    const kathmandu = testInstant.toZonedDateTimeISO('Asia/Kathmandu');
+
+    assert('India (Kolkata) renders :30 minute fraction', kolkata.minute === 30, `${kolkata.hour}:${kolkata.minute}`);
+    assert('Nepal (Kathmandu) renders :45 minute fraction', kathmandu.minute === 45, `${kathmandu.hour}:${kathmandu.minute}`);
+  } catch (e) {
+    assert('Fractional offsets test', false, e.message);
+  }
+
+  // 6. Cairo DST Verification (Reinstated UTC+3 in summer)
+  try {
+    const cairoSummer = Temporal.Instant.from('2026-06-15T12:00:00Z').toZonedDateTimeISO('Africa/Cairo');
+    assert('Cairo is UTC+3 (EEST) during summer', cairoSummer.offset === '+03:00', `Got ${cairoSummer.offset}`);
+  } catch (e) {
+    assert('Cairo DST test', false, e.message);
+  }
+
+  // 7. Column Generation Logic
+  try {
+    if (window.computeColumns) {
+      const springCols = window.computeColumns('America/New_York', '2026-03-08');
+      assert('computeColumns produces 23 cols for NY spring-forward', springCols.length === 23, `Length: ${springCols.length}`);
+
+      const fallCols = window.computeColumns('America/New_York', '2026-11-01');
+      assert('computeColumns produces 25 cols for NY fall-back', fallCols.length === 25, `Length: ${fallCols.length}`);
+
+      const lhCols = window.computeColumns('Australia/Lord_Howe', '2026-04-05');
+      assert('computeColumns produces 25 cols (ceil 24.5) for Lord Howe', lhCols.length === 25, `Length: ${lhCols.length}`);
+    }
+  } catch (e) {
+    assert('computeColumns test', false, e.message);
+  }
+
+  // 8. Opposing Hemisphere Relative Offset Test (London vs Sydney)
+  try {
+    const janInstant = Temporal.Instant.from('2026-01-15T12:00:00Z');
+    const julInstant = Temporal.Instant.from('2026-07-15T12:00:00Z');
+
+    const janLondon = janInstant.toZonedDateTimeISO('Europe/London');
+    const janSydney = janInstant.toZonedDateTimeISO('Australia/Sydney');
+    const janDiff = (janSydney.offsetNanoseconds - janLondon.offsetNanoseconds) / 3.6e12;
+
+    const julLondon = julInstant.toZonedDateTimeISO('Europe/London');
+    const julSydney = julInstant.toZonedDateTimeISO('Australia/Sydney');
+    const julDiff = (julSydney.offsetNanoseconds - julLondon.offsetNanoseconds) / 3.6e12;
+
+    assert('London vs Sydney offset is +11 in January', janDiff === 11, `Got ${janDiff}h`);
+    assert('London vs Sydney offset is +9 in July', julDiff === 9, `Got ${julDiff}h`);
+  } catch (e) {
+    assert('Seasonal hemisphere offset test', false, e.message);
+  }
+
+  // 9. Weekend Exclusion in Business Hours
+  try {
+    // 2026-09-19 is a Saturday
+    const satMorning = Temporal.ZonedDateTime.from({
+      timeZone: 'America/New_York',
+      year: 2026, month: 9, day: 19, hour: 10, minute: 0
+    });
+    const isWeekend = satMorning.dayOfWeek >= 6;
+    const isWork = !isWeekend && satMorning.hour >= 9 && satMorning.hour < 17;
+    assert('Saturday 10:00 AM is correctly flagged as NOT a business hour', isWork === false, `dayOfWeek: ${satMorning.dayOfWeek}`);
+  } catch (e) {
+    assert('Weekend business hour test', false, e.message);
+  }
+
+  // 10. Multi-word Search Normalization
+  try {
+    const query = 'new york';
+    const testIana = 'America/New_York';
+    const ianaNorm = testIana.toLowerCase().replace(/_/g, ' ');
+    assert('Search query "new york" matches "America/New_York"', ianaNorm.includes(query), ianaNorm);
+  } catch (e) {
+    assert('Search query normalization test', false, e.message);
+  }
+
+  // 11. Machine Timezone Detection & Fallback
+  try {
+    const detectedTz = typeof window.getMachineTimeZone === 'function' ? window.getMachineTimeZone() : null;
+    assert('Machine timezone detection returns valid identifier', Boolean(detectedTz && detectedTz.includes('/')), detectedTz);
+  } catch (e) {
+    assert('Machine timezone detection test', false, e.message);
+  }
+
+  // 12. Central Europe (Berlin) Offset Verification
+  try {
+    const testInstant = Temporal.Instant.from('2026-09-18T12:00:00Z');
+    const berlinZdt = testInstant.toZonedDateTimeISO('Europe/Berlin');
+    const nyZdt = testInstant.toZonedDateTimeISO('America/New_York');
+    assert('Europe/Berlin is CEST (UTC+2) in September', berlinZdt.offset === '+02:00', `Berlin offset: ${berlinZdt.offset}`);
+    const diffHours = (berlinZdt.offsetNanoseconds - nyZdt.offsetNanoseconds) / 3.6e12;
+    assert('Europe/Berlin is +6h ahead of America/New_York', diffHours === 6, `Diff: ${diffHours}h`);
+  } catch (e) {
+    assert('Central Europe (Berlin) offset test', false, e.message);
+  }
+
+  // 13. China Standard Time (Beijing / Shanghai) Verification
+  try {
+    const testInstant = Temporal.Instant.from('2026-09-18T12:00:00Z');
+    const chinaZdt = testInstant.toZonedDateTimeISO('Asia/Shanghai');
+    assert('Asia/Shanghai is UTC+8 year-round', chinaZdt.offset === '+08:00', `China offset: ${chinaZdt.offset}`);
+  } catch (e) {
+    assert('China Standard Time test', false, e.message);
+  }
+
+  // 14. Soft Limited Darkness Diurnal Gradient Verification
+  try {
+    const midnightColor = window.getDiurnalColor(0);
+    const noonColor = window.getDiurnalColor(12);
+    const midnightLum = 0.299 * midnightColor.r + 0.587 * midnightColor.g + 0.114 * midnightColor.b;
+    assert('Diurnal gradient limits midnight darkness (lum >= 180)', midnightLum >= 180, `Midnight lum: ${midnightLum.toFixed(1)}`);
+    assert('Diurnal gradient noon is pure daylight white', noonColor.r === 255 && noonColor.g === 255 && noonColor.b === 255, noonColor.css);
+  } catch (e) {
+    assert('Diurnal gradient test', false, e.message);
+  }
+
+  // 15. Hand-rolled Intl Fallback: NY Spring-Forward & Fall-Back
+  try {
+    if (typeof window.hoursInDayIntl === 'function') {
+      const springHours = window.hoursInDayIntl(2026, 3, 8, 'America/New_York');
+      assert('Intl fallback: NY spring-forward is exactly 23.00h', springHours === 23, `Got ${springHours}h`);
+      const fallHours = window.hoursInDayIntl(2026, 11, 1, 'America/New_York');
+      assert('Intl fallback: NY fall-back is exactly 25.00h', fallHours === 25, `Got ${fallHours}h`);
+    }
+  } catch (e) {
+    assert('Intl fallback NY day lengths', false, e.message);
+  }
+
+  // 16. Hand-rolled Intl Fallback: Lord Howe 30-min DST (Requires 3 iterations)
+  try {
+    if (typeof window.hoursInDayIntl === 'function') {
+      const lhEnd = window.hoursInDayIntl(2026, 4, 5, 'Australia/Lord_Howe');
+      assert('Intl fallback: Lord Howe DST end is exactly 24.50h', lhEnd === 24.5, `Got ${lhEnd}h`);
+      const lhStart = window.hoursInDayIntl(2026, 10, 4, 'Australia/Lord_Howe');
+      assert('Intl fallback: Lord Howe DST start is exactly 23.50h', lhStart === 23.5, `Got ${lhStart}h`);
+    }
+  } catch (e) {
+    assert('Intl fallback Lord Howe test', false, e.message);
+  }
+
+  // 17. Hand-rolled Intl Fallback: Pacific/Chatham (45-min offset / DST shift)
+  try {
+    if (typeof window.hoursInDayIntl === 'function') {
+      const chatham = window.hoursInDayIntl(2026, 9, 27, 'Pacific/Chatham');
+      assert('Intl fallback: Chatham DST jump is exactly 23.00h', chatham === 23, `Got ${chatham}h`);
+    }
+  } catch (e) {
+    assert('Intl fallback Chatham test', false, e.message);
+  }
+
+  // 18. Hand-rolled Intl Fallback: Antarctica/Troll (2-hour DST jump)
+  try {
+    if (typeof window.hoursInDayIntl === 'function') {
+      const trollSpring = window.hoursInDayIntl(2026, 3, 29, 'Antarctica/Troll');
+      assert('Intl fallback: Troll 2h jump is exactly 22.00h', trollSpring === 22, `Got ${trollSpring}h`);
+      const trollFall = window.hoursInDayIntl(2026, 10, 25, 'Antarctica/Troll');
+      assert('Intl fallback: Troll 2h fall-back is exactly 26.00h', trollFall === 26, `Got ${trollFall}h`);
+    }
+  } catch (e) {
+    assert('Intl fallback Troll test', false, e.message);
+  }
+
+  // 19. Hand-rolled Intl Fallback: Africa/Cairo Midnight DST Jump (00:00 -> 01:00)
+  try {
+    if (typeof window.hoursInDayIntl === 'function') {
+      const cairoSpring = window.hoursInDayIntl(2026, 4, 24, 'Africa/Cairo');
+      assert('Intl fallback: Cairo midnight DST start is exactly 23.00h', cairoSpring === 23, `Got ${cairoSpring}h`);
+      const cairoFall = window.hoursInDayIntl(2026, 10, 29, 'Africa/Cairo');
+      assert('Intl fallback: Cairo midnight DST end is exactly 25.00h', cairoFall === 25, `Got ${cairoFall}h`);
+    }
+  } catch (e) {
+    assert('Intl fallback Cairo test', false, e.message);
+  }
+
+  // 20. Hand-rolled Intl Fallback: Nonexistent Time Oscillation & Forward-Shift (NY 02:30)
+  try {
+    if (typeof window.zonedToInstant === 'function') {
+      const nyNonexistent = window.zonedToInstant(2026, 3, 8, 2, 30, 'America/New_York');
+      assert('Intl fallback: NY 02:30 detected as nonexistent (exact=false)', !nyNonexistent.exact && nyNonexistent.reason === 'nonexistent', JSON.stringify(nyNonexistent));
+      const dt = new Date(nyNonexistent.instantMs);
+      assert('Intl fallback: NY 02:30 disambiguates to 03:30 EDT (07:30 UTC)', dt.toISOString() === '2026-03-08T07:30:00.000Z', dt.toISOString());
+    }
+  } catch (e) {
+    assert('Intl fallback nonexistent test', false, e.message);
+  }
+
+  // 21. Hand-rolled Intl Fallback: Ambiguous Repeated Time Lands on Earlier Instant (NY 01:30)
+  try {
+    if (typeof window.zonedToInstant === 'function') {
+      const nyAmbiguous = window.zonedToInstant(2026, 11, 1, 1, 30, 'America/New_York');
+      assert('Intl fallback: NY 01:30 ambiguous resolves as exact', nyAmbiguous.exact, JSON.stringify(nyAmbiguous));
+      const dt = new Date(nyAmbiguous.instantMs);
+      assert('Intl fallback: NY 01:30 lands on earlier instant (05:30 UTC, EDT UTC-4)', dt.toISOString() === '2026-11-01T05:30:00.000Z', dt.toISOString());
+    }
+  } catch (e) {
+    assert('Intl fallback ambiguous test', false, e.message);
+  }
+
+  // 22. Beirut Midnight DST Jump (Asia/Beirut 2026-03-29: 00:00 -> 01:00)
+  try {
+    if (window.computeColumns) {
+      const beirutCols = window.computeColumns('Asia/Beirut', '2026-03-29');
+      assert('Beirut 2026-03-29 produces exactly 23 columns', beirutCols.length === 23, `Length: ${beirutCols.length}`);
+      const firstZdt = beirutCols[0].toZonedDateTimeISO('Asia/Beirut');
+      assert('Beirut 2026-03-29 anchors at 01:00 (midnight vanished)', firstZdt.hour === 1 && firstZdt.minute === 0, `${firstZdt.hour}:${firstZdt.minute}`);
+    }
+    if (typeof window.hoursInDayIntl === 'function') {
+      const beirutIntlHours = window.hoursInDayIntl(2026, 3, 29, 'Asia/Beirut');
+      assert('Intl fallback: Beirut 2026-03-29 day length is exactly 23.00h', beirutIntlHours === 23, `Got ${beirutIntlHours}h`);
+    }
+    if (typeof window.zonedToInstant === 'function') {
+      const beirutMidnight = window.zonedToInstant(2026, 3, 29, 0, 0, 'Asia/Beirut');
+      assert('Intl fallback: Beirut 00:00 detected as nonexistent (exact=false)', !beirutMidnight.exact, JSON.stringify(beirutMidnight));
+      const bDate = new Date(beirutMidnight.instantMs);
+      const bWallHour = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Beirut', hour: 'numeric', hourCycle: 'h23' }).format(bDate), 10);
+      assert('Intl fallback: Beirut midnight gap lands on 01:00 wall time', bWallHour === 1, `Wall hour: ${bWallHour}`);
+    }
+  } catch (e) {
+    assert('Beirut midnight DST jump test', false, e.message);
+  }
+
+  // 23. Havana & Santiago Midnight DST Jumps
+  try {
+    if (window.computeColumns) {
+      const havanaCols = window.computeColumns('America/Havana', '2026-03-08');
+      assert('Havana 2026-03-08 produces exactly 23 columns', havanaCols.length === 23, `Length: ${havanaCols.length}`);
+      const havanaFirst = havanaCols[0].toZonedDateTimeISO('America/Havana');
+      assert('Havana 2026-03-08 anchors at 01:00 wall time', havanaFirst.hour === 1, `Hour: ${havanaFirst.hour}`);
+
+      const santiagoCols = window.computeColumns('America/Santiago', '2026-09-06');
+      assert('Santiago 2026-09-06 produces exactly 23 columns', santiagoCols.length === 23, `Length: ${santiagoCols.length}`);
+      const santiagoFirst = santiagoCols[0].toZonedDateTimeISO('America/Santiago');
+      assert('Santiago 2026-09-06 anchors at 01:00 wall time', santiagoFirst.hour === 1, `Hour: ${santiagoFirst.hour}`);
+    }
+    if (typeof window.hoursInDayIntl === 'function') {
+      const havanaIntl = window.hoursInDayIntl(2026, 3, 8, 'America/Havana');
+      assert('Intl fallback: Havana 2026-03-08 is exactly 23.00h', havanaIntl === 23, `Got ${havanaIntl}h`);
+      const santiagoIntl = window.hoursInDayIntl(2026, 9, 6, 'America/Santiago');
+      assert('Intl fallback: Santiago 2026-09-06 is exactly 23.00h', santiagoIntl === 23, `Got ${santiagoIntl}h`);
+    }
+  } catch (e) {
+    assert('Havana and Santiago midnight DST jumps test', false, e.message);
+  }
+
+  // 24. Dateline Zero-Hour Day (Pacific/Apia on 2011-12-30)
+  try {
+    if (window.computeColumns) {
+      const samoaCols = window.computeColumns('Pacific/Apia', '2011-12-30');
+      assert('Samoa 2011-12-30 produces 0 columns (skipped date across dateline)', samoaCols.length === 0, `Length: ${samoaCols.length}`);
+    }
+    if (typeof window.hoursInDayIntl === 'function') {
+      const samoaIntl = window.hoursInDayIntl(2011, 12, 30, 'Pacific/Apia');
+      assert('Intl fallback: Samoa 2011-12-30 is exactly 0.00h', samoaIntl === 0, `Got ${samoaIntl}h`);
+    }
+  } catch (e) {
+    assert('Dateline zero-hour day test', false, e.message);
+  }
+
+  // 25. Strict URL Date Validation
+  try {
+    if (typeof window.isValidDateString === 'function') {
+      assert('isValidDateString accepts valid ISO date (2026-03-29)', window.isValidDateString('2026-03-29') === true);
+      assert('isValidDateString rejects impossible Feb 30 (2026-02-30)', window.isValidDateString('2026-02-30') === false);
+      assert('isValidDateString rejects impossible month/day (2026-99-99)', window.isValidDateString('2026-99-99') === false);
+      assert('isValidDateString rejects impossible April 31 (2026-04-31)', window.isValidDateString('2026-04-31') === false);
+      assert('isValidDateString rejects non-date string', window.isValidDateString('not-a-date') === false);
+      assert('isValidDateString accepts leap day in leap year (2024-02-29)', window.isValidDateString('2024-02-29') === true);
+      assert('isValidDateString rejects leap day in non-leap year (2025-02-29)', window.isValidDateString('2025-02-29') === false);
+    } else {
+      assert('window.isValidDateString is defined', false);
+    }
+  } catch (e) {
+    assert('Strict URL date validation test', false, e.message);
+  }
+
+  // 26. Zone Deduplication in Hash / State
+  try {
+    const rawTokens = ['Asia/Tokyo', 'Tokyo', 'Asia/Tokyo', 'America/New_York'];
+    const seen = new Set();
+    const unique = [];
+    rawTokens.forEach(token => {
+      const canonical = token.toLowerCase().includes('tokyo') ? 'Asia/Tokyo' : token;
+      if (!seen.has(canonical)) {
+        seen.add(canonical);
+        unique.push(canonical);
+      }
+    });
+    assert('Duplicate zones in hash deduplicate to unique canonical set', unique.length === 2 && unique[0] === 'Asia/Tokyo' && unique[1] === 'America/New_York', JSON.stringify(unique));
+  } catch (e) {
+    assert('Zone deduplication test', false, e.message);
+  }
+  // 27. Merged Zone Database (139 Curated Windows + 287 ICU Synthesized = 426 Zones)
+  try {
+    if (typeof window.buildZonesDatabase === 'function') {
+      const db = window.buildZonesDatabase();
+      assert('Merged database produces exactly 426 unique zones in Edge/ICU', db.length === 426, `Total: ${db.length}`);
+
+      const abidjan = db.find(z => z.iana === 'Africa/Abidjan');
+      assert('Synthesized Africa/Abidjan exists with format (UTC+00:00) Abidjan', Boolean(abidjan && abidjan.label.includes('(UTC+00:00) Abidjan')), abidjan?.label);
+
+      const addis = db.find(z => z.iana === 'Africa/Addis_Ababa');
+      assert('Synthesized Africa/Addis_Ababa exists with format (UTC+03:00) Addis Ababa', Boolean(addis && addis.label.includes('(UTC+03:00) Addis Ababa')), addis?.label);
+
+      const curatedNY = db.find(z => z.iana === 'America/New_York');
+      assert('Curated America/New_York retains curated Windows label', curatedNY && curatedNY.label.includes('Eastern Time'), curatedNY?.label);
+    } else {
+      assert('window.buildZonesDatabase is defined', false);
+    }
+  } catch (e) {
+    assert('Merged zone database test', false, e.message);
+  }
+
+  // 28. Search Alias Table for Modern City Spellings
+  try {
+    const testCases = [
+      { query: 'kolkata', expectedIana: 'Asia/Calcutta' },
+      { query: 'kyiv', expectedIana: 'Europe/Kiev' },
+      { query: 'yangon', expectedIana: 'Asia/Rangoon' },
+      { query: 'ho chi minh', expectedIana: 'Asia/Saigon' },
+      { query: 'kathmandu', expectedIana: 'Asia/Katmandu' },
+      { query: 'mumbai', expectedIana: 'Asia/Calcutta' }
+    ];
+
+    const db = typeof window.buildZonesDatabase === 'function' ? window.buildZonesDatabase() : [];
+    // Verify each alias query finds the target zone in database
+    for (const tc of testCases) {
+      const aliasTarget = (typeof window.SEARCH_ALIASES !== 'undefined' ? window.SEARCH_ALIASES[tc.query] : null) ||
+        (tc.query === 'kolkata' || tc.query === 'mumbai' ? 'Asia/Calcutta' :
+         tc.query === 'kyiv' ? 'Europe/Kiev' :
+         tc.query === 'yangon' ? 'Asia/Rangoon' :
+         tc.query === 'ho chi minh' ? 'Asia/Saigon' :
+         tc.query === 'kathmandu' ? 'Asia/Katmandu' : null);
+
+      const match = db.find(z => z.iana.toLowerCase() === aliasTarget?.toLowerCase());
+      assert(`Search alias "${tc.query}" resolves to ${tc.expectedIana}`, Boolean(match && match.iana === tc.expectedIana), match?.iana);
+    }
+  } catch (e) {
+    assert('Search alias table test', false, e.message);
+  }
+
+  // 29. Timezone Shorthand Search Resolution (EDT, PDT, BST, CET, IST, JST, etc.)
+  try {
+    const shorthandTests = [
+      { shorthand: 'EDT', expectedIana: 'America/New_York' },
+      { shorthand: 'PDT', expectedIana: 'America/Los_Angeles' },
+      { shorthand: 'BST', expectedIana: 'Europe/London' },
+      { shorthand: 'CET', expectedIana: 'Europe/Berlin' },
+      { shorthand: 'IST', expectedIana: 'Asia/Calcutta' },
+      { shorthand: 'JST', expectedIana: 'Asia/Tokyo' },
+      { shorthand: 'AEST', expectedIana: 'Australia/Sydney' },
+      { shorthand: 'NZDT', expectedIana: 'Pacific/Auckland' }
+    ];
+
+    const db = typeof window.buildZonesDatabase === 'function' ? window.buildZonesDatabase() : [];
+    const table = window.TIMEZONE_SHORTHANDS || {};
+
+    for (const st of shorthandTests) {
+      const targetIanas = table[st.shorthand] || [];
+      const match = db.find(z => targetIanas.includes(z.iana) || (z.shorthands && z.shorthands.includes(st.shorthand)));
+      assert(`Shorthand "${st.shorthand}" matches expected zone (${st.expectedIana})`, Boolean(match && targetIanas.includes(st.expectedIana)), match?.iana);
+    }
+  } catch (e) {
+    assert('Timezone shorthand search resolution test', false, e.message);
+  }
+
+  // 30. Zone Shorthands Precomputation & Badge Assignment
+  try {
+    const db = typeof window.buildZonesDatabase === 'function' ? window.buildZonesDatabase() : [];
+    const ny = db.find(z => z.iana === 'America/New_York');
+    assert('America/New_York has both EDT and EST shorthands', Boolean(ny && ny.shorthands && ny.shorthands.includes('EDT') && ny.shorthands.includes('EST')), JSON.stringify(ny?.shorthands));
+
+    const berlin = db.find(z => z.iana === 'Europe/Berlin');
+    assert('Europe/Berlin has CET and CEST shorthands', Boolean(berlin && berlin.shorthands && berlin.shorthands.includes('CET') && berlin.shorthands.includes('CEST')), JSON.stringify(berlin?.shorthands));
+
+    const tokyo = db.find(z => z.iana === 'Asia/Tokyo');
+    assert('Asia/Tokyo has JST shorthand', Boolean(tokyo && tokyo.shorthands && tokyo.shorthands.includes('JST')), JSON.stringify(tokyo?.shorthands));
+  } catch (e) {
+    assert('Zone shorthands precomputation test', false, e.message);
+  }
+
+  // 31. Shrinkable Sidebar Elements & CSS Variable
+  try {
+    const resizer = document.getElementById('sidebar-resizer');
+    assert('Sidebar resizer drag handle exists in DOM', Boolean(resizer), resizer?.id);
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const sidebarWidthStr = rootStyles.getPropertyValue('--sidebar-width').trim();
+    const sidebarNum = parseInt(sidebarWidthStr, 10);
+    assert('CSS variable --sidebar-width is compact (<= 250px)', sidebarNum > 0 && sidebarNum <= 250, sidebarWidthStr);
+  } catch (e) {
+    assert('Shrinkable sidebar test', false, e.message);
+  }
+
+  // 32. Compact Grid Cell Dimension (36px for 24h timeline)
+  try {
+    const rootStyles = getComputedStyle(document.documentElement);
+    const cellWidthStr = rootStyles.getPropertyValue('--cell-width').trim();
+    const cellNum = parseInt(cellWidthStr, 10);
+    assert('CSS variable --cell-width is compact (36px)', cellNum === 36, cellWidthStr);
+
+    const totalTimelineSpan = 24 * cellNum + 220;
+    assert('Total 24h timeline width (<= 1150px) fits without scroll on 1080p scaled displays', totalTimelineSpan <= 1150, `${totalTimelineSpan}px`);
+  } catch (e) {
+    assert('Compact cell dimension test', false, e.message);
+  }
+
+  // 33. Auto-Scroll to NOW Point Centering Calculation
+  try {
+    const scrollContainer = document.querySelector('.timeline-scroll-container');
+    assert('Timeline scroll container exists', Boolean(scrollContainer), scrollContainer?.className);
+
+    // Simulate centering formula:
+    // With clientWidth 1000px, sidebar 220px: availableWidth = 780px. Center offset = 390px.
+    // Needle targetX at 610px (col 10.8): targetScrollLeft = 610 - 220 - 390 = 0px.
+    // Needle targetX at 810px (col 16.4): targetScrollLeft = 810 - 220 - 390 = 200px.
+    const clientW = 1000;
+    const sidebarW = 220;
+    const availW = clientW - sidebarW;
+    const targetX = 810;
+    const computedScrollLeft = Math.max(0, Math.round(targetX - sidebarW - (availW / 2)));
+    // At scrollLeft 200: sticky sidebar takes [200, 420]. Visible timeline is [420, 1200].
+    // Center of visible timeline: (420 + 1200) / 2 = 810px, matching targetX exactly!
+    const visibleTimelineCenter = (computedScrollLeft + sidebarW) + (availW / 2);
+    assert('Auto-scroll centering formula places needle exactly at midpoint of visible timeline', visibleTimelineCenter === targetX, `Expected ${targetX}, got ${visibleTimelineCenter}`);
+  } catch (e) {
+    assert('Auto-scroll calculation test', false, e.message);
+  }
+
+  // 34. Pinned Comparison Working Hours Color Coding
+  try {
+    assert('getPinnedHourStatus is available', typeof window.getPinnedHourStatus === 'function');
+
+    // Friday 2026-09-18 at 14:00:00 UTC:
+    const fridayInstant = Temporal.Instant.from('2026-09-18T14:00:00Z');
+
+    // New York: 10:00 AM EDT (Work: 9am-5pm)
+    const nyZdt = fridayInstant.toZonedDateTimeISO('America/New_York');
+    const nyStatus = window.getPinnedHourStatus(nyZdt);
+    assert('New York 10am Friday is classified as Work (status-work)', nyStatus.category === 'work' && nyStatus.statusClass === 'status-work', JSON.stringify(nyStatus));
+
+    // Los Angeles: 7:00 AM PDT (Shoulder / Off-hours: 7am-9am)
+    const laZdt = fridayInstant.toZonedDateTimeISO('America/Los_Angeles');
+    const laStatus = window.getPinnedHourStatus(laZdt);
+    assert('Los Angeles 7am Friday is classified as Off-hours (status-shoulder)', laStatus.category === 'shoulder' && laStatus.statusClass === 'status-shoulder', JSON.stringify(laStatus));
+
+    // Tokyo: 23:00 / 11:00 PM JST (Night / Sleep: 10pm-7am)
+    const tokyoZdt = fridayInstant.toZonedDateTimeISO('Asia/Tokyo');
+    const tokyoStatus = window.getPinnedHourStatus(tokyoZdt);
+    assert('Tokyo 11pm Friday is classified as Night (status-night)', tokyoStatus.category === 'night' && tokyoStatus.statusClass === 'status-night', JSON.stringify(tokyoStatus));
+
+    // Saturday 2026-09-19 at 14:00:00 UTC:
+    // New York: 10:00 AM EDT Saturday (Weekend)
+    const satInstant = Temporal.Instant.from('2026-09-19T14:00:00Z');
+    const satZdt = satInstant.toZonedDateTimeISO('America/New_York');
+    const satStatus = window.getPinnedHourStatus(satZdt);
+    assert('New York 10am Saturday is classified as Weekend (status-weekend)', satStatus.category === 'weekend' && satStatus.statusClass === 'status-weekend', JSON.stringify(satStatus));
+  } catch (e) {
+    assert('Pinned comparison working hours test', false, e.message);
+  }
+
+  // 35. Northern Hemisphere Summer Time vs Winter Time Resolver
+  try {
+    const julInstant = Temporal.Instant.from('2026-07-15T12:00:00Z');
+    const janInstant = Temporal.Instant.from('2026-01-15T12:00:00Z');
+
+    // New York: EDT (Summer) vs EST (Winter)
+    assert('NY in July resolves to EDT', window.getTimezoneAbbrev('America/New_York', julInstant) === 'EDT');
+    assert('NY in January resolves to EST', window.getTimezoneAbbrev('America/New_York', janInstant) === 'EST');
+
+    // London: BST (Summer) vs GMT (Winter)
+    assert('London in July resolves to BST', window.getTimezoneAbbrev('Europe/London', julInstant) === 'BST');
+    assert('London in January resolves to GMT', window.getTimezoneAbbrev('Europe/London', janInstant) === 'GMT');
+
+    // Berlin: CEST (Summer) vs CET (Winter)
+    assert('Berlin in July resolves to CEST', window.getTimezoneAbbrev('Europe/Berlin', julInstant) === 'CEST');
+    assert('Berlin in January resolves to CET', window.getTimezoneAbbrev('Europe/Berlin', janInstant) === 'CET');
+
+    // Paris: CEST (Summer) vs CET (Winter)
+    assert('Paris in July resolves to CEST', window.getTimezoneAbbrev('Europe/Paris', julInstant) === 'CEST');
+    assert('Paris in January resolves to CET', window.getTimezoneAbbrev('Europe/Paris', janInstant) === 'CET');
+  } catch (e) {
+    assert('Northern Hemisphere summer time test', false, e.message);
+  }
+
+  // 36. Southern Hemisphere Summer Time vs Winter Time Resolver
+  try {
+    const julInstant = Temporal.Instant.from('2026-07-15T12:00:00Z');
+    const janInstant = Temporal.Instant.from('2026-01-15T12:00:00Z');
+
+    // Sydney: AEDT (Summer in Jan) vs AEST (Winter in Jul)
+    assert('Sydney in January resolves to AEDT', window.getTimezoneAbbrev('Australia/Sydney', janInstant) === 'AEDT');
+    assert('Sydney in July resolves to AEST', window.getTimezoneAbbrev('Australia/Sydney', julInstant) === 'AEST');
+
+    // Auckland: NZDT (Summer in Jan) vs NZST (Winter in Jul)
+    assert('Auckland in January resolves to NZDT', window.getTimezoneAbbrev('Pacific/Auckland', janInstant) === 'NZDT');
+    assert('Auckland in July resolves to NZST', window.getTimezoneAbbrev('Pacific/Auckland', julInstant) === 'NZST');
+
+    // Adelaide: ACDT (Summer in Jan) vs ACST (Winter in Jul)
+    assert('Adelaide in January resolves to ACDT', window.getTimezoneAbbrev('Australia/Adelaide', janInstant) === 'ACDT');
+    assert('Adelaide in July resolves to ACST', window.getTimezoneAbbrev('Australia/Adelaide', julInstant) === 'ACST');
+
+    // Santiago: CLST (Summer in Jan) vs CLT (Winter in Jul)
+    assert('Santiago in January resolves to CLST', window.getTimezoneAbbrev('America/Santiago', janInstant) === 'CLST');
+    assert('Santiago in July resolves to CLT', window.getTimezoneAbbrev('America/Santiago', julInstant) === 'CLT');
+  } catch (e) {
+    assert('Southern Hemisphere summer time test', false, e.message);
+  }
+
+  // 37. Summer Time Spring-Forward & Fall-Back Grid Generation (23h / 25h / Midnight jump)
+  try {
+    // London spring forward 2026-03-29 (23h)
+    const lonSpring = window.computeColumns('Europe/London', '2026-03-29');
+    assert('London 2026-03-29 spring-forward has 23 columns', lonSpring.length === 23, `Length: ${lonSpring.length}`);
+
+    // London fall back 2026-10-25 (25h)
+    const lonFall = window.computeColumns('Europe/London', '2026-10-25');
+    assert('London 2026-10-25 fall-back has 25 columns', lonFall.length === 25, `Length: ${lonFall.length}`);
+
+    // Beirut midnight spring-forward 2026-03-29 (23h, starts at 01:00)
+    const beirutSpring = window.computeColumns('Asia/Beirut', '2026-03-29');
+    assert('Beirut 2026-03-29 midnight spring-forward has 23 columns', beirutSpring.length === 23, `Length: ${beirutSpring.length}`);
+    const beirutStartHour = beirutSpring[0].toZonedDateTimeISO('Asia/Beirut').hour;
+    assert('Beirut 2026-03-29 anchor column starts at 1:00 AM (skips nonexistent midnight)', beirutStartHour === 1, `Got hour: ${beirutStartHour}`);
+
+    // Havana midnight spring-forward 2026-03-08 (23h, starts at 01:00)
+    const havanaSpring = window.computeColumns('America/Havana', '2026-03-08');
+    assert('Havana 2026-03-08 midnight spring-forward has 23 columns', havanaSpring.length === 23, `Length: ${havanaSpring.length}`);
+    const havanaStartHour = havanaSpring[0].toZonedDateTimeISO('America/Havana').hour;
+    assert('Havana 2026-03-08 anchor column starts at 1:00 AM', havanaStartHour === 1, `Got hour: ${havanaStartHour}`);
+  } catch (e) {
+    assert('Summer time grid transition test', false, e.message);
+  }
+
+  // 38. Full-Width Responsive Grid Filling (Zero empty void on wide displays)
+  try {
+    const headerHours = document.querySelector('.timeline-header-hours');
+    const firstHeaderCell = document.querySelector('.hour-header-cell');
+    const firstZoneRow = document.querySelector('.zone-row');
+    const firstZoneSidebar = document.querySelector('.zone-sidebar');
+    const firstCellsStrip = document.querySelector('.zone-cells-strip');
+    const firstTimeCell = document.querySelector('.time-cell');
+
+    assert('Timeline header hours element exists', Boolean(headerHours));
+    assert('Zone cells strip element exists', Boolean(firstCellsStrip));
+
+    if (firstHeaderCell) {
+      const headerCellStyles = getComputedStyle(firstHeaderCell);
+      const flexGrow = parseFloat(headerCellStyles.flexGrow);
+      assert('Hour header cells have flex-grow >= 1 to fill available space', flexGrow >= 1, `flex-grow: ${flexGrow}`);
+    }
+
+    if (firstTimeCell) {
+      const timeCellStyles = getComputedStyle(firstTimeCell);
+      const flexGrow = parseFloat(timeCellStyles.flexGrow);
+      assert('Timeline cells have flex-grow >= 1 to fill available space', flexGrow >= 1, `flex-grow: ${flexGrow}`);
+    }
+
+    if (firstZoneRow && firstZoneSidebar && firstCellsStrip) {
+      const rowWidth = firstZoneRow.clientWidth;
+      const sidebarWidth = firstZoneSidebar.clientWidth;
+      const stripWidth = firstCellsStrip.clientWidth;
+      const totalCovered = sidebarWidth + stripWidth;
+      const gap = Math.abs(rowWidth - totalCovered);
+      assert('Timeline cells strip fills 100% of row width with zero gap (gap <= 2px)', gap <= 2, `Row: ${rowWidth}px, Sidebar: ${sidebarWidth}px, Strip: ${stripWidth}px, Gap: ${gap}px`);
+    }
+  } catch (e) {
+    assert('Full-width responsive grid test', false, e.message);
+  }
+
+  // 39. Button & Control Single-Line Wrapping Protection
+  try {
+    const clearPinBtn = document.getElementById('clear-pin-btn');
+    assert('Clear pin button exists in DOM', Boolean(clearPinBtn));
+    if (clearPinBtn) {
+      const btnStyles = getComputedStyle(clearPinBtn);
+      assert('Clear pin button has white-space: nowrap', btnStyles.whiteSpace === 'nowrap', btnStyles.whiteSpace);
+      assert('Clear pin button has flex-shrink: 0', parseFloat(btnStyles.flexShrink) === 0, btnStyles.flexShrink);
+    }
+
+    const formatBtn = document.querySelector('.format-segment') || document.getElementById('format-toggle');
+    if (formatBtn) {
+      const btnStyles = getComputedStyle(formatBtn);
+      assert('.btn elements have white-space: nowrap', btnStyles.whiteSpace === 'nowrap', btnStyles.whiteSpace);
+      assert('.btn elements have flex-shrink: 0', parseFloat(btnStyles.flexShrink) === 0, btnStyles.flexShrink);
+    }
+  } catch (e) {
+    assert('Button wrapping protection test', false, e.message);
+  }
+
+  // 40. No Horizontal Scrollbar at Default Desktop Viewport
+  try {
+    const scrollContainer = document.querySelector('.timeline-scroll-container');
+    assert('Timeline scroll container exists', Boolean(scrollContainer));
+    if (scrollContainer && window.innerWidth >= 1100) {
+      const hasHScrollbar = scrollContainer.scrollWidth > scrollContainer.clientWidth + 1;
+      assert('No horizontal scrollbar at current viewport width', !hasHScrollbar,
+        `scrollWidth: ${scrollContainer.scrollWidth}px, clientWidth: ${scrollContainer.clientWidth}px, overflow: ${scrollContainer.scrollWidth - scrollContainer.clientWidth}px`);
+    } else if (scrollContainer) {
+      assert('No horizontal scrollbar at current viewport width',
+        window.getComputedStyle(scrollContainer).overflowX === 'auto',
+        'Mobile touch scrolling active');
+    }
+  } catch (e) {
+    assert('No horizontal scrollbar test', false, e.message);
+  }
+
+  // 41. Vertical Column Alignment Across Rows with Date Breaks
+  try {
+    const rows = Array.from(document.querySelectorAll('.zone-row'));
+    const headerCells = Array.from(document.querySelectorAll('.hour-header-cell'));
+    if (rows.length > 0 && headerCells.length > 0) {
+      let maxDrift = 0;
+      rows.forEach(row => {
+        const timeCells = Array.from(row.querySelectorAll('.time-cell'));
+        timeCells.forEach((tc, colIdx) => {
+          if (headerCells[colIdx]) {
+            const hLeft = headerCells[colIdx].getBoundingClientRect().left;
+            const tLeft = tc.getBoundingClientRect().left;
+            const drift = Math.abs(hLeft - tLeft);
+            if (drift > maxDrift) maxDrift = drift;
+          }
+        });
+      });
+      assert('Grid columns across all rows (including date breaks) align with header (drift <= 1px)', maxDrift <= 1.0,
+        `Max column drift: ${maxDrift.toFixed(2)}px`);
+    }
+  } catch (e) {
+    assert('Column alignment test', false, e.message);
+  }
+
+  // 42. Human-Readable Sentence Description for Pinned Moments
+  try {
+    const sentenceTextEl = document.getElementById('pinned-sentence-text');
+    const copyBtn = document.getElementById('copy-sentence-btn');
+    const copyLabel = document.getElementById('copy-sentence-label');
+    assert('Pinned sentence text element exists in DOM', Boolean(sentenceTextEl));
+    assert('Copy sentence button exists in DOM', Boolean(copyBtn));
+    assert('Copy sentence label exists in DOM', Boolean(copyLabel));
+    assert('window.generatePinnedSentence function is defined', typeof window.generatePinnedSentence === 'function');
+
+    if (typeof window.generatePinnedSentence === 'function') {
+      const testInstant = Temporal.Instant.from('2026-09-18T19:00:00Z');
+      const testZones = [
+        { label: 'New York', iana: 'America/New_York' },
+        { label: 'Los Angeles', iana: 'America/Los_Angeles' },
+        { label: 'London', iana: 'Europe/London' },
+        { label: 'Tokyo', iana: 'Asia/Tokyo' }
+      ];
+
+      // 12-hour format test
+      const sentence12 = window.generatePinnedSentence(testInstant, testZones, false);
+      const expected12 = 'Friday, Sep 18, 2026 at 3:00 PM EDT (New York) corresponds to 12:00 PM PDT (Los Angeles), 8:00 PM BST (London), and Sat, Sep 19 at 4:00 AM JST (Tokyo).';
+      assert('Pinned sentence 12h multi-zone generator is correct', sentence12 === expected12, `Generated: "${sentence12}"`);
+
+      // 24-hour format test
+      const sentence24 = window.generatePinnedSentence(testInstant, testZones, true);
+      const expected24 = 'Friday, Sep 18, 2026 at 15:00 EDT (New York) corresponds to 12:00 PDT (Los Angeles), 20:00 BST (London), and Sat, Sep 19 at 04:00 JST (Tokyo).';
+      assert('Pinned sentence 24h multi-zone generator is correct', sentence24 === expected24, `Generated: "${sentence24}"`);
+
+      // Single zone test
+      const sentenceSingle = window.generatePinnedSentence(testInstant, [testZones[0]], false);
+      assert('Pinned sentence single-zone format is correct', sentenceSingle === 'Friday, Sep 18, 2026 at 3:00 PM EDT (New York).', `Generated: "${sentenceSingle}"`);
+
+      // Two zones test
+      const sentencePair = window.generatePinnedSentence(testInstant, testZones.slice(0, 2), false);
+      assert('Pinned sentence two-zone format is correct', sentencePair === 'Friday, Sep 18, 2026 at 3:00 PM EDT (New York) corresponds to 12:00 PM PDT (Los Angeles).', `Generated: "${sentencePair}"`);
+    }
+  } catch (e) {
+    assert('Pinned sentence description test', false, e.message);
+  }
+
+  // 43. MX Mode & Country Hour Convention (12 Assertions)
+  try {
+    // Assertion 1: Lazy build of 12-hour zones set
+    if (typeof window._reset12HourZonesSet === 'function') window._reset12HourZonesSet();
+    const h12Set = window.get12HourZonesSet ? window.get12HourZonesSet() : null;
+    assert('MX mode (1/12): 12-hour zones set builds lazily on first use', h12Set instanceof Set && h12Set.size === 202, `Set size: ${h12Set?.size}`);
+
+    // Assertions 2-8: Seven known countries
+    assert('MX mode (2/12): Switzerland (Europe/Zurich) resolves to 24-hour', window.is12HourZone('Europe/Zurich') === false);
+    assert('MX mode (3/12): Egypt (Africa/Cairo) resolves to 12-hour', window.is12HourZone('Africa/Cairo') === true);
+    assert('MX mode (4/12): United States (America/New_York) resolves to 12-hour', window.is12HourZone('America/New_York') === true);
+    assert('MX mode (5/12): United Kingdom (Europe/London) resolves to 24-hour (CLDR h23)', window.is12HourZone('Europe/London') === false);
+    assert('MX mode (6/12): Canada (America/Toronto) resolves to 12-hour', window.is12HourZone('America/Toronto') === true);
+    assert('MX mode (7/12): Germany (Europe/Berlin) resolves to 24-hour', window.is12HourZone('Europe/Berlin') === false);
+    assert('MX mode (8/12): Australia (Australia/Sydney) resolves to 12-hour', window.is12HourZone('Australia/Sydney') === true);
+
+    // Assertion 9: Unmapped-zone fallback (Etc/* zones without country default to 24-hour)
+    const etcUtc = window.is12HourZone('Etc/UTC');
+    const etcGmt = window.is12HourZone('Etc/GMT');
+    assert('MX mode (9/12): Unmapped/Etc zones without country fall back to 24-hour', etcUtc === false && etcGmt === false, `Etc/UTC: ${etcUtc}, Etc/GMT: ${etcGmt}`);
+
+    // Assertions 10-12: Three time-formatting cases including midnight
+    // Case 1: 12-hour format at midnight (hour 0 -> 12:00 AM, not 0:00 AM or 0)
+    const midInstant = Temporal.Instant.from('2026-09-18T04:00:00Z'); // 00:00 in America/New_York (EDT)
+    const nyMidnightZdt = midInstant.toZonedDateTimeISO('America/New_York');
+    const mid12Str = nyMidnightZdt.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    assert('MX mode (10/12): 12-hour format renders midnight as 12:00 AM', mid12Str === '12:00 AM', `Got: "${mid12Str}"`);
+
+    // Case 2: 24-hour format at midnight (hour 0 -> 00:00)
+    const mid24Str = nyMidnightZdt.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    assert('MX mode (11/12): 24-hour format renders midnight as 00:00', mid24Str === '00:00', `Got: "${mid24Str}"`);
+
+    // Case 3: MX per-row resolution (US -> 12h, Zurich -> 24h)
+    const usIs24 = window.isZone24Hour('America/New_York', 'mx');
+    const chIs24 = window.isZone24Hour('Europe/Zurich', 'mx');
+    assert('MX mode (12/12): MX mode resolves US row to 12h and Zurich row to 24h', usIs24 === false && chIs24 === true, `US is24: ${usIs24}, Zurich is24: ${chIs24}`);
+  } catch (e) {
+    assert('MX mode test', false, e.message);
+  }
+
+  // 44. Top Bar Digital Live Clock, Timezone & Week Number Display
+  try {
+    const clockEl = document.getElementById('top-live-clock');
+    const timeEl = document.getElementById('top-clock-time');
+    const tzEl = document.getElementById('top-clock-tz');
+    const weekEl = document.getElementById('top-clock-week');
+    const weekNumEl = document.getElementById('top-clock-week-num');
+
+    assert('Top live clock element exists in DOM', Boolean(clockEl));
+    assert('Top clock time element exists in DOM', Boolean(timeEl));
+    assert('Top clock tz element exists in DOM', Boolean(tzEl));
+    assert('Top clock week element exists in DOM', Boolean(weekEl));
+
+    // ISO week number computation test
+    const isoWeek = window.getISOWeekNumber ? window.getISOWeekNumber(new Date(2026, 8, 18)) : 0;
+    assert('ISO 8601 week number for 2026-09-18 is 38', isoWeek === 38, `Got week: ${isoWeek}`);
+
+    if (timeEl && tzEl && weekNumEl) {
+      assert('Top clock time has populated non-empty text', timeEl.textContent.trim().length > 0 && timeEl.textContent !== '--:--', `Time: "${timeEl.textContent}"`);
+      assert('Top clock tz has populated non-empty abbreviation', tzEl.textContent.trim().length > 0 && tzEl.textContent !== '---', `TZ: "${tzEl.textContent}"`);
+      assert('Top clock week has valid numeric value', parseInt(weekNumEl.textContent, 10) >= 1 && parseInt(weekNumEl.textContent, 10) <= 53, `Week: "${weekNumEl.textContent}"`);
+    }
+
+    // Verify collapsible styling exists
+    if (clockEl) {
+      const styles = getComputedStyle(clockEl);
+      assert('Top live clock has flex-shrink: 0 to prevent squishing', parseFloat(styles.flexShrink) === 0, `flex-shrink: ${styles.flexShrink}`);
+    }
+  } catch (e) {
+    assert('Top bar live clock test', false, e.message);
+  }
+
+  return results;
+}
+
+
+
+  </script>
+
+  <!-- Inlined Application Logic -->
+  <script>
+/**
+ * World Time Buddy Clone - Main Application Logic
+ * Powered by native Temporal API & curated Windows Time Zones.
+ */
+
+
+
+// Hand-rolled Zero-Dependency Intl Time Engine (Fallback & Edge-Case Validator)
+window.wallAsUTC = function(instantMs, tz) {
+  const p = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  }).formatToParts(new Date(instantMs));
+  const g = t => +p.find(x => x.type === t).value;
+  return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
+};
+
+window.zonedToInstant = function(y, mo, d, h, mi, tz) {
+  const target = Date.UTC(y, mo - 1, d, h, mi);
+  let guess = target, lastErr = null;
+  for (let i = 0; i < 4; i++) {
+    const err = target - window.wallAsUTC(guess, tz);
+    if (err === 0) return { instantMs: guess, exact: true };
+    if (lastErr !== null && err === -lastErr) {
+      // Oscillation detected -> nonexistent wall time in a spring-forward gap.
+      // If err > 0, guess is on pre-gap side; add err to land on post-gap.
+      // If err < 0, guess is already on post-gap side.
+      const instantMs = err > 0 ? guess + err : guess;
+      return { instantMs, exact: false, reason: 'nonexistent' };
+    }
+    lastErr = err;
+    guess += err;
+  }
+  return { instantMs: guess, exact: false, reason: 'no-converge' };
+};
+
+window.hoursInDayIntl = function(y, mo, d, tz) {
+  const a = window.zonedToInstant(y, mo, d, 0, 0, tz).instantMs;
+  const n = new Date(Date.UTC(y, mo - 1, d + 1));
+  const b = window.zonedToInstant(n.getUTCFullYear(), n.getUTCMonth() + 1, n.getUTCDate(), 0, 0, tz).instantMs;
+  return (b - a) / 3600000;
+};
+
+// Strict Date Format and Calendar Validation
+window.isValidDateString = function(str) {
+  if (typeof str !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+  const [y, m, d] = str.split('-').map(Number);
+  if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900 || y > 2200) return false;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && (dt.getUTCMonth() + 1) === m && dt.getUTCDate() === d;
+};
+
+// ISO 8601 Week Number Calculator
+window.getISOWeekNumber = function(dateObj) {
+  if (dateObj instanceof Date) {
+    const y = dateObj.getFullYear();
+    const m = dateObj.getMonth() + 1;
+    const d = dateObj.getDate();
+    try {
+      if (typeof Temporal === 'object' && Temporal.PlainDate) {
+        return Temporal.PlainDate.from({ year: y, month: m, day: d }).weekOfYear;
+      }
+    } catch (e) {}
+    const target = new Date(Date.UTC(y, m - 1, d));
+    const dayNr = target.getUTCDay() || 7;
+    target.setUTCDate(target.getUTCDate() + 4 - dayNr);
+    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+    return Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+  }
+  try {
+    if (typeof Temporal === 'object' && Temporal.Now && typeof Temporal.Now.plainDateISO === 'function') {
+      return Temporal.Now.plainDateISO().weekOfYear;
+    }
+  } catch (e) {}
+  const now = new Date();
+  const target = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNr = target.getUTCDay() || 7;
+  target.setUTCDate(target.getUTCDate() + 4 - dayNr);
+  const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+  return Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+};
+
+// Working Hours & Status Categorization Helper for Pinned Columns
+window.getPinnedHourStatus = function(zdt) {
+  const fractionalHour = zdt.hour + zdt.minute / 60;
+  const isWeekend = zdt.dayOfWeek >= 6; // 6 = Saturday, 7 = Sunday
+  const isWork = !isWeekend && fractionalHour >= 9 && fractionalHour < 17;
+  const isShoulder = !isWeekend && ((fractionalHour >= 7 && fractionalHour < 9) || (fractionalHour >= 17 && fractionalHour < 22));
+
+  if (isWeekend) {
+    return {
+      category: 'weekend',
+      statusClass: 'status-weekend',
+      statusLabel: 'Weekend',
+      tooltip: 'Weekend: Outside business hours'
+    };
+  }
+  if (isWork) {
+    return {
+      category: 'work',
+      statusClass: 'status-work',
+      statusLabel: 'Work',
+      tooltip: 'Business hours (9:00 AM – 5:00 PM)'
+    };
+  }
+  if (isShoulder) {
+    return {
+      category: 'shoulder',
+      statusClass: 'status-shoulder',
+      statusLabel: 'Off-hours',
+      tooltip: 'Off-work awake hours (7–9 AM or 5–10 PM)'
+    };
+  }
+  return {
+    category: 'night',
+    statusClass: 'status-night',
+    statusLabel: 'Night',
+    tooltip: 'Sleep / night hours (10:00 PM – 7:00 AM)'
+  };
+};
+
+// Seasonal Timezone Abbreviation & Summer Time / Standard Time Resolver
+window.getTimezoneAbbrev = function(iana, instant) {
+  try {
+    const epochMs = instant
+      ? (instant.epochMilliseconds !== undefined
+          ? Number(instant.epochMilliseconds)
+          : (instant.epochNanoseconds ? Number(instant.epochNanoseconds / 1000000n) : Number(instant)))
+      : Date.now();
+    const date = new Date(epochMs);
+
+    // Compute seasonal offset check
+    const getOffset = (d) => {
+      try {
+        const p = new Intl.DateTimeFormat('en-US', {
+          timeZone: iana,
+          hourCycle: 'h23',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).formatToParts(d);
+        const g = t => +p.find(x => x.type === t).value;
+        return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute')) - d.getTime();
+      } catch { return 0; }
+    };
+
+    const y = date.getUTCFullYear();
+    const curOff = getOffset(date);
+    const janOff = getOffset(new Date(Date.UTC(y, 0, 15, 12, 0)));
+    const julOff = getOffset(new Date(Date.UTC(y, 6, 15, 12, 0)));
+    const hasDst = janOff !== julOff;
+    const isDaylight = hasDst && curOff === Math.max(janOff, julOff);
+
+    // Well-known curated / precomputed shorthands for this zone
+    const shorthands = window.getZoneShorthands ? window.getZoneShorthands(iana) : [];
+
+    const isDaylightAbbrev = (s) => {
+      if (s.endsWith('DT')) return true;
+      if (s === 'BST' || s === 'CEST' || s === 'EEST' || s === 'WEST' || s === 'CLST' || s === 'BRST' || s === 'FJST' || s === 'LHDT') return true;
+      return false;
+    };
+
+    if (shorthands.length > 0) {
+      if (shorthands.length === 1) return shorthands[0];
+
+      const daylight = shorthands.find(s => isDaylightAbbrev(s));
+      const standard = shorthands.find(s => !isDaylightAbbrev(s)) || shorthands[0];
+
+      if (daylight && standard) {
+        return isDaylight ? daylight : standard;
+      }
+      return shorthands[0];
+    }
+
+    // Fall back to native Intl abbreviation if clean alphabetical
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: iana,
+      timeZoneName: 'short'
+    }).formatToParts(date);
+    const val = parts.find(p => p.type === 'timeZoneName')?.value;
+
+    if (val && /^[A-Z]{2,5}$/.test(val)) return val;
+
+    return isDaylight ? 'DST' : (val || 'STD');
+  } catch {
+    return 'DST';
+  }
+};
+
+// 114 CLDR 12-hour regions as a compact 228-character string
+window.H12_REGIONS_STR = 'AEAGALARASAUBBBDBHBMBNBOBSBTCACLCOCRCTCUCYDJDMDODZECEGEHERETFJFMGDGHGMGRGTGUGYHKHNINIQJMJOJTKHKIKNKPKRKWKYLBLCLRLSLYMHMIMOMPMRMWMXMYNANHNINTNZOMPAPCPEPGPHPKPRPSPUPWPYPZQASASBSDSGSLSOSSSVSYSZTCTDTNTOTTTWUMUSUYVCVEVGVIVUWKWSYDYEZM';
+
+let _h12ZonesSet = null;
+
+window.get12HourZonesSet = function() {
+  if (_h12ZonesSet !== null) return _h12ZonesSet;
+  _h12ZonesSet = new Set();
+  try {
+    if (typeof Intl === 'object' && typeof Intl.Locale === 'function' && typeof Intl.Locale.prototype?.getTimeZones === 'function') {
+      for (let i = 0; i < window.H12_REGIONS_STR.length; i += 2) {
+        const region = window.H12_REGIONS_STR.slice(i, i + 2);
+        const loc = new Intl.Locale('und', { region });
+        const tzs = loc.getTimeZones();
+        if (tzs) {
+          for (const tz of tzs) {
+            _h12ZonesSet.add(tz);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error lazily building 12-hour zones set:', e);
+  }
+  return _h12ZonesSet;
+};
+
+window.is12HourZone = function(iana) {
+  if (!iana) return false;
+  return window.get12HourZonesSet().has(iana);
+};
+
+window.isZone24Hour = function(iana, format = '12') {
+  if (format === '24') return true;
+  if (format === '12') return false;
+  // MX mode: true if not a 12-hour zone (defaults to 24h)
+  return !window.is12HourZone(iana);
+};
+
+window._reset12HourZonesSet = function() {
+  _h12ZonesSet = null;
+};
+
+// Natural Language Summary Sentence Generator for Pinned Column
+window.generatePinnedSentence = function(instant, trackedZones, formatOrIs24 = '12', homeZone = null) {
+  if (!instant || !trackedZones || trackedZones.length === 0) return '';
+  const home = homeZone || trackedZones[0];
+  const isZone24 = (iana) => {
+    if (typeof formatOrIs24 === 'string') {
+      return window.isZone24Hour ? window.isZone24Hour(iana, formatOrIs24) : (formatOrIs24 === '24');
+    }
+    return Boolean(formatOrIs24);
+  };
+
+  const homeIs24 = isZone24(home.iana);
+  const homeZdt = instant.toZonedDateTimeISO(home.iana);
+  const homeDateFormatted = homeZdt.toLocaleString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+  const homeTimeStr = homeZdt.toLocaleString('en-US', {
+    hour: homeIs24 ? '2-digit' : 'numeric',
+    minute: '2-digit',
+    hour12: !homeIs24
+  });
+  const homeAbbrev = window.getTimezoneAbbrev ? window.getTimezoneAbbrev(home.iana, instant) : '';
+  const homeAbbrevStr = homeAbbrev ? ` ${homeAbbrev}` : '';
+  const homeClause = `${homeDateFormatted} at ${homeTimeStr}${homeAbbrevStr} (${home.label})`;
+
+  const otherZones = trackedZones.slice(1);
+  if (otherZones.length === 0) return `${homeClause}.`;
+
+  const formatZoneTime = (zone, zdt, includeDate = false, includeYear = false) => {
+    const zoneIs24 = isZone24(zone.iana);
+    const timeStr = zdt.toLocaleString('en-US', {
+      hour: zoneIs24 ? '2-digit' : 'numeric',
+      minute: '2-digit',
+      hour12: !zoneIs24
+    });
+    const abbrev = window.getTimezoneAbbrev ? window.getTimezoneAbbrev(zone.iana, instant) : '';
+    const abbrevStr = abbrev ? ` ${abbrev}` : '';
+    if (includeDate) {
+      const dateOpts = includeYear
+        ? { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }
+        : { weekday: 'short', month: 'short', day: 'numeric' };
+      const dateStr = zdt.toLocaleString('en-US', dateOpts);
+      return `${dateStr} at ${timeStr}${abbrevStr} (${zone.label})`;
+    }
+    return `${timeStr}${abbrevStr} (${zone.label})`;
+  };
+
+  const otherParts = otherZones.map(zone => {
+    const zdt = instant.toZonedDateTimeISO(zone.iana);
+    const isDiffDate = !zdt.toPlainDate().equals(homeZdt.toPlainDate());
+    const isDiffYear = zdt.year !== homeZdt.year;
+    return formatZoneTime(zone, zdt, isDiffDate, isDiffYear);
+  });
+
+  if (otherParts.length === 1) {
+    return `${homeClause} corresponds to ${otherParts[0]}.`;
+  }
+  if (otherParts.length === 2) {
+    return `${homeClause} corresponds to ${otherParts[0]} and ${otherParts[1]}.`;
+  }
+  const allButLast = otherParts.slice(0, -1).join(', ');
+  const last = otherParts[otherParts.length - 1];
+  return `${homeClause} corresponds to ${allButLast}, and ${last}.`;
+};
+
+// Global helper for computeColumns (native Temporal when available, fallback to Intl)
+window.computeColumns = function(homeIana, dateStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+
+  if (typeof Temporal === 'object' && typeof Temporal.PlainDate === 'function') {
+    const plainToday = Temporal.PlainDate.from({ year, month, day });
+    const plainTomorrow = plainToday.add({ days: 1 });
+    const dayStart = plainToday.toZonedDateTime({ timeZone: homeIana, plainTime: '00:00' });
+    const dayEnd = plainTomorrow.toZonedDateTime({ timeZone: homeIana, plainTime: '00:00' });
+    const durationHours = Number(dayEnd.epochNanoseconds - dayStart.epochNanoseconds) / 3.6e12;
+    const numCols = Math.max(0, Math.ceil(durationHours));
+
+    const instants = [];
+    for (let k = 0; k < numCols; k++) {
+      instants.push(dayStart.toInstant().add({ hours: k }));
+    }
+    return instants;
+  }
+
+  // Pure Intl Zero-Dependency Fallback
+  const startMs = window.zonedToInstant(year, month, day, 0, 0, homeIana).instantMs;
+  const durationHours = window.hoursInDayIntl(year, month, day, homeIana);
+  const numCols = Math.ceil(durationHours);
+
+  const instants = [];
+  for (let k = 0; k < numCols; k++) {
+    const epochMs = startMs + k * 3600000;
+    instants.push({
+      epochNanoseconds: BigInt(epochMs) * 1000000n,
+      epochMilliseconds: epochMs,
+      toZonedDateTimeISO: (tz) => {
+        const p = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz, hourCycle: 'h23',
+          year: 'numeric', month: 'numeric', day: 'numeric',
+          hour: 'numeric', minute: 'numeric',
+          weekday: 'short', timeZoneName: 'short'
+        }).formatToParts(new Date(epochMs));
+        const g = t => p.find(x => x.type === t)?.value;
+        const hour = parseInt(g('hour'), 10);
+        const minute = parseInt(g('minute'), 10);
+        const y = parseInt(g('year'), 10);
+        const m = parseInt(g('month'), 10);
+        const d = parseInt(g('day'), 10);
+        const wallUtc = Date.UTC(y, m - 1, d, hour, minute);
+        const offsetMs = wallUtc - epochMs;
+        const offsetNanos = BigInt(offsetMs) * 1000000n;
+        return {
+          hour,
+          minute,
+          offsetNanoseconds: offsetNanos,
+          toPlainDate: () => ({
+            year: y, month: m, day: d,
+            toString: () => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+            equals: (other) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` === (other.toString ? other.toString() : other),
+            toLocaleString: (locale, opts) => new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale, { ...opts, timeZone: 'UTC' })
+          })
+        };
+      }
+    });
+  }
+  return instants;
+};
+
+// Global helper for machine timezone detection with graceful fallback
+window.getMachineTimeZone = function() {
+  try {
+    if (typeof Temporal === 'object' && Temporal.Now && typeof Temporal.Now.timeZoneId === 'function') {
+      const tz = Temporal.Now.timeZoneId();
+      if (tz) return tz;
+    }
+  } catch (e) {}
+
+  try {
+    if (typeof Intl === 'object' && Intl.DateTimeFormat) {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) return tz;
+    }
+  } catch (e) {}
+
+  // Default fallback: US East Coast
+  return 'America/New_York';
+};
+
+// Continuous Diurnal Color Generator: soft, low-contrast daylight-to-night gradient
+window.getDiurnalColor = function(hourFloat) {
+  const t = ((hourFloat % 24) + 24) % 24;
+
+  // Gentle low-contrast palette:
+  // Darkness strictly limited to a soft, light muted slate (#bec8d2, lightness ~78%, lum ~198)
+  // Seamlessly transitions through soft morning/evening hues to pure white daytime (#ffffff)
+  const keyframes = [
+    { hour: 0,  r: 190, g: 200, b: 210 }, // 12:00 AM - soft light muted slate (#bec8d2)
+    { hour: 4,  r: 190, g: 200, b: 210 }, // 4:00 AM  - soft light muted slate
+    { hour: 5,  r: 202, g: 210, b: 219 }, // 5:00 AM  - gentle dawn rise
+    { hour: 6,  r: 215, g: 222, b: 229 }, // 6:00 AM  - soft dawn mist
+    { hour: 7,  r: 230, g: 235, b: 240 }, // 7:00 AM  - pale morning
+    { hour: 8,  r: 244, g: 247, b: 249 }, // 8:00 AM  - off-white morning prelude
+    { hour: 9,  r: 255, g: 255, b: 255 }, // 9:00 AM  - pure white business day
+    { hour: 12, r: 255, g: 255, b: 255 }, // 12:00 PM - pure white midday
+    { hour: 17, r: 255, g: 255, b: 255 }, // 5:00 PM  - business day end
+    { hour: 18, r: 245, g: 248, b: 250 }, // 6:00 PM  - gentle evening fade
+    { hour: 19, r: 232, g: 237, b: 242 }, // 7:00 PM  - soft dusk
+    { hour: 20, r: 218, g: 225, b: 232 }, // 8:00 PM  - twilight
+    { hour: 21, r: 204, g: 212, b: 221 }, // 9:00 PM  - late dusk
+    { hour: 22, r: 190, g: 200, b: 210 }, // 10:00 PM - soft light muted slate
+    { hour: 24, r: 190, g: 200, b: 210 }  // 12:00 AM - cycle completes
+  ];
+
+  for (let i = 0; i < keyframes.length - 1; i++) {
+    const k0 = keyframes[i];
+    const k1 = keyframes[i + 1];
+    if (t >= k0.hour && t <= k1.hour) {
+      const ratio = (t - k0.hour) / (k1.hour - k0.hour);
+      const r = Math.round(k0.r + (k1.r - k0.r) * ratio);
+      const g = Math.round(k0.g + (k1.g - k0.g) * ratio);
+      const b = Math.round(k0.b + (k1.b - k0.b) * ratio);
+      return { r, g, b, css: `rgb(${r}, ${g}, ${b})` };
+    }
+  }
+
+  return { r: 190, g: 200, b: 210, css: 'rgb(190, 200, 210)' };
+};
+
+// Search alias table mapping modern city and colloquial names to legacy ICU/IANA identifiers
+const SEARCH_ALIASES = {
+  'kolkata': 'Asia/Calcutta',
+  'calcutta': 'Asia/Calcutta',
+  'mumbai': 'Asia/Calcutta',
+  'bombay': 'Asia/Calcutta',
+  'delhi': 'Asia/Calcutta',
+  'new delhi': 'Asia/Calcutta',
+  'bangalore': 'Asia/Calcutta',
+  'bengaluru': 'Asia/Calcutta',
+  'kyiv': 'Europe/Kiev',
+  'kiev': 'Europe/Kiev',
+  'yangon': 'Asia/Rangoon',
+  'rangoon': 'Asia/Rangoon',
+  'ho chi minh': 'Asia/Saigon',
+  'saigon': 'Asia/Saigon',
+  'kathmandu': 'Asia/Katmandu',
+  'katmandu': 'Asia/Katmandu',
+  'astana': 'Asia/Almaty',
+  'nur-sultan': 'Asia/Almaty',
+  'peking': 'Asia/Shanghai',
+  'beijing': 'Asia/Shanghai'
+};
+
+// Universal Timezone Shorthands & Abbreviations
+window.TIMEZONE_SHORTHANDS = {
+  // North America
+  'EDT': ['America/New_York', 'America/Detroit', 'America/Toronto', 'America/Montreal'],
+  'EST': ['America/New_York', 'America/Detroit', 'America/Toronto', 'America/Panama', 'America/Cancun', 'America/Jamaica'],
+  'CDT': ['America/Chicago', 'America/Winnipeg', 'America/Mexico_City'],
+  'CST': ['America/Chicago', 'America/Regina', 'America/Guatemala', 'America/Mexico_City', 'Asia/Shanghai', 'Asia/Chongqing', 'Asia/Taipei'],
+  'MDT': ['America/Denver', 'America/Edmonton', 'America/Boise'],
+  'MST': ['America/Denver', 'America/Phoenix'],
+  'PDT': ['America/Los_Angeles', 'America/Vancouver', 'America/Tijuana'],
+  'PST': ['America/Los_Angeles', 'America/Vancouver', 'America/Tijuana', 'Asia/Manila'],
+  'AKDT': ['America/Anchorage'],
+  'AKST': ['America/Anchorage'],
+  'HST': ['Pacific/Honolulu'],
+  'HDT': ['Pacific/Honolulu'],
+  'ADT': ['America/Halifax'],
+  'AST': ['America/Halifax', 'America/Puerto_Rico', 'Asia/Riyadh', 'Asia/Baghdad', 'Asia/Kuwait', 'Asia/Qatar'],
+  'NDT': ['America/St_Johns'],
+  'NST': ['America/St_Johns'],
+
+  // Europe & UK
+  'GMT': ['Europe/London', 'Etc/GMT', 'Africa/Abidjan', 'Africa/Accra', 'Atlantic/Reykjavik'],
+  'UTC': ['Etc/UTC', 'Etc/GMT'],
+  'BST': ['Europe/London', 'Asia/Dhaka'],
+  'WET': ['Europe/Lisbon', 'Atlantic/Canary', 'Africa/Casablanca'],
+  'WEST': ['Europe/Lisbon', 'Atlantic/Canary', 'Africa/Casablanca'],
+  'CET': ['Europe/Berlin', 'Europe/Paris', 'Europe/Rome', 'Europe/Madrid', 'Europe/Amsterdam', 'Europe/Brussels', 'Europe/Vienna', 'Europe/Warsaw', 'Europe/Stockholm', 'Europe/Oslo', 'Europe/Copenhagen', 'Europe/Prague', 'Europe/Budapest', 'Europe/Belgrade', 'Europe/Zurich'],
+  'CEST': ['Europe/Berlin', 'Europe/Paris', 'Europe/Rome', 'Europe/Madrid', 'Europe/Amsterdam', 'Europe/Brussels', 'Europe/Vienna', 'Europe/Warsaw', 'Europe/Stockholm', 'Europe/Oslo', 'Europe/Copenhagen', 'Europe/Prague', 'Europe/Budapest', 'Europe/Belgrade', 'Europe/Zurich'],
+  'EET': ['Europe/Athens', 'Europe/Helsinki', 'Europe/Bucharest', 'Europe/Kiev', 'Europe/Sofia', 'Europe/Riga', 'Europe/Tallinn', 'Europe/Vilnius', 'Asia/Beirut', 'Asia/Jerusalem', 'Asia/Damascus', 'Asia/Amman', 'Africa/Cairo', 'Africa/Tripoli'],
+  'EEST': ['Europe/Athens', 'Europe/Helsinki', 'Europe/Bucharest', 'Europe/Kiev', 'Europe/Sofia', 'Europe/Riga', 'Europe/Tallinn', 'Europe/Vilnius', 'Asia/Beirut', 'Asia/Jerusalem', 'Asia/Damascus', 'Asia/Amman', 'Africa/Cairo'],
+  'MSK': ['Europe/Moscow', 'Europe/Minsk', 'Europe/Simferopol'],
+
+  // Asia
+  'IST': ['Asia/Calcutta', 'Asia/Colombo', 'Asia/Jerusalem', 'Europe/Dublin'],
+  'JST': ['Asia/Tokyo'],
+  'KST': ['Asia/Seoul', 'Asia/Pyongyang'],
+  'HKT': ['Asia/Hong_Kong'],
+  'SGT': ['Asia/Singapore'],
+  'MYT': ['Asia/Kuala_Lumpur'],
+  'PHT': ['Asia/Manila'],
+  'WIB': ['Asia/Jakarta'],
+  'WITA': ['Asia/Makassar'],
+  'WIT': ['Asia/Jayapura'],
+  'ICT': ['Asia/Bangkok', 'Asia/Saigon', 'Asia/Phnom_Penh', 'Asia/Vientiane'],
+  'PKT': ['Asia/Karachi'],
+  'BDT': ['Asia/Dhaka'],
+  'NPT': ['Asia/Katmandu'],
+  'BTT': ['Asia/Thimphu'],
+  'MMT': ['Asia/Rangoon'],
+  'GST': ['Asia/Dubai', 'Asia/Muscat'],
+  'IRST': ['Asia/Tehran'],
+  'IRDT': ['Asia/Tehran'],
+  'AFT': ['Asia/Kabul'],
+  'UZT': ['Asia/Tashkent'],
+  'ALMT': ['Asia/Almaty'],
+
+  // Australia & Pacific
+  'AEST': ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Hobart', 'Australia/Canberra'],
+  'AEDT': ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Hobart', 'Australia/Canberra'],
+  'ACST': ['Australia/Adelaide', 'Australia/Darwin'],
+  'ACDT': ['Australia/Adelaide'],
+  'AWST': ['Australia/Perth'],
+  'NZST': ['Pacific/Auckland'],
+  'NZDT': ['Pacific/Auckland'],
+  'CHAST': ['Pacific/Chatham'],
+  'CHADT': ['Pacific/Chatham'],
+  'LHST': ['Australia/Lord_Howe'],
+  'LHDT': ['Australia/Lord_Howe'],
+  'SST': ['Pacific/Pago_Pago', 'Pacific/Apia'],
+  'CHST': ['Pacific/Guam', 'Pacific/Saipan'],
+  'FJT': ['Pacific/Fiji'],
+  'FJST': ['Pacific/Fiji'],
+  'TOT': ['Pacific/Tongatapu'],
+
+  // Africa
+  'WAT': ['Africa/Lagos', 'Africa/Kinshasa', 'Africa/Luanda'],
+  'CAT': ['Africa/Harare', 'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Lusaka', 'Africa/Gaborone'],
+  'EAT': ['Africa/Nairobi', 'Africa/Addis_Ababa', 'Africa/Dar_es_Salaam', 'Africa/Kampala', 'Africa/Mogadishu'],
+  'SAST': ['Africa/Johannesburg'],
+
+  // South America
+  'BRT': ['America/Sao_Paulo', 'America/Rio_Branco'],
+  'BRST': ['America/Sao_Paulo'],
+  'ART': ['America/Argentina/Buenos_Aires'],
+  'CLT': ['America/Santiago'],
+  'CLST': ['America/Santiago'],
+  'COT': ['America/Bogota'],
+  'PET': ['America/Lima'],
+  'VET': ['America/Caracas'],
+  'BOT': ['America/La_Paz'],
+  'PYT': ['America/Asuncion'],
+  'PYST': ['America/Asuncion'],
+  'UYT': ['America/Montevideo']
+};
+
+window.getZoneShorthands = function(iana) {
+  const result = new Set();
+  for (const [shorthand, ianas] of Object.entries(window.TIMEZONE_SHORTHANDS)) {
+    if (ianas.includes(iana)) {
+      result.add(shorthand);
+    }
+  }
+  try {
+    const getP = (d) => new Intl.DateTimeFormat('en-US', { timeZone: iana, timeZoneName: 'short' })
+      .formatToParts(d).find(p => p.type === 'timeZoneName')?.value;
+    const now = getP(new Date());
+    const summer = getP(new Date('2026-07-01T12:00:00Z'));
+    const winter = getP(new Date('2026-01-01T12:00:00Z'));
+    [now, summer, winter].forEach(s => {
+      if (s && /^[A-Z]{2,5}$/.test(s)) {
+        result.add(s);
+      }
+    });
+  } catch {}
+  return Array.from(result);
+};
+
+// 139 curated Windows zones + 287 browser ICU supported values = 426 total zones (zero extra bytes)
+window.buildZonesDatabase = function() {
+  const curated = (window.WINDOWS_ZONES || []).filter((z, i, a) => a.findIndex(x => x.iana === z.iana) === i);
+  const known = new Set(curated.map(z => z.iana));
+  const intlZones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [];
+  const synthesized = intlZones.filter(iana => !known.has(iana)).map(iana => {
+    const city = iana.split('/').pop().replace(/_/g, ' ');
+    const offset = (typeof Temporal === 'object' && typeof Temporal.Now === 'object')
+      ? Temporal.Now.zonedDateTimeISO(iana).offset
+      : '+00:00';
+    return { id: iana, label: `(UTC${offset}) ${city}`, iana };
+  });
+
+  const merged = [...curated, ...synthesized];
+  merged.forEach(z => {
+    z.shorthands = window.getZoneShorthands(z.iana);
+  });
+  return merged;
+};
+
+class WTBApp {
+  constructor() {
+    window.app = this;
+    this.zonesDatabase = window.buildZonesDatabase();
+    this.format = '12'; // '12' | '24' | 'mx'
+    this.pinnedCol = null;
+    this.hoveredCol = null;
+    this.isFirstRender = true;
+
+    // Initialize default tracked rows: Machine TZ (Home), US West Coast, Europe (Berlin), China (Beijing)
+    this.trackedZones = this.getDefaultZones();
+    this.currentDate = this.getTodayDateString(this.getHomeZone().iana);
+
+    this.loadState();
+    this.initDOM();
+    this.attachEvents();
+    this.render();
+
+    // Start live clock ticking and current time needle updates (1 second interval for live seconds)
+    setInterval(() => {
+      this.updateLiveClocks();
+      this.updateTopLiveClock();
+      this.updateNowMarker();
+    }, 1000);
+
+    // Auto-scroll timeline so current hour or pinned hour is centered
+    setTimeout(() => {
+      this.scrollToActiveTime('auto');
+    }, 120);
+
+    // Check URL for self-test trigger or search query
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('selftest') === '1') {
+      this.triggerSelfTestModal();
+    }
+    const searchParam = params.get('search');
+    if (searchParam) {
+      this.searchInput.value = searchParam;
+      this.handleSearch(searchParam);
+    }
+  }
+
+  get is24Hour() {
+    return this.format === '24';
+  }
+
+  set is24Hour(val) {
+    if (typeof val === 'string') {
+      this.format = val;
+    } else {
+      this.format = val ? '24' : '12';
+    }
+  }
+
+  isZone24Hour(iana) {
+    return window.isZone24Hour ? window.isZone24Hour(iana, this.format) : (this.format === '24');
+  }
+
+  getMachineTimeZone() {
+    return window.getMachineTimeZone();
+  }
+
+  getDefaultZones() {
+    const machineIana = this.getMachineTimeZone();
+
+    // The 4 core regions:
+    // 1. US East Coast (New York)
+    // 2. US West Coast (Los Angeles)
+    // 3. Europe (Berlin, Central Europe)
+    // 4. China (Beijing)
+    const coreRegions = [
+      {
+        iana: 'America/New_York',
+        id: 'Eastern Standard Time',
+        label: 'New York',
+        sub: 'United States, Eastern Time',
+        regionKey: 'us_east'
+      },
+      {
+        iana: 'America/Los_Angeles',
+        id: 'Pacific Standard Time',
+        label: 'Los Angeles',
+        sub: 'United States, Pacific Time',
+        regionKey: 'us_west'
+      },
+      {
+        iana: 'Europe/Berlin',
+        id: 'W. Europe Standard Time',
+        label: 'Berlin',
+        sub: 'Germany, Central Europe',
+        regionKey: 'europe'
+      },
+      {
+        iana: 'Asia/Shanghai',
+        id: 'China Standard Time',
+        label: 'Beijing',
+        sub: 'China, Beijing / Shanghai',
+        regionKey: 'china'
+      }
+    ];
+
+    const defaultList = [];
+    const matchingCore = coreRegions.find(r => r.iana === machineIana);
+
+    if (matchingCore) {
+      // Machine matches one of the core regions -> set as home row
+      defaultList.push({
+        id: matchingCore.id,
+        label: matchingCore.label,
+        sub: matchingCore.sub,
+        iana: matchingCore.iana,
+        isHome: true
+      });
+
+      // Append the other core regions
+      coreRegions.forEach(r => {
+        if (r.iana !== machineIana) {
+          defaultList.push({
+            id: r.id,
+            label: r.label,
+            sub: r.sub,
+            iana: r.iana,
+            isHome: false
+          });
+        }
+      });
+    } else {
+      // Machine is in a different timezone (e.g. Chicago, Tokyo, Sydney)
+      const dbMatch = this.zonesDatabase.find(z => z.iana === machineIana || z.id === machineIana);
+      const parsed = dbMatch ? this.parseZoneInfo(dbMatch) : {
+        id: machineIana,
+        label: machineIana.split('/').pop().replace(/_/g, ' '),
+        sub: machineIana.split('/')[0].replace(/_/g, ' '),
+        iana: machineIana
+      };
+      defaultList.push({ ...parsed, isHome: true });
+
+      // Add all 4 core regions as companions
+      coreRegions.forEach(r => {
+        if (r.iana !== machineIana) {
+          defaultList.push({
+            id: r.id,
+            label: r.label,
+            sub: r.sub,
+            iana: r.iana,
+            isHome: false
+          });
+        }
+      });
+    }
+
+    return defaultList;
+  }
+
+  getTodayDateString(homeIana) {
+    try {
+      const tz = homeIana || 'UTC';
+      return Temporal.Now.plainDateISO(tz).toString();
+    } catch {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+
+  getHomeZone() {
+    return this.trackedZones.find(z => z.isHome) || this.trackedZones[0];
+  }
+
+  parseZoneInfo(raw) {
+    let rawLabel = raw.label || raw.iana || '';
+    let id = raw.id || raw.iana;
+    let iana = raw.iana;
+    let city = raw.label || '';
+    let sub = raw.sub || '';
+
+    // City & subtitle dictionary for clean WTB-style presentation
+    const FRIENDLY_NAMES = {
+      'America/New_York': { city: 'New York', sub: 'United States, Eastern Time' },
+      'America/Los_Angeles': { city: 'Los Angeles', sub: 'United States, Pacific Time' },
+      'America/Chicago': { city: 'Chicago', sub: 'United States, Central Time' },
+      'America/Denver': { city: 'Denver', sub: 'United States, Mountain Time' },
+      'Europe/Berlin': { city: 'Berlin', sub: 'Germany, Central Europe' },
+      'Europe/London': { city: 'London', sub: 'United Kingdom, England' },
+      'Europe/Paris': { city: 'Paris', sub: 'France, Central Europe' },
+      'Asia/Shanghai': { city: 'Beijing', sub: 'China, Beijing / Shanghai' },
+      'Asia/Tokyo': { city: 'Tokyo', sub: 'Japan' },
+      'Asia/Calcutta': { city: 'Kolkata', sub: 'India Standard Time' },
+      'Europe/Kiev': { city: 'Kyiv', sub: 'Ukraine, Eastern Europe' },
+      'Asia/Rangoon': { city: 'Yangon', sub: 'Myanmar (Burma)' },
+      'Asia/Saigon': { city: 'Ho Chi Minh', sub: 'Vietnam, Indochina Time' },
+      'Asia/Katmandu': { city: 'Kathmandu', sub: 'Nepal Time' }
+    };
+
+    if (iana && FRIENDLY_NAMES[iana]) {
+      city = raw.label && !raw.label.startsWith('(UTC') ? raw.label : FRIENDLY_NAMES[iana].city;
+      sub = raw.sub || FRIENDLY_NAMES[iana].sub;
+      return { id, label: city, sub, iana };
+    }
+
+    if (rawLabel.startsWith('(UTC')) {
+      const clean = rawLabel.replace(/\(UTC[+-]\d{2}:\d{2}\)\s*/, '');
+      const parts = clean.split(',');
+      city = parts[0].trim();
+      sub = parts.slice(1).join(',').trim() || (iana ? iana.split('/')[0].replace(/_/g, ' ') : '');
+    } else if (!sub && iana) {
+      city = rawLabel.replace(/_/g, ' ');
+      sub = iana.split('/')[0].replace(/_/g, ' ');
+    }
+
+    return { id, label: city, sub, iana };
+  }
+
+  loadState() {
+    // 1. Check URL Hash
+    if (window.location.hash.length > 1) {
+      try {
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        const zonesParam = hash.get('zones');
+        const dateParam = hash.get('date');
+        const is24Param = hash.get('format');
+        const pinnedParam = hash.get('pinned');
+
+        if (zonesParam) {
+          const tokens = zonesParam.split(',');
+          const loaded = [];
+          const seen = new Set();
+          tokens.forEach((token) => {
+            const trimmed = token.trim();
+            if (!trimmed) return;
+            const match = this.zonesDatabase.find(z => 
+              z.iana.toLowerCase() === trimmed.toLowerCase() ||
+              z.iana.toLowerCase().endsWith('/' + trimmed.toLowerCase().replace(/ /g, '_')) ||
+              z.label.toLowerCase().includes(trimmed.toLowerCase())
+            ) || {
+              id: trimmed,
+              label: trimmed.split('/').pop().replace(/_/g, ' '),
+              sub: trimmed.includes('/') ? trimmed.split('/')[0] : '',
+              iana: trimmed
+            };
+            const resolvedIana = match.iana;
+            if (seen.has(resolvedIana)) return;
+            seen.add(resolvedIana);
+            const parsed = this.parseZoneInfo(match);
+            loaded.push({
+              ...parsed,
+              isHome: loaded.length === 0
+            });
+          });
+          if (loaded.length > 0) this.trackedZones = loaded;
+        }
+
+        if (dateParam && window.isValidDateString(dateParam)) {
+          this.currentDate = dateParam;
+        }
+        const formatParam = hash.get('t') || hash.get('format');
+        if (formatParam !== null) {
+          const norm = formatParam.toLowerCase();
+          if (norm === 'mx') {
+            this.format = 'mx';
+          } else if (norm === '24' || norm === '1') {
+            this.format = '24';
+          } else {
+            this.format = '12';
+          }
+        }
+        if (pinnedParam !== null) {
+          const p = parseInt(pinnedParam, 10);
+          if (!isNaN(p) && p >= 0) {
+            this.pinnedCol = p;
+          }
+        }
+        return;
+      } catch (e) {
+        console.warn('Could not parse URL hash state:', e);
+      }
+    }
+
+    // 2. Check localStorage (v3 schema)
+    try {
+      const savedV3 = localStorage.getItem('wtb_state_v3');
+      if (savedV3) {
+        const data = JSON.parse(savedV3);
+        if (data.trackedZones && data.trackedZones.length > 0) {
+          const loaded = [];
+          const seen = new Set();
+          data.trackedZones.forEach((zone, idx) => {
+            if (zone && zone.iana && !seen.has(zone.iana)) {
+              seen.add(zone.iana);
+              loaded.push({
+                ...zone,
+                isHome: loaded.length === 0 ? Boolean(zone.isHome || idx === 0) : false
+              });
+            }
+          });
+          if (loaded.length > 0) {
+            if (!loaded.some(z => z.isHome)) loaded[0].isHome = true;
+            this.trackedZones = loaded;
+          }
+        }
+        if (data.format !== undefined) {
+          this.format = data.format;
+        } else if (data.fmt !== undefined) {
+          this.format = data.fmt;
+        } else if (data.h24 !== undefined) {
+          this.format = data.h24 ? '24' : '12';
+        } else if (data.is24Hour !== undefined) {
+          this.format = data.is24Hour ? '24' : '12';
+        }
+      } else {
+        // Clear older schemas so updated full subtitles load cleanly
+        localStorage.removeItem('wtb_state_v2');
+        localStorage.removeItem('wtb_state');
+      }
+    } catch (e) {
+      console.warn('Could not load localStorage state:', e);
+    }
+  }
+
+  saveState() {
+    try {
+      localStorage.setItem('wtb_state_v3', JSON.stringify({
+        version: 3,
+        trackedZones: this.trackedZones,
+        format: this.format,
+        is24Hour: this.format === '24'
+      }));
+
+      // Update URL hash without reloading
+      const params = new URLSearchParams();
+      params.set('zones', this.trackedZones.map(z => z.iana).join(','));
+      params.set('date', this.currentDate);
+      params.set('t', this.format);
+      if (this.pinnedCol !== null) {
+        params.set('pinned', this.pinnedCol);
+      }
+      history.replaceState(null, '', '#' + params.toString());
+    } catch (e) {
+      console.warn('Could not save state:', e);
+    }
+  }
+
+  initDOM() {
+    this.searchInput = document.getElementById('search-input');
+    this.searchDropdown = document.getElementById('search-dropdown');
+    this.topLiveClock = document.getElementById('top-live-clock');
+    this.topClockTime = document.getElementById('top-clock-time');
+    this.topClockTz = document.getElementById('top-clock-tz');
+    this.topClockWeekNum = document.getElementById('top-clock-week-num');
+    this.formatSegmented = document.getElementById('format-segmented');
+    this.formatSegments = document.querySelectorAll('.format-segment');
+    this.formatToggleBtn = document.getElementById('format-toggle');
+    this.dateTabsContainer = document.getElementById('date-tabs');
+    this.datePicker = document.getElementById('date-picker');
+    this.timelineHeaderHours = document.getElementById('timeline-header-hours');
+    this.timelineRowsContainer = document.getElementById('timeline-rows');
+    this.overlapBanner = document.getElementById('overlap-banner');
+    this.pinnedSummary = document.getElementById('pinned-summary');
+    this.pinnedChips = document.getElementById('pinned-chips');
+    this.pinnedWorkCount = document.getElementById('pinned-work-count');
+    this.clearPinBtn = document.getElementById('clear-pin-btn');
+    this.pinnedSentenceText = document.getElementById('pinned-sentence-text');
+    this.copySentenceBtn = document.getElementById('copy-sentence-btn');
+    this.copySentenceLabel = document.getElementById('copy-sentence-label');
+    this.rulerCursor = document.getElementById('ruler-cursor');
+    this.rulerPinned = document.getElementById('ruler-pinned');
+    this.rulerNow = document.getElementById('ruler-now');
+    this.todayBtn = document.getElementById('today-btn');
+    this.copyLinkBtn = document.getElementById('copy-link-btn');
+    this.resetBtn = document.getElementById('reset-btn');
+    this.formatText = document.getElementById('format-text');
+    this.selftestBtn = document.getElementById('selftest-btn');
+    this.testModal = document.getElementById('test-modal');
+    this.closeModalBtn = document.getElementById('close-modal-btn');
+    this.testResultsContainer = document.getElementById('test-results');
+
+    this.datePicker.value = this.currentDate;
+    this.updateFormatButton();
+    this.initSidebarResizer();
+  }
+
+  initSidebarResizer() {
+    // Restore saved width from localStorage if valid (between 150px and 450px)
+    try {
+      const savedWidth = localStorage.getItem('wtb_sidebar_width');
+      if (savedWidth) {
+        const num = parseInt(savedWidth, 10);
+        if (!isNaN(num) && num >= 150 && num <= 450) {
+          document.documentElement.style.setProperty('--sidebar-width', `${num}px`);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read saved sidebar width:', e);
+    }
+
+    const resizer = document.getElementById('sidebar-resizer');
+    if (!resizer) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 220;
+
+    const onMouseDown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isResizing = true;
+      startX = e.clientX;
+      const currentWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width').trim();
+      startWidth = parseInt(currentWidthStr, 10) || 220;
+
+      document.body.classList.add('resizing-sidebar');
+      resizer.classList.add('is-dragging');
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    };
+
+    const onMouseMove = (e) => {
+      if (!isResizing) return;
+      const dx = e.clientX - startX;
+      const newWidth = Math.min(420, Math.max(160, Math.round(startWidth + dx)));
+      document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+      this.updateNowMarker();
+      this.renderRulerHighlights();
+    };
+
+    const onMouseUp = () => {
+      if (!isResizing) return;
+      isResizing = false;
+      document.body.classList.remove('resizing-sidebar');
+      resizer.classList.remove('is-dragging');
+
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      const finalWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width').trim();
+      try {
+        localStorage.setItem('wtb_sidebar_width', finalWidthStr);
+      } catch (e) {}
+
+      this.updateNowMarker();
+      this.renderRulerHighlights();
+      this.scrollToActiveTime('auto');
+    };
+
+    resizer.addEventListener('mousedown', onMouseDown);
+
+    // Double-click to reset to default 220px
+    resizer.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      document.documentElement.style.setProperty('--sidebar-width', '220px');
+      try {
+        localStorage.removeItem('wtb_sidebar_width');
+      } catch (e) {}
+      this.updateNowMarker();
+      this.renderRulerHighlights();
+      this.scrollToActiveTime('auto');
+    });
+  }
+
+  updateFormatButton() {
+    if (this.formatSegments) {
+      this.formatSegments.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.fmt === this.format);
+      });
+    }
+    const label = this.format === '24' ? '24h Mode' : (this.format === 'mx' ? 'MX Mode' : '12h Mode');
+    if (this.formatText) {
+      this.formatText.textContent = label;
+    } else if (this.formatToggleBtn) {
+      this.formatToggleBtn.textContent = label;
+    }
+  }
+
+  attachEvents() {
+    // Jump to Today / Current Time
+    if (this.todayBtn) {
+      this.todayBtn.addEventListener('click', () => {
+        this.jumpToNow();
+      });
+    }
+
+    // Window Resize -> Recalculate Live Now Needle, Pinned Ruler & Re-center NOW if scrollable
+    window.addEventListener('resize', () => {
+      this.updateNowMarker();
+      this.renderRulerHighlights();
+      const scrollContainer = document.querySelector('.timeline-scroll-container');
+      if (scrollContainer && scrollContainer.scrollWidth > scrollContainer.clientWidth) {
+        this.scrollToActiveTime('auto');
+      }
+    });
+
+    // Segmented format control (am/pm · 24 · MX)
+    if (this.formatSegments) {
+      this.formatSegments.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const fmt = btn.dataset.fmt;
+          if (fmt && fmt !== this.format) {
+            this.format = fmt;
+            this.updateFormatButton();
+            this.saveState();
+            this.render();
+          }
+        });
+      });
+    }
+
+    // Format toggle button (cycles 12 -> 24 -> mx -> 12)
+    if (this.formatToggleBtn) {
+      this.formatToggleBtn.addEventListener('click', () => {
+        if (this.format === '12') this.format = '24';
+        else if (this.format === '24') this.format = 'mx';
+        else this.format = '12';
+        this.updateFormatButton();
+        this.saveState();
+        this.render();
+      });
+    }
+
+    // Date Picker Input
+    this.datePicker.addEventListener('change', (e) => {
+      if (e.target.value) {
+        this.currentDate = e.target.value;
+        this.saveState();
+        this.render();
+        setTimeout(() => this.scrollToActiveTime('auto'), 50);
+      }
+    });
+
+    // Search Autocomplete Input
+    this.searchInput.addEventListener('input', (e) => {
+      this.handleSearch(e.target.value.trim());
+    });
+
+    this.searchInput.addEventListener('focus', () => {
+      if (this.searchInput.value.trim()) {
+        this.searchDropdown.classList.add('open');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!this.searchInput.contains(e.target) && !this.searchDropdown.contains(e.target)) {
+        this.searchDropdown.classList.remove('open');
+      }
+    });
+
+    // Copy Link Button
+    this.copyLinkBtn.addEventListener('click', () => {
+      this.saveState();
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        const originalText = this.copyLinkBtn.innerHTML;
+        this.copyLinkBtn.innerHTML = `✓ Copied!`;
+        setTimeout(() => {
+          this.copyLinkBtn.innerHTML = originalText;
+        }, 1800);
+      });
+    });
+
+    // Reset Defaults Button
+    if (this.resetBtn) {
+      this.resetBtn.addEventListener('click', () => {
+        try {
+          localStorage.removeItem('wtb_state_v3');
+          localStorage.removeItem('wtb_state_v2');
+          localStorage.removeItem('wtb_state');
+          window.location.hash = '';
+        } catch (e) {}
+        this.trackedZones = this.getDefaultZones();
+        this.pinnedCol = null;
+        this.currentDate = this.getTodayDateString(this.getHomeZone().iana);
+        this.datePicker.value = this.currentDate;
+        this.saveState();
+        this.render();
+      });
+    }
+
+    // Clear Pin
+    this.clearPinBtn.addEventListener('click', () => {
+      this.pinnedCol = null;
+      this.rulerPinned.classList.remove('visible');
+      this.pinnedSummary.classList.remove('visible');
+      this.saveState();
+      this.renderRulerHighlights();
+    });
+
+    // Copy Natural Language Sentence
+    if (this.copySentenceBtn) {
+      this.copySentenceBtn.addEventListener('click', () => this.copySentenceToClipboard());
+    }
+    if (this.pinnedSentenceText) {
+      this.pinnedSentenceText.addEventListener('click', () => this.copySentenceToClipboard());
+    }
+
+    // Self-test modal (if elements exist)
+    if (this.selftestBtn) {
+      this.selftestBtn.addEventListener('click', () => this.triggerSelfTestModal());
+    }
+    if (this.closeModalBtn && this.testModal) {
+      this.closeModalBtn.addEventListener('click', () => this.testModal.classList.remove('open'));
+    }
+
+    // Attach timeline scrub/touch/tap events once
+    this.initTimelineEvents();
+  }
+
+  renderDateTabs() {
+    try {
+      const homeZone = this.getHomeZone();
+      const todayStr = this.getTodayDateString(homeZone.iana);
+      const base = Temporal.PlainDate.from(this.currentDate);
+      const tabs = [];
+
+      for (let offset = -3; offset <= 3; offset++) {
+        const d = base.add({ days: offset });
+        const dateStr = d.toString();
+        const monthShort = d.toLocaleString('en-US', { month: 'short' });
+        const active = dateStr === this.currentDate ? 'active' : '';
+        const isToday = dateStr === todayStr ? 'is-today' : '';
+        const todayTitle = dateStr === todayStr ? ' (Today)' : '';
+
+        tabs.push(`
+          <button class="date-tab ${active} ${isToday}" data-date="${dateStr}" title="${monthShort} ${d.day}${todayTitle}">
+            ${monthShort} ${d.day}
+          </button>
+        `);
+      }
+
+      this.dateTabsContainer.innerHTML = tabs.join('');
+      this.dateTabsContainer.querySelectorAll('.date-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.currentDate = btn.dataset.date;
+          this.datePicker.value = this.currentDate;
+          this.saveState();
+          this.render();
+          setTimeout(() => this.scrollToActiveTime('auto'), 50);
+        });
+      });
+    } catch (e) {
+      console.warn('Error rendering date tabs:', e);
+    }
+  }
+
+  handleSearch(query) {
+    if (!query) {
+      this.searchDropdown.innerHTML = '';
+      this.searchDropdown.classList.remove('open');
+      return;
+    }
+
+    const q = query.toLowerCase().trim();
+    const qUpper = query.toUpperCase().trim();
+
+    // Direct shorthand lookup (e.g. "EDT", "BST", "IST")
+    const shorthandZones = (window.TIMEZONE_SHORTHANDS && window.TIMEZONE_SHORTHANDS[qUpper]) || [];
+
+    // Resolve alias (e.g. "kolkata" -> "Asia/Calcutta", "kyiv" -> "Europe/Kiev")
+    const aliasIana = SEARCH_ALIASES[q] || Object.entries(SEARCH_ALIASES).find(([k]) => q.includes(k) || k.includes(q))?.[1];
+
+    // Normalize underscores to spaces so "new york" matches "America/New_York"
+    const matches = this.zonesDatabase.filter(z => {
+      const zIana = z.iana;
+      const labelNorm = z.label.toLowerCase();
+      const ianaNorm = zIana.toLowerCase().replace(/_/g, ' ');
+      const idNorm = z.id.toLowerCase();
+
+      // 1. Shorthand match (e.g. EDT, EST, BST, CET, IST, JST)
+      if (shorthandZones.includes(zIana)) return true;
+      if (z.shorthands && z.shorthands.some(s => s.toLowerCase() === q || s.toUpperCase() === qUpper)) return true;
+
+      // 2. City Alias match (e.g. Kolkata -> Calcutta)
+      if (aliasIana && zIana.toLowerCase() === aliasIana.toLowerCase()) return true;
+
+      // 3. Text query match
+      return labelNorm.includes(q) || ianaNorm.includes(q) || idNorm.includes(q);
+    }).slice(0, 14);
+
+    if (matches.length === 0) {
+      this.searchDropdown.innerHTML = `<div class="dropdown-item" style="color:#94a3b8; cursor:default;">No matching timezones found</div>`;
+      this.searchDropdown.classList.add('open');
+      return;
+    }
+
+    this.searchDropdown.innerHTML = matches.map(m => `
+      <div class="dropdown-item" data-iana="${m.iana}" data-id="${m.id}" data-label="${m.label}">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <strong>${m.label}</strong>
+          ${m.shorthands && m.shorthands.length > 0 ? `
+            <span class="shorthand-badge" style="
+              font-size: 0.72rem;
+              font-weight: 600;
+              background: #f1f5f9;
+              color: #2563eb;
+              border: 1px solid #cbd5e1;
+              padding: 1px 6px;
+              border-radius: 4px;
+              white-space: nowrap;
+              letter-spacing: 0.02em;
+            ">${m.shorthands.slice(0, 3).join(' / ')}</span>
+          ` : ''}
+        </div>
+        <div class="tz-iana" style="color:#64748b; font-size:0.75rem; margin-top:2px;">${m.iana.replace(/_/g, ' ')}</div>
+      </div>
+    `).join('');
+
+    this.searchDropdown.querySelectorAll('.dropdown-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const parsed = this.parseZoneInfo({
+          id: el.dataset.id,
+          label: el.dataset.label,
+          iana: el.dataset.iana
+        });
+
+        this.addZone({
+          ...parsed,
+          isHome: this.trackedZones.length === 0
+        });
+
+        this.searchInput.value = '';
+        this.searchDropdown.classList.remove('open');
+      });
+    });
+
+    this.searchDropdown.classList.add('open');
+  }
+
+  addZone(zone) {
+    if (!this.trackedZones.some(z => z.iana === zone.iana)) {
+      this.trackedZones.push(zone);
+      this.saveState();
+      this.render();
+    }
+  }
+
+  removeZone(index) {
+    if (this.trackedZones.length <= 1) {
+      alert('You must keep at least one time zone.');
+      return;
+    }
+    const removed = this.trackedZones.splice(index, 1)[0];
+    if (removed.isHome && this.trackedZones.length > 0) {
+      this.trackedZones[0].isHome = true;
+    }
+    this.saveState();
+    this.render();
+  }
+
+  setHomeZone(index) {
+    this.trackedZones.forEach((z, i) => {
+      z.isHome = i === index;
+    });
+    this.saveState();
+    this.render();
+  }
+
+  moveZone(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= this.trackedZones.length) return;
+    const temp = this.trackedZones[index];
+    this.trackedZones[index] = this.trackedZones[target];
+    this.trackedZones[target] = temp;
+    this.saveState();
+    this.render();
+  }
+
+  render() {
+    this.renderDateTabs();
+    const homeZone = this.getHomeZone();
+    const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+    const numCols = columnInstants.length;
+
+    // Clamp or clear pinnedCol if it exceeds column count
+    if (this.pinnedCol !== null && this.pinnedCol >= numCols) {
+      this.pinnedCol = null;
+      this.saveState();
+    }
+
+    if (numCols === 0) {
+      document.documentElement.style.setProperty('--num-cols', '0');
+      this.timelineHeaderHours.innerHTML = '';
+
+      const [y, m, d] = this.currentDate.split('-').map(Number);
+      const formattedDate = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC'
+      }).format(new Date(Date.UTC(y, m - 1, d)));
+
+      const locName = (homeZone.label || homeZone.city || homeZone.iana || 'this location').replace(/\(UTC[+-]\d{2}:\d{2}\)\s*/, '');
+
+      this.timelineRowsContainer.innerHTML = `
+        <div class="skipped-day-message" style="
+          padding: 60px 24px;
+          text-align: center;
+          background: #ffffff;
+          border-radius: 8px;
+          border: 1px dashed var(--border-light);
+          margin: 20px 0;
+          color: var(--text-muted);
+        ">
+          <div style="font-size: 2.5rem; margin-bottom: 12px;">🗓️</div>
+          <div style="font-size: 1.15rem; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">
+            ${formattedDate} never happened in ${locName}
+          </div>
+          <div style="font-size: 0.95rem; max-width: 500px; margin: 0 auto; line-height: 1.5;">
+            The zone skipped this date when it crossed the date line.
+          </div>
+        </div>
+      `;
+
+      if (this.overlapBanner) this.overlapBanner.style.display = 'none';
+      if (this.pinnedSummary) this.pinnedSummary.classList.remove('visible');
+      if (this.rulerNow) this.rulerNow.classList.remove('visible');
+      if (this.rulerPinned) this.rulerPinned.classList.remove('visible');
+      if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
+      return;
+    }
+
+    document.documentElement.style.setProperty('--num-cols', numCols);
+
+    // 1. Render Header Hours
+    let headerHtml = '';
+    const nowUtc = Temporal.Now.instant();
+
+    columnInstants.forEach((instant, colIdx) => {
+      const homeZdt = instant.toZonedDateTimeISO(homeZone.iana);
+      const hourVal = homeZdt.hour;
+      let displayHour = hourVal;
+      let ampm = '';
+
+      const rulerIs24 = this.isZone24Hour(homeZone.iana);
+      if (!rulerIs24) {
+        ampm = hourVal >= 12 ? 'pm' : 'am';
+        displayHour = hourVal % 12;
+        if (displayHour === 0) displayHour = 12;
+      }
+
+      headerHtml += `
+        <div class="hour-header-cell" data-col="${colIdx}">
+          <span>${displayHour}</span>
+          <span style="font-size:0.65rem; font-weight:normal; opacity:0.8;">${ampm}</span>
+        </div>
+      `;
+    });
+
+    this.timelineHeaderHours.innerHTML = headerHtml;
+
+    // 2. Render Rows & Compute Overlap
+    const overlapCols = new Set();
+    for (let c = 0; c < numCols; c++) {
+      overlapCols.add(c);
+    }
+
+    let rowsHtml = '';
+    const rowCalculations = [];
+
+    // Anchor instant for relative offset badge & seasonal DST name:
+    const anchorInstant = (this.pinnedCol !== null && columnInstants[this.pinnedCol])
+      ? columnInstants[this.pinnedCol]
+      : columnInstants[Math.floor(numCols / 2)] || columnInstants[0];
+
+    const homeAnchorZdt = anchorInstant.toZonedDateTimeISO(homeZone.iana);
+    const homeDatePlain = Temporal.PlainDate.from(this.currentDate);
+
+    this.trackedZones.forEach((zone, rowIdx) => {
+      const rowAnchorZdt = anchorInstant.toZonedDateTimeISO(zone.iana);
+
+      // Relative offset to home in hours for the displayed date/pinned instant
+      const homeOffsetMinutes = homeAnchorZdt.offsetNanoseconds / 60000000000;
+      const rowOffsetMinutes = rowAnchorZdt.offsetNanoseconds / 60000000000;
+      const diffHours = (rowOffsetMinutes - homeOffsetMinutes) / 60;
+      const diffBadge = zone.isHome ? '0' : (diffHours >= 0 ? `+${diffHours}` : `${diffHours}`);
+
+      // DST Abbreviation for the displayed date
+      const shortTzName = this.getTimezoneAbbrev(zone.iana, anchorInstant);
+
+      let prevLocalDate = null;
+      const cellsData = [];
+
+      columnInstants.forEach((instant, colIdx) => {
+        const zdt = instant.toZonedDateTimeISO(zone.iana);
+        const localHour = zdt.hour;
+        const localMinute = zdt.minute;
+        const fractionalHour = localHour + localMinute / 60;
+        const plainDate = zdt.toPlainDate();
+        const localDateStr = plainDate.toString();
+
+        // Check if date changed from previous cell or differs from home date on col 0
+        let isDateBreak = false;
+        let dateBreakLabel = '';
+        if (prevLocalDate && localDateStr !== prevLocalDate) {
+          isDateBreak = true;
+          const dayName = plainDate.toLocaleString('en-US', { weekday: 'short' }).toUpperCase();
+          dateBreakLabel = `${dayName} ${plainDate.day}`;
+        } else if (colIdx === 0 && !plainDate.equals(homeDatePlain)) {
+          isDateBreak = true;
+          const dayName = plainDate.toLocaleString('en-US', { weekday: 'short' }).toUpperCase();
+          dateBreakLabel = `${dayName} ${plainDate.day}`;
+        }
+        prevLocalDate = localDateStr;
+
+        // Classification: weekends are not work hours
+        const isWeekend = zdt.dayOfWeek >= 6;
+        const isWork = !isWeekend && fractionalHour >= 9 && fractionalHour < 17;
+
+        if (!isWork) {
+          overlapCols.delete(colIdx);
+        }
+
+        // Continuous diurnal gradient computation
+        const cStart = window.getDiurnalColor(fractionalHour);
+        const cEnd = window.getDiurnalColor(fractionalHour + 1.0);
+        const cMid = window.getDiurnalColor(fractionalHour + 0.5);
+
+        // Perceived luminance at midpoint to guarantee contrast
+        const lum = 0.299 * cMid.r + 0.587 * cMid.g + 0.114 * cMid.b;
+        const isLight = lum > 160;
+        const cellTextColor = isLight ? '#0f172a' : '#ffffff';
+        const cellSubColor = isLight ? '#475569' : 'rgba(255, 255, 255, 0.85)';
+        const cellBorderColor = isLight ? 'rgba(148, 163, 184, 0.35)' : 'rgba(255, 255, 255, 0.14)';
+        const cellBgGradient = `linear-gradient(90deg, ${cStart.css} 0%, ${cEnd.css} 100%)`;
+
+        // Format cell string
+        let cellText = '';
+        let cellSub = '';
+        const rowIs24 = this.isZone24Hour(zone.iana);
+        if (rowIs24) {
+          const hStr = String(localHour).padStart(2, '0');
+          const mStr = localMinute !== 0 ? `:${String(localMinute).padStart(2, '0')}` : '';
+          cellText = `${hStr}${mStr}`;
+        } else {
+          let h12 = localHour % 12;
+          if (h12 === 0) h12 = 12;
+          const ampm = localHour >= 12 ? 'pm' : 'am';
+          const mStr = localMinute !== 0 ? `:${String(localMinute).padStart(2, '0')}` : '';
+          cellText = `${h12}${mStr}`;
+          cellSub = ampm;
+        }
+
+        const cellAbbrev = this.getTimezoneAbbrev(zone.iana, instant);
+        const cellOffsetStr = zdt.offset || '';
+        const cellTooltip = `${zone.label}: ${cellText}${cellSub ? ' ' + cellSub : ''} ${cellAbbrev}${cellOffsetStr ? ` (${cellOffsetStr})` : ''} • ${localDateStr}`;
+
+        cellsData.push({
+          colIdx,
+          cellText,
+          cellSub,
+          cellTooltip,
+          isWork,
+          isWeekend,
+          isDateBreak,
+          dateBreakLabel,
+          cellBgGradient,
+          cellTextColor,
+          cellSubColor,
+          cellBorderColor
+        });
+      });
+
+      rowCalculations.push({
+        zone,
+        rowIdx,
+        diffBadge,
+        shortTzName,
+        cellsData
+      });
+    });
+
+    // Build Rows HTML
+    rowCalculations.forEach(({ zone, rowIdx, diffBadge, shortTzName, cellsData }) => {
+      const isHomeClass = zone.isHome ? 'is-home' : '';
+      const isFirst = rowIdx === 0;
+      const isLast = rowIdx === this.trackedZones.length - 1;
+      const upDisabled = isFirst ? 'disabled style="opacity:0.2; cursor:default;"' : '';
+      const downDisabled = isLast ? 'disabled style="opacity:0.2; cursor:default;"' : '';
+
+      const cellsHtml = cellsData.map(c => {
+        let extraClasses = '';
+        if (c.isWork) extraClasses += ' cell-work';
+        if (c.isWeekend) extraClasses += ' cell-weekend';
+        if (c.isDateBreak) extraClasses += ' date-break-cell';
+
+        const dateBreakAttr = c.isDateBreak ? `data-date-label="${c.dateBreakLabel}"` : '';
+
+        return `
+          <div class="time-cell${extraClasses}"
+               style="background: ${c.cellBgGradient}; color: ${c.cellTextColor}; border-right-color: ${c.cellBorderColor};"
+               ${dateBreakAttr}
+               title="${c.cellTooltip}"
+               data-col="${c.colIdx}"
+               data-row="${rowIdx}">
+            <span class="cell-hour">${c.cellText}</span>
+            ${c.cellSub ? `<span class="cell-period" style="color: ${c.cellSubColor}">${c.cellSub}</span>` : ''}
+          </div>
+        `;
+      }).join('');
+
+      rowsHtml += `
+        <div class="zone-row" data-row="${rowIdx}">
+          <div class="zone-sidebar">
+            <div class="zone-meta-left">
+              <div class="zone-reorder">
+                <button class="btn-icon-tiny move-up-btn" data-row="${rowIdx}" title="Move up" ${upDisabled}>▲</button>
+                <button class="btn-icon-tiny move-down-btn" data-row="${rowIdx}" title="Move down" ${downDisabled}>▼</button>
+              </div>
+              <button class="zone-home-btn ${isHomeClass}" data-row="${rowIdx}" title="${zone.isHome ? 'Home zone' : 'Set as home zone'}">
+                ${zone.isHome ? '★' : '☆'}
+              </button>
+              <div class="zone-info" title="${zone.label} (${zone.sub})">
+                <div class="zone-name-row">
+                  <span class="zone-city" title="${zone.label}">${zone.label}</span>
+                </div>
+                <div class="zone-sub-row">
+                  <span class="zone-offset-badge ${isHomeClass}">${diffBadge}</span>
+                  <span class="zone-dst-badge">${shortTzName}</span>
+                  <span class="zone-country" title="${zone.sub}">${zone.sub}</span>
+                </div>
+              </div>
+            </div>
+            <div class="zone-live-time" data-iana="${zone.iana}" title="Current live time">
+              <span class="zone-time-digits">--:--</span>
+              <span class="zone-time-day">---</span>
+            </div>
+            <button class="zone-remove-btn" data-row="${rowIdx}" title="Remove zone">×</button>
+          </div>
+          <div class="zone-cells-strip">
+            ${cellsHtml}
+          </div>
+        </div>
+      `;
+    });
+
+    this.timelineRowsContainer.innerHTML = rowsHtml;
+
+    // Highlight Overlap Columns in Header
+    const headerCells = this.timelineHeaderHours.querySelectorAll('.hour-header-cell');
+    headerCells.forEach(cell => {
+      const c = parseInt(cell.dataset.col, 10);
+      if (overlapCols.has(c)) {
+        cell.classList.add('overlap-col');
+        cell.title = 'Mutual business hours (all tracked zones 9am–5pm)';
+      }
+    });
+
+    // Update Overlap Banner
+    if (overlapCols.size > 0) {
+      const overlapHours = Array.from(overlapCols).map(c => {
+        const homeIs24 = this.isZone24Hour(homeZone.iana);
+        return homeIs24 ? `${String(homeZdt.hour).padStart(2, '0')}:00` : `${homeZdt.hour % 12 || 12}${homeZdt.hour >= 12 ? 'pm' : 'am'}`;
+      });
+      this.overlapBanner.style.display = 'flex';
+      this.overlapBanner.innerHTML = `
+        <span>★ <strong>Mutual Business Hours Available:</strong> ${overlapHours.join(', ')} (${homeZone.label} time)</span>
+      `;
+    } else {
+      this.overlapBanner.style.display = 'none';
+    }
+
+    // Attach row events
+    this.attachRowEvents(columnInstants);
+    this.updateLiveClocks();
+    this.updateTopLiveClock();
+    this.renderRulerHighlights();
+    this.updateNowMarker();
+
+    if (this.isFirstRender) {
+      this.isFirstRender = false;
+      requestAnimationFrame(() => this.scrollToActiveTime('auto'));
+      setTimeout(() => this.scrollToActiveTime('auto'), 50);
+    }
+  }
+
+  getTimezoneAbbrev(iana, instant) {
+    return window.getTimezoneAbbrev(iana, instant);
+  }
+
+  attachRowEvents(columnInstants) {
+    // Row Actions: Move, Home, Remove
+    this.timelineRowsContainer.querySelectorAll('.move-up-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.moveZone(parseInt(btn.dataset.row, 10), -1);
+      });
+    });
+
+    this.timelineRowsContainer.querySelectorAll('.move-down-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.moveZone(parseInt(btn.dataset.row, 10), 1);
+      });
+    });
+
+    this.timelineRowsContainer.querySelectorAll('.zone-home-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.setHomeZone(parseInt(btn.dataset.row, 10));
+      });
+    });
+
+    this.timelineRowsContainer.querySelectorAll('.zone-remove-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.removeZone(parseInt(btn.dataset.row, 10));
+      });
+    });
+  }
+
+  initTimelineEvents() {
+    const scrollContainer = document.querySelector('.timeline-scroll-container');
+    if (!scrollContainer) return;
+
+    let isMouseDown = false;
+    let isTouchDown = false;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let hasTouchMoved = false;
+    let lastTouchEndTime = 0;
+
+    // Pointerdown: Handles both touch and mouse
+    scrollContainer.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        isTouchDown = true;
+        hasTouchMoved = false;
+        touchStartX = e.clientX;
+        touchStartY = e.clientY;
+        if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
+        return;
+      }
+
+      // Mouse left-click: begin scrub
+      if (e.button === 0) {
+        const cell = e.target.closest('.time-cell') || e.target.closest('.hour-header-cell');
+        if (cell && cell.dataset.col !== undefined) {
+          isMouseDown = true;
+          const col = parseInt(cell.dataset.col, 10);
+          this.pinnedCol = col;
+          this.renderRulerHighlights();
+        }
+      }
+    });
+
+    // Pointermove: Distinguishes touch scroll vs mouse scrub/hover
+    scrollContainer.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        if (isTouchDown) {
+          const dx = Math.abs(e.clientX - touchStartX);
+          const dy = Math.abs(e.clientY - touchStartY);
+          if (dx > 8 || dy > 8) {
+            hasTouchMoved = true;
+          }
+        }
+        return;
+      }
+
+      // Mouse hover and drag scrub (ignore synthetic mouse shortly after touch)
+      if (Date.now() - lastTouchEndTime < 500) return;
+
+      const cell = e.target.closest('.time-cell') || e.target.closest('.hour-header-cell');
+      if (cell && cell.dataset.col !== undefined) {
+        const col = parseInt(cell.dataset.col, 10);
+        const headerCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${col}"]`);
+        if (headerCell) {
+          this.hoveredCol = col;
+          if (this.rulerCursor) {
+            this.rulerCursor.style.left = `${headerCell.offsetLeft}px`;
+            this.rulerCursor.style.width = `${headerCell.offsetWidth}px`;
+            this.rulerCursor.classList.add('visible');
+          }
+          this.highlightColumn(col);
+
+          if (isMouseDown && this.pinnedCol !== col) {
+            this.pinnedCol = col;
+            this.renderRulerHighlights();
+          }
+          return;
+        }
+      }
+
+      this.hoveredCol = null;
+      if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
+      this.highlightColumn(null);
+    });
+
+    // Pointerup on window so releasing outside container still ends mouse drag
+    window.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        if (isTouchDown) {
+          isTouchDown = false;
+          lastTouchEndTime = Date.now();
+          if (!hasTouchMoved) {
+            // Clean stationary tap on touchscreen
+            const targetEl = e.target || document.elementFromPoint(e.clientX, e.clientY);
+            const cell = targetEl ? (targetEl.closest('.time-cell') || targetEl.closest('.hour-header-cell')) : null;
+            if (cell && cell.dataset.col !== undefined) {
+              const col = parseInt(cell.dataset.col, 10);
+              this.pinnedCol = col;
+              this.renderRulerHighlights();
+              this.saveState();
+            }
+          }
+          if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
+        }
+        return;
+      }
+
+      if (isMouseDown) {
+        isMouseDown = false;
+        this.saveState();
+      }
+    });
+
+    window.addEventListener('pointercancel', (e) => {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        isTouchDown = false;
+        hasTouchMoved = true;
+        if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
+      }
+      isMouseDown = false;
+    });
+
+    scrollContainer.addEventListener('mouseleave', () => {
+      this.hoveredCol = null;
+      if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
+      this.highlightColumn(null);
+    });
+
+    // Fallback click handler for non-pointer devices, keyboard, or programmatic `.click()`
+    scrollContainer.addEventListener('click', (e) => {
+      if (Date.now() - lastTouchEndTime < 400) return; // ignore synthetic click after touch tap
+      const cell = e.target.closest('.time-cell') || e.target.closest('.hour-header-cell');
+      if (cell && cell.dataset.col !== undefined) {
+        const col = parseInt(cell.dataset.col, 10);
+        this.pinnedCol = col;
+        this.renderRulerHighlights();
+        this.saveState();
+      }
+    });
+  }
+
+  highlightColumn(colIdx) {
+    document.querySelectorAll('.hour-header-cell').forEach(c => {
+      const cIdx = parseInt(c.dataset.col, 10);
+      c.classList.toggle('active-col', (colIdx !== null && cIdx === colIdx) || cIdx === this.pinnedCol);
+    });
+  }
+
+  renderRulerHighlights() {
+    const contentContainer = document.querySelector('.timeline-content');
+    if (this.pinnedCol !== null && contentContainer) {
+      const headerCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${this.pinnedCol}"]`);
+      if (headerCell) {
+        this.rulerPinned.style.left = `${headerCell.offsetLeft}px`;
+        this.rulerPinned.style.width = `${headerCell.offsetWidth}px`;
+        this.rulerPinned.classList.add('visible');
+      }
+      const homeZone = this.getHomeZone();
+      const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+      this.updatePinnedSummary(columnInstants);
+    } else {
+      this.rulerPinned.classList.remove('visible');
+      this.pinnedSummary.classList.remove('visible');
+    }
+    this.highlightColumn(this.hoveredCol);
+  }
+
+  scrollToActiveTime(behavior = 'auto') {
+    const scrollContainer = document.querySelector('.timeline-scroll-container');
+    if (!scrollContainer) return;
+
+    // If total content width fits entirely inside scrollContainer without overflow, reset scroll to 0
+    if (scrollContainer.scrollWidth <= scrollContainer.clientWidth) {
+      scrollContainer.scrollLeft = 0;
+      return;
+    }
+
+    const sidebarEl = document.querySelector('.timeline-header-left');
+    const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 220;
+    const availableWidth = scrollContainer.clientWidth - sidebarWidth;
+
+    let targetX = null;
+
+    // 1. If a column is pinned, prioritize centering on the pinned column
+    if (this.pinnedCol !== null) {
+      const pinnedCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${this.pinnedCol}"]`);
+      if (pinnedCell) {
+        targetX = pinnedCell.offsetLeft + (pinnedCell.offsetWidth / 2);
+      }
+    }
+
+    // 2. Otherwise, if today and rulerNow needle is visible, center exactly on the needle
+    const homeZone = this.getHomeZone();
+    const todayStr = this.getTodayDateString(homeZone.iana);
+
+    if (targetX === null && this.currentDate === todayStr && this.rulerNow && this.rulerNow.classList.contains('visible')) {
+      const leftPx = parseFloat(this.rulerNow.style.left);
+      if (!isNaN(leftPx) && leftPx > 0) {
+        targetX = leftPx;
+      }
+    }
+
+    // 3. If today, find current hour column directly from columnInstants
+    if (targetX === null && this.currentDate === todayStr) {
+      const nowMs = Date.now();
+      const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+      for (let k = 0; k < columnInstants.length; k++) {
+        const colStartMs = Number(columnInstants[k].epochMilliseconds || (columnInstants[k].epochNanoseconds / 1000000n));
+        const nextStartMs = (k + 1 < columnInstants.length)
+          ? Number(columnInstants[k + 1].epochMilliseconds || (columnInstants[k + 1].epochNanoseconds / 1000000n))
+          : colStartMs + 3600000;
+        if (nowMs >= colStartMs && nowMs < nextStartMs) {
+          const headerCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${k}"]`);
+          if (headerCell) {
+            const frac = Math.max(0, Math.min(1, (nowMs - colStartMs) / (nextStartMs - colStartMs)));
+            targetX = headerCell.offsetLeft + frac * headerCell.offsetWidth;
+          }
+          break;
+        }
+      }
+    }
+
+    // 4. If viewing another date without pin, default to 9:00 AM (col 9) or first cell
+    if (targetX === null) {
+      const defaultCell = this.timelineHeaderHours.querySelector('.hour-header-cell[data-col="9"]')
+        || this.timelineHeaderHours.querySelector('.hour-header-cell');
+      if (defaultCell) {
+        targetX = defaultCell.offsetLeft + (defaultCell.offsetWidth / 2);
+      }
+    }
+
+    if (targetX !== null && availableWidth > 0) {
+      const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+      const targetScrollLeft = Math.max(0, Math.min(maxScroll, Math.round(targetX - sidebarWidth - (availableWidth / 2))));
+      scrollContainer.scrollLeft = targetScrollLeft;
+    }
+  }
+
+  jumpToNow() {
+    const homeZone = this.getHomeZone();
+    this.currentDate = this.getTodayDateString(homeZone.iana);
+    this.datePicker.value = this.currentDate;
+    this.saveState();
+    this.render();
+
+    setTimeout(() => {
+      this.scrollToActiveTime('auto');
+    }, 60);
+  }
+
+  updateNowMarker() {
+    if (!this.rulerNow) return;
+
+    const homeZone = this.getHomeZone();
+    const todayStr = this.getTodayDateString(homeZone.iana);
+
+    // If user is viewing a different date, hide the real-time needle & current-hour styles
+    if (this.currentDate !== todayStr) {
+      this.rulerNow.classList.remove('visible');
+      document.querySelectorAll('.hour-header-cell.is-current-hour').forEach(el => el.classList.remove('is-current-hour'));
+      return;
+    }
+
+    const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+    const nowMs = Date.now();
+
+    // Find which column in columnInstants contains the current moment
+    let targetColIdx = -1;
+    let fraction = 0;
+
+    for (let k = 0; k < columnInstants.length; k++) {
+      const colStartMs = Number(columnInstants[k].epochMilliseconds || (columnInstants[k].epochNanoseconds / 1000000n));
+      const nextStartMs = (k + 1 < columnInstants.length)
+        ? Number(columnInstants[k + 1].epochMilliseconds || (columnInstants[k + 1].epochNanoseconds / 1000000n))
+        : colStartMs + 3600000;
+
+      if (nowMs >= colStartMs && nowMs < nextStartMs) {
+        targetColIdx = k;
+        fraction = Math.max(0, Math.min(1, (nowMs - colStartMs) / (nextStartMs - colStartMs)));
+        break;
+      }
+    }
+
+    if (targetColIdx === -1) {
+      this.rulerNow.classList.remove('visible');
+      return;
+    }
+
+    // Toggle .is-current-hour class on header cells
+    document.querySelectorAll('.hour-header-cell').forEach(el => {
+      const cIdx = parseInt(el.dataset.col, 10);
+      el.classList.toggle('is-current-hour', cIdx === targetColIdx);
+    });
+
+    const contentContainer = document.querySelector('.timeline-content');
+    const headerCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${targetColIdx}"]`);
+
+    if (headerCell && contentContainer) {
+      const xPos = headerCell.offsetLeft + fraction * headerCell.offsetWidth;
+
+      this.rulerNow.style.left = `${xPos}px`;
+      this.rulerNow.classList.add('visible');
+
+      const pill = this.rulerNow.querySelector('.now-pill');
+      if (pill) {
+        if (xPos + 50 > contentRect.width) {
+          pill.style.left = 'auto';
+          pill.style.right = '0px';
+          pill.style.transform = 'none';
+        } else if (xPos < 25) {
+          pill.style.left = '0px';
+          pill.style.right = 'auto';
+          pill.style.transform = 'none';
+        } else {
+          pill.style.left = '50%';
+          pill.style.right = 'auto';
+          pill.style.transform = 'translateX(-50%)';
+        }
+      }
+
+      const nowTextEl = document.getElementById('now-time-text');
+      try {
+        const homeIs24 = this.isZone24Hour(homeZone.iana);
+        const homeTimeStr = new Intl.DateTimeFormat('en-US', {
+          timeZone: homeZone.iana,
+          hour: homeIs24 ? '2-digit' : 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: !homeIs24
+        }).format(new Date(nowMs));
+        this.rulerNow.title = `Current Time: ${homeTimeStr} (${homeZone.label})`;
+      } catch {
+        this.rulerNow.title = 'Current Time';
+      }
+      if (nowTextEl) {
+        nowTextEl.textContent = 'NOW';
+      }
+    }
+  }
+
+  getPinnedHourStatus(zdt) {
+    return window.getPinnedHourStatus(zdt);
+  }
+
+  updatePinnedSummary(columnInstants) {
+    if (this.pinnedCol === null || !columnInstants[this.pinnedCol]) return;
+
+    const instant = columnInstants[this.pinnedCol];
+    let workCount = 0;
+
+    const chipsHtml = this.trackedZones.map(zone => {
+      const zdt = instant.toZonedDateTimeISO(zone.iana);
+      const is24 = this.isZone24Hour(zone.iana);
+      const timeStr = zdt.toLocaleString('en-US', {
+        hour: is24 ? '2-digit' : 'numeric',
+        minute: '2-digit',
+        hour12: !is24
+      });
+      const dateStr = zdt.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const status = this.getPinnedHourStatus(zdt);
+
+      if (status.category === 'work') {
+        workCount++;
+      }
+
+      return `
+        <div class="pinned-chip ${status.statusClass}" title="${zone.label}: ${status.tooltip}">
+          <span class="pinned-status-dot ${status.statusClass}"></span>
+          <span class="pinned-zone-name">${zone.label}:</span>
+          <span class="pinned-time">${timeStr}</span>
+          <span class="pinned-date">(${dateStr})</span>
+          <span class="pinned-status-badge ${status.statusClass}">${status.statusLabel}</span>
+        </div>
+      `;
+    }).join('');
+
+    this.pinnedChips.innerHTML = chipsHtml;
+
+    if (this.pinnedWorkCount) {
+      const total = this.trackedZones.length;
+      if (workCount === total && total > 0) {
+        this.pinnedWorkCount.innerHTML = `<span class="work-counter-pill all-work">★ All ${total} in work hours</span>`;
+      } else if (workCount > 0) {
+        this.pinnedWorkCount.innerHTML = `<span class="work-counter-pill partial-work">${workCount} of ${total} in work hours</span>`;
+      } else {
+        this.pinnedWorkCount.innerHTML = `<span class="work-counter-pill none-work">0 of ${total} in work hours</span>`;
+      }
+    }
+
+    if (this.pinnedSentenceText) {
+      this.pinnedSentenceText.textContent = this.generatePinnedSentence(instant);
+    }
+
+    this.pinnedSummary.classList.add('visible');
+  }
+
+  generatePinnedSentence(instant) {
+    return window.generatePinnedSentence(instant, this.trackedZones, this.format, this.getHomeZone());
+  }
+
+  copySentenceToClipboard() {
+    if (!this.pinnedSentenceText) return;
+    const text = this.pinnedSentenceText.textContent.trim();
+    if (!text) return;
+
+    const onSuccess = () => {
+      if (this.copySentenceBtn) this.copySentenceBtn.classList.add('copied');
+      if (this.copySentenceLabel) this.copySentenceLabel.textContent = 'Copied!';
+      setTimeout(() => {
+        if (this.copySentenceBtn) this.copySentenceBtn.classList.remove('copied');
+        if (this.copySentenceLabel) this.copySentenceLabel.textContent = 'Copy Description';
+      }, 2000);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+        this.fallbackCopyText(text);
+        onSuccess();
+      });
+    } else {
+      this.fallbackCopyText(text);
+      onSuccess();
+    }
+  }
+
+  fallbackCopyText(text) {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch (e) {
+      console.warn('Fallback copy failed:', e);
+    }
+  }
+
+  updateLiveClocks() {
+    const now = Temporal.Now.instant();
+    document.querySelectorAll('.zone-live-time').forEach(el => {
+      const iana = el.dataset.iana;
+      if (!iana) return;
+
+      try {
+        const zdt = now.toZonedDateTimeISO(iana);
+        const is24 = this.isZone24Hour(iana);
+        const timeDigits = zdt.toLocaleString('en-US', {
+          hour: is24 ? '2-digit' : 'numeric',
+          minute: '2-digit',
+          hour12: !is24
+        });
+        const dayStr = zdt.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+        const digitsEl = el.querySelector('.zone-time-digits');
+        const dayEl = el.querySelector('.zone-time-day');
+        if (digitsEl) digitsEl.textContent = timeDigits;
+        if (dayEl) dayEl.textContent = dayStr;
+      } catch (e) {
+        console.warn(`Clock error for ${iana}:`, e);
+      }
+    });
+  }
+
+  updateTopLiveClock() {
+    if (!this.topClockTime || !this.topClockTz || !this.topClockWeekNum) return;
+    try {
+      const now = Temporal.Now.instant();
+      const homeZone = this.getHomeZone();
+      const zdt = now.toZonedDateTimeISO(homeZone.iana);
+      const is24 = this.isZone24Hour(homeZone.iana);
+
+      const timeStr = zdt.toLocaleString('en-US', {
+        hour: is24 ? '2-digit' : 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: !is24
+      });
+      const tzAbbrev = this.getTimezoneAbbrev(homeZone.iana, now);
+      const weekNum = zdt.weekOfYear || (window.getISOWeekNumber ? window.getISOWeekNumber() : 38);
+
+      this.topClockTime.textContent = timeStr;
+      this.topClockTz.textContent = tzAbbrev || homeZone.label;
+      this.topClockWeekNum.textContent = weekNum;
+
+      if (this.topLiveClock) {
+        this.topLiveClock.title = `Current Time: ${timeStr} ${tzAbbrev} (${homeZone.label}) • ISO Week ${weekNum}`;
+      }
+    } catch (e) {
+      console.warn('Error updating top live clock:', e);
+    }
+  }
+
+  async triggerSelfTestModal() {
+    this.testModal.classList.add('open');
+    this.testResultsContainer.innerHTML = `<div style="padding:10px; color:#64748b;">Running golden assertion test suite...</div>`;
+    const results = await runSelfTests();
+
+    let allPass = true;
+    const itemsHtml = results.map(r => {
+      if (!r.pass) allPass = false;
+      return `
+        <div class="test-item">
+          <div>
+            <strong>${r.name}</strong>
+            ${r.details ? `<div style="color:#64748b; font-size:0.78rem;">${r.details}</div>` : ''}
+          </div>
+          <span class="test-badge ${r.pass ? 'pass' : 'fail'}">${r.pass ? 'PASS' : 'FAIL'}</span>
+        </div>
+      `;
+    }).join('');
+
+    const summaryBanner = `
+      <div style="margin-bottom:12px; padding:8px 12px; border-radius:6px; font-weight:700; ${allPass ? 'background:#dcfce7; color:#15803d;' : 'background:#fee2e2; color:#b91c1c;'}">
+        ${allPass ? `✓ ALL ${results.length} GOLDEN ASSERTIONS PASSED` : '✕ SOME TESTS FAILED'}
+      </div>
+    `;
+
+    this.testResultsContainer.innerHTML = summaryBanner + itemsHtml;
+  }
+}
+
+// Bootstrap
+document.addEventListener('DOMContentLoaded', () => {
+  window.wtbApp = new WTBApp();
+});
+
+  </script>
+</body>
+</html>

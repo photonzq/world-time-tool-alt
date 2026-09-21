@@ -1,0 +1,702 @@
+/**
+ * NOTE: This file contains display labels only, curated from the Windows Registry (Get-TimeZone -ListAvailable).
+ * All actual time rules, offsets, and DST transitions are computed dynamically at runtime via the browser's Temporal / Intl engine.
+ */
+window.WINDOWS_ZONES = [
+  {
+    "id": "Dateline Standard Time",
+    "label": "(UTC-12:00) International Date Line West",
+    "iana": "Etc/GMT+12"
+  },
+  {
+    "id": "UTC-11",
+    "label": "(UTC-11:00) Coordinated Universal Time-11",
+    "iana": "Etc/GMT+11"
+  },
+  {
+    "id": "Aleutian Standard Time",
+    "label": "(UTC-10:00) Aleutian Islands",
+    "iana": "America/Adak"
+  },
+  {
+    "id": "Hawaiian Standard Time",
+    "label": "(UTC-10:00) Hawaii",
+    "iana": "Pacific/Honolulu"
+  },
+  {
+    "id": "Marquesas Standard Time",
+    "label": "(UTC-09:30) Marquesas Islands",
+    "iana": "Pacific/Marquesas"
+  },
+  {
+    "id": "Alaskan Standard Time",
+    "label": "(UTC-09:00) Alaska",
+    "iana": "America/Anchorage"
+  },
+  {
+    "id": "UTC-09",
+    "label": "(UTC-09:00) Coordinated Universal Time-09",
+    "iana": "Etc/GMT+9"
+  },
+  {
+    "id": "Pacific Standard Time (Mexico)",
+    "label": "(UTC-08:00) Baja California",
+    "iana": "America/Tijuana"
+  },
+  {
+    "id": "UTC-08",
+    "label": "(UTC-08:00) Coordinated Universal Time-08",
+    "iana": "Etc/GMT+8"
+  },
+  {
+    "id": "Pacific Standard Time",
+    "label": "(UTC-08:00) Pacific Time (US & Canada)",
+    "iana": "America/Los_Angeles"
+  },
+  {
+    "id": "US Mountain Standard Time",
+    "label": "(UTC-07:00) Arizona",
+    "iana": "America/Phoenix"
+  },
+  {
+    "id": "Mountain Standard Time (Mexico)",
+    "label": "(UTC-07:00) La Paz, Mazatlan",
+    "iana": "America/Chihuahua"
+  },
+  {
+    "id": "Mountain Standard Time",
+    "label": "(UTC-07:00) Mountain Time (US & Canada)",
+    "iana": "America/Denver"
+  },
+  {
+    "id": "Yukon Standard Time",
+    "label": "(UTC-07:00) Yukon",
+    "iana": "America/Whitehorse"
+  },
+  {
+    "id": "Central America Standard Time",
+    "label": "(UTC-06:00) Central America",
+    "iana": "America/Guatemala"
+  },
+  {
+    "id": "Central Standard Time",
+    "label": "(UTC-06:00) Central Time (US & Canada)",
+    "iana": "America/Chicago"
+  },
+  {
+    "id": "Easter Island Standard Time",
+    "label": "(UTC-06:00) Easter Island",
+    "iana": "Pacific/Easter"
+  },
+  {
+    "id": "Central Standard Time (Mexico)",
+    "label": "(UTC-06:00) Guadalajara, Mexico City, Monterrey",
+    "iana": "America/Mexico_City"
+  },
+  {
+    "id": "Canada Central Standard Time",
+    "label": "(UTC-06:00) Saskatchewan",
+    "iana": "America/Regina"
+  },
+  {
+    "id": "SA Pacific Standard Time",
+    "label": "(UTC-05:00) Bogota, Lima, Quito, Rio Branco",
+    "iana": "America/Bogota"
+  },
+  {
+    "id": "Eastern Standard Time (Mexico)",
+    "label": "(UTC-05:00) Chetumal",
+    "iana": "America/Cancun"
+  },
+  {
+    "id": "Eastern Standard Time",
+    "label": "(UTC-05:00) Eastern Time (US & Canada)",
+    "iana": "America/New_York"
+  },
+  {
+    "id": "Haiti Standard Time",
+    "label": "(UTC-05:00) Haiti",
+    "iana": "America/Port-au-Prince"
+  },
+  {
+    "id": "Cuba Standard Time",
+    "label": "(UTC-05:00) Havana",
+    "iana": "America/Havana"
+  },
+  {
+    "id": "US Eastern Standard Time",
+    "label": "(UTC-05:00) Indiana (East)",
+    "iana": "America/Indianapolis"
+  },
+  {
+    "id": "Turks And Caicos Standard Time",
+    "label": "(UTC-05:00) Turks and Caicos",
+    "iana": "America/Grand_Turk"
+  },
+  {
+    "id": "Atlantic Standard Time",
+    "label": "(UTC-04:00) Atlantic Time (Canada)",
+    "iana": "America/Halifax"
+  },
+  {
+    "id": "Venezuela Standard Time",
+    "label": "(UTC-04:00) Caracas",
+    "iana": "America/Caracas"
+  },
+  {
+    "id": "Central Brazilian Standard Time",
+    "label": "(UTC-04:00) Cuiaba",
+    "iana": "America/Cuiaba"
+  },
+  {
+    "id": "SA Western Standard Time",
+    "label": "(UTC-04:00) Georgetown, La Paz, Manaus, San Juan",
+    "iana": "America/La_Paz"
+  },
+  {
+    "id": "Pacific SA Standard Time",
+    "label": "(UTC-04:00) Santiago",
+    "iana": "America/Santiago"
+  },
+  {
+    "id": "Newfoundland Standard Time",
+    "label": "(UTC-03:30) Newfoundland",
+    "iana": "America/St_Johns"
+  },
+  {
+    "id": "Tocantins Standard Time",
+    "label": "(UTC-03:00) Araguaina",
+    "iana": "America/Araguaina"
+  },
+  {
+    "id": "Paraguay Standard Time",
+    "label": "(UTC-03:00) Asuncion",
+    "iana": "America/Asuncion"
+  },
+  {
+    "id": "E. South America Standard Time",
+    "label": "(UTC-03:00) Brasilia",
+    "iana": "America/Sao_Paulo"
+  },
+  {
+    "id": "SA Eastern Standard Time",
+    "label": "(UTC-03:00) Cayenne, Fortaleza",
+    "iana": "America/Cayenne"
+  },
+  {
+    "id": "Argentina Standard Time",
+    "label": "(UTC-03:00) City of Buenos Aires",
+    "iana": "America/Buenos_Aires"
+  },
+  {
+    "id": "Montevideo Standard Time",
+    "label": "(UTC-03:00) Montevideo",
+    "iana": "America/Montevideo"
+  },
+  {
+    "id": "Magallanes Standard Time",
+    "label": "(UTC-03:00) Punta Arenas",
+    "iana": "America/Punta_Arenas"
+  },
+  {
+    "id": "Saint Pierre Standard Time",
+    "label": "(UTC-03:00) Saint Pierre and Miquelon",
+    "iana": "America/Miquelon"
+  },
+  {
+    "id": "Bahia Standard Time",
+    "label": "(UTC-03:00) Salvador",
+    "iana": "America/Bahia"
+  },
+  {
+    "id": "UTC-02",
+    "label": "(UTC-02:00) Coordinated Universal Time-02",
+    "iana": "Etc/GMT+2"
+  },
+  {
+    "id": "Greenland Standard Time",
+    "label": "(UTC-02:00) Greenland",
+    "iana": "America/Godthab"
+  },
+  {
+    "id": "Azores Standard Time",
+    "label": "(UTC-01:00) Azores",
+    "iana": "Atlantic/Azores"
+  },
+  {
+    "id": "Cape Verde Standard Time",
+    "label": "(UTC-01:00) Cabo Verde Is.",
+    "iana": "Atlantic/Cape_Verde"
+  },
+  {
+    "id": "UTC",
+    "label": "(UTC) Coordinated Universal Time",
+    "iana": "Etc/UTC"
+  },
+  {
+    "id": "GMT Standard Time",
+    "label": "(UTC+00:00) Dublin, Edinburgh, Lisbon, London",
+    "iana": "Europe/London"
+  },
+  {
+    "id": "Greenwich Standard Time",
+    "label": "(UTC+00:00) Monrovia, Reykjavik",
+    "iana": "Atlantic/Reykjavik"
+  },
+  {
+    "id": "Sao Tome Standard Time",
+    "label": "(UTC+00:00) Sao Tome",
+    "iana": "Africa/Sao_Tome"
+  },
+  {
+    "id": "Morocco Standard Time",
+    "label": "(UTC+01:00) Casablanca",
+    "iana": "Africa/Casablanca"
+  },
+  {
+    "id": "W. Europe Standard Time",
+    "label": "(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna",
+    "iana": "Europe/Berlin"
+  },
+  {
+    "id": "Central Europe Standard Time",
+    "label": "(UTC+01:00) Belgrade, Bratislava, Budapest, Ljubljana, Prague",
+    "iana": "Europe/Budapest"
+  },
+  {
+    "id": "Romance Standard Time",
+    "label": "(UTC+01:00) Brussels, Copenhagen, Madrid, Paris",
+    "iana": "Europe/Paris"
+  },
+  {
+    "id": "Central European Standard Time",
+    "label": "(UTC+01:00) Sarajevo, Skopje, Warsaw, Zagreb",
+    "iana": "Europe/Warsaw"
+  },
+  {
+    "id": "W. Central Africa Standard Time",
+    "label": "(UTC+01:00) West Central Africa",
+    "iana": "Africa/Lagos"
+  },
+  {
+    "id": "GTB Standard Time",
+    "label": "(UTC+02:00) Athens, Bucharest",
+    "iana": "Europe/Bucharest"
+  },
+  {
+    "id": "Middle East Standard Time",
+    "label": "(UTC+02:00) Beirut",
+    "iana": "Asia/Beirut"
+  },
+  {
+    "id": "Egypt Standard Time",
+    "label": "(UTC+02:00) Cairo",
+    "iana": "Africa/Cairo"
+  },
+  {
+    "id": "E. Europe Standard Time",
+    "label": "(UTC+02:00) Chisinau",
+    "iana": "Europe/Chisinau"
+  },
+  {
+    "id": "West Bank Standard Time",
+    "label": "(UTC+02:00) Gaza, Hebron",
+    "iana": "Asia/Hebron"
+  },
+  {
+    "id": "South Africa Standard Time",
+    "label": "(UTC+02:00) Harare, Pretoria",
+    "iana": "Africa/Johannesburg"
+  },
+  {
+    "id": "FLE Standard Time",
+    "label": "(UTC+02:00) Helsinki, Kyiv, Riga, Sofia, Tallinn, Vilnius",
+    "iana": "Europe/Kiev"
+  },
+  {
+    "id": "Israel Standard Time",
+    "label": "(UTC+02:00) Jerusalem",
+    "iana": "Asia/Jerusalem"
+  },
+  {
+    "id": "South Sudan Standard Time",
+    "label": "(UTC+02:00) Juba",
+    "iana": "Africa/Juba"
+  },
+  {
+    "id": "Kaliningrad Standard Time",
+    "label": "(UTC+02:00) Kaliningrad",
+    "iana": "Europe/Kaliningrad"
+  },
+  {
+    "id": "Sudan Standard Time",
+    "label": "(UTC+02:00) Khartoum",
+    "iana": "Africa/Khartoum"
+  },
+  {
+    "id": "Libya Standard Time",
+    "label": "(UTC+02:00) Tripoli",
+    "iana": "Africa/Tripoli"
+  },
+  {
+    "id": "Namibia Standard Time",
+    "label": "(UTC+02:00) Windhoek",
+    "iana": "Africa/Windhoek"
+  },
+  {
+    "id": "Jordan Standard Time",
+    "label": "(UTC+03:00) Amman",
+    "iana": "Asia/Amman"
+  },
+  {
+    "id": "Arabic Standard Time",
+    "label": "(UTC+03:00) Baghdad",
+    "iana": "Asia/Baghdad"
+  },
+  {
+    "id": "Syria Standard Time",
+    "label": "(UTC+03:00) Damascus",
+    "iana": "Asia/Damascus"
+  },
+  {
+    "id": "Turkey Standard Time",
+    "label": "(UTC+03:00) Istanbul",
+    "iana": "Europe/Istanbul"
+  },
+  {
+    "id": "Arab Standard Time",
+    "label": "(UTC+03:00) Kuwait, Riyadh",
+    "iana": "Asia/Riyadh"
+  },
+  {
+    "id": "Belarus Standard Time",
+    "label": "(UTC+03:00) Minsk",
+    "iana": "Europe/Minsk"
+  },
+  {
+    "id": "Russian Standard Time",
+    "label": "(UTC+03:00) Moscow, St. Petersburg",
+    "iana": "Europe/Moscow"
+  },
+  {
+    "id": "E. Africa Standard Time",
+    "label": "(UTC+03:00) Nairobi",
+    "iana": "Africa/Nairobi"
+  },
+  {
+    "id": "Volgograd Standard Time",
+    "label": "(UTC+03:00) Volgograd",
+    "iana": "Europe/Volgograd"
+  },
+  {
+    "id": "Iran Standard Time",
+    "label": "(UTC+03:30) Tehran",
+    "iana": "Asia/Tehran"
+  },
+  {
+    "id": "Arabian Standard Time",
+    "label": "(UTC+04:00) Abu Dhabi, Muscat",
+    "iana": "Asia/Dubai"
+  },
+  {
+    "id": "Astrakhan Standard Time",
+    "label": "(UTC+04:00) Astrakhan, Ulyanovsk",
+    "iana": "Europe/Astrakhan"
+  },
+  {
+    "id": "Azerbaijan Standard Time",
+    "label": "(UTC+04:00) Baku",
+    "iana": "Asia/Baku"
+  },
+  {
+    "id": "Russia Time Zone 3",
+    "label": "(UTC+04:00) Izhevsk, Samara",
+    "iana": "Europe/Samara"
+  },
+  {
+    "id": "Mauritius Standard Time",
+    "label": "(UTC+04:00) Port Louis",
+    "iana": "Indian/Mauritius"
+  },
+  {
+    "id": "Saratov Standard Time",
+    "label": "(UTC+04:00) Saratov",
+    "iana": "Europe/Saratov"
+  },
+  {
+    "id": "Georgian Standard Time",
+    "label": "(UTC+04:00) Tbilisi",
+    "iana": "Asia/Tbilisi"
+  },
+  {
+    "id": "Caucasus Standard Time",
+    "label": "(UTC+04:00) Yerevan",
+    "iana": "Asia/Yerevan"
+  },
+  {
+    "id": "Afghanistan Standard Time",
+    "label": "(UTC+04:30) Kabul",
+    "iana": "Asia/Kabul"
+  },
+  {
+    "id": "West Asia Standard Time",
+    "label": "(UTC+05:00) Ashgabat, Tashkent",
+    "iana": "Asia/Tashkent"
+  },
+  {
+    "id": "Qyzylorda Standard Time",
+    "label": "(UTC+05:00) Astana",
+    "iana": "Asia/Qyzylorda"
+  },
+  {
+    "id": "Ekaterinburg Standard Time",
+    "label": "(UTC+05:00) Ekaterinburg",
+    "iana": "Asia/Yekaterinburg"
+  },
+  {
+    "id": "Pakistan Standard Time",
+    "label": "(UTC+05:00) Islamabad, Karachi",
+    "iana": "Asia/Karachi"
+  },
+  {
+    "id": "India Standard Time",
+    "label": "(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi",
+    "iana": "Asia/Calcutta"
+  },
+  {
+    "id": "Sri Lanka Standard Time",
+    "label": "(UTC+05:30) Sri Jayawardenepura",
+    "iana": "Asia/Colombo"
+  },
+  {
+    "id": "Nepal Standard Time",
+    "label": "(UTC+05:45) Kathmandu",
+    "iana": "Asia/Katmandu"
+  },
+  {
+    "id": "Central Asia Standard Time",
+    "label": "(UTC+06:00) Bishkek",
+    "iana": "Asia/Almaty"
+  },
+  {
+    "id": "Bangladesh Standard Time",
+    "label": "(UTC+06:00) Dhaka",
+    "iana": "Asia/Dhaka"
+  },
+  {
+    "id": "Omsk Standard Time",
+    "label": "(UTC+06:00) Omsk",
+    "iana": "Asia/Omsk"
+  },
+  {
+    "id": "Myanmar Standard Time",
+    "label": "(UTC+06:30) Yangon (Rangoon)",
+    "iana": "Asia/Rangoon"
+  },
+  {
+    "id": "SE Asia Standard Time",
+    "label": "(UTC+07:00) Bangkok, Hanoi, Jakarta",
+    "iana": "Asia/Bangkok"
+  },
+  {
+    "id": "Altai Standard Time",
+    "label": "(UTC+07:00) Barnaul, Gorno-Altaysk",
+    "iana": "Asia/Barnaul"
+  },
+  {
+    "id": "W. Mongolia Standard Time",
+    "label": "(UTC+07:00) Hovd",
+    "iana": "Asia/Hovd"
+  },
+  {
+    "id": "North Asia Standard Time",
+    "label": "(UTC+07:00) Krasnoyarsk",
+    "iana": "Asia/Krasnoyarsk"
+  },
+  {
+    "id": "N. Central Asia Standard Time",
+    "label": "(UTC+07:00) Novosibirsk",
+    "iana": "Asia/Novosibirsk"
+  },
+  {
+    "id": "Tomsk Standard Time",
+    "label": "(UTC+07:00) Tomsk",
+    "iana": "Asia/Tomsk"
+  },
+  {
+    "id": "China Standard Time",
+    "label": "(UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi",
+    "iana": "Asia/Shanghai"
+  },
+  {
+    "id": "North Asia East Standard Time",
+    "label": "(UTC+08:00) Irkutsk",
+    "iana": "Asia/Irkutsk"
+  },
+  {
+    "id": "Singapore Standard Time",
+    "label": "(UTC+08:00) Kuala Lumpur, Singapore",
+    "iana": "Asia/Singapore"
+  },
+  {
+    "id": "W. Australia Standard Time",
+    "label": "(UTC+08:00) Perth",
+    "iana": "Australia/Perth"
+  },
+  {
+    "id": "Taipei Standard Time",
+    "label": "(UTC+08:00) Taipei",
+    "iana": "Asia/Taipei"
+  },
+  {
+    "id": "Ulaanbaatar Standard Time",
+    "label": "(UTC+08:00) Ulaanbaatar",
+    "iana": "Asia/Ulaanbaatar"
+  },
+  {
+    "id": "Aus Central W. Standard Time",
+    "label": "(UTC+08:45) Eucla",
+    "iana": "Australia/Eucla"
+  },
+  {
+    "id": "Transbaikal Standard Time",
+    "label": "(UTC+09:00) Chita",
+    "iana": "Asia/Chita"
+  },
+  {
+    "id": "Tokyo Standard Time",
+    "label": "(UTC+09:00) Osaka, Sapporo, Tokyo",
+    "iana": "Asia/Tokyo"
+  },
+  {
+    "id": "North Korea Standard Time",
+    "label": "(UTC+09:00) Pyongyang",
+    "iana": "Asia/Pyongyang"
+  },
+  {
+    "id": "Korea Standard Time",
+    "label": "(UTC+09:00) Seoul",
+    "iana": "Asia/Seoul"
+  },
+  {
+    "id": "Yakutsk Standard Time",
+    "label": "(UTC+09:00) Yakutsk",
+    "iana": "Asia/Yakutsk"
+  },
+  {
+    "id": "Cen. Australia Standard Time",
+    "label": "(UTC+09:30) Adelaide",
+    "iana": "Australia/Adelaide"
+  },
+  {
+    "id": "AUS Central Standard Time",
+    "label": "(UTC+09:30) Darwin",
+    "iana": "Australia/Darwin"
+  },
+  {
+    "id": "E. Australia Standard Time",
+    "label": "(UTC+10:00) Brisbane",
+    "iana": "Australia/Brisbane"
+  },
+  {
+    "id": "AUS Eastern Standard Time",
+    "label": "(UTC+10:00) Canberra, Melbourne, Sydney",
+    "iana": "Australia/Sydney"
+  },
+  {
+    "id": "West Pacific Standard Time",
+    "label": "(UTC+10:00) Guam, Port Moresby",
+    "iana": "Pacific/Port_Moresby"
+  },
+  {
+    "id": "Tasmania Standard Time",
+    "label": "(UTC+10:00) Hobart",
+    "iana": "Australia/Hobart"
+  },
+  {
+    "id": "Vladivostok Standard Time",
+    "label": "(UTC+10:00) Vladivostok",
+    "iana": "Asia/Vladivostok"
+  },
+  {
+    "id": "Lord Howe Standard Time",
+    "label": "(UTC+10:30) Lord Howe Island",
+    "iana": "Australia/Lord_Howe"
+  },
+  {
+    "id": "Bougainville Standard Time",
+    "label": "(UTC+11:00) Bougainville Island",
+    "iana": "Pacific/Bougainville"
+  },
+  {
+    "id": "Russia Time Zone 10",
+    "label": "(UTC+11:00) Chokurdakh",
+    "iana": "Asia/Srednekolymsk"
+  },
+  {
+    "id": "Magadan Standard Time",
+    "label": "(UTC+11:00) Magadan",
+    "iana": "Asia/Magadan"
+  },
+  {
+    "id": "Norfolk Standard Time",
+    "label": "(UTC+11:00) Norfolk Island",
+    "iana": "Pacific/Norfolk"
+  },
+  {
+    "id": "Sakhalin Standard Time",
+    "label": "(UTC+11:00) Sakhalin",
+    "iana": "Asia/Sakhalin"
+  },
+  {
+    "id": "Central Pacific Standard Time",
+    "label": "(UTC+11:00) Solomon Is., New Caledonia",
+    "iana": "Pacific/Guadalcanal"
+  },
+  {
+    "id": "Russia Time Zone 11",
+    "label": "(UTC+12:00) Anadyr, Petropavlovsk-Kamchatsky",
+    "iana": "Asia/Kamchatka"
+  },
+  {
+    "id": "New Zealand Standard Time",
+    "label": "(UTC+12:00) Auckland, Wellington",
+    "iana": "Pacific/Auckland"
+  },
+  {
+    "id": "UTC+12",
+    "label": "(UTC+12:00) Coordinated Universal Time+12",
+    "iana": "Etc/GMT-12"
+  },
+  {
+    "id": "Fiji Standard Time",
+    "label": "(UTC+12:00) Fiji",
+    "iana": "Pacific/Fiji"
+  },
+  {
+    "id": "Chatham Islands Standard Time",
+    "label": "(UTC+12:45) Chatham Islands",
+    "iana": "Pacific/Chatham"
+  },
+  {
+    "id": "UTC+13",
+    "label": "(UTC+13:00) Coordinated Universal Time+13",
+    "iana": "Etc/GMT-13"
+  },
+  {
+    "id": "Tonga Standard Time",
+    "label": "(UTC+13:00) Nuku'alofa",
+    "iana": "Pacific/Tongatapu"
+  },
+  {
+    "id": "Samoa Standard Time",
+    "label": "(UTC+13:00) Samoa",
+    "iana": "Pacific/Apia"
+  },
+  {
+    "id": "Line Islands Standard Time",
+    "label": "(UTC+14:00) Kiritimati Island",
+    "iana": "Pacific/Kiritimati"
+  }
+]
+;

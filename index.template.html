@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>World Time Tool - Windows Timezone Edition</title>
+  <link rel="stylesheet" href="style.css?v=2.2">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <div class="brand-text">
+          <span>world</span>
+          <span>time</span>
+          <span>tool</span>
+        </div>
+      </div>
+
+      <!-- Digital Display of Current Time, Timezone & Week Number -->
+      <div id="top-live-clock" class="top-live-clock" title="Current Local Time, Timezone & ISO Week">
+        <div class="top-clock-time-group">
+          <span id="top-clock-time" class="top-clock-time">--:--:--</span>
+          <span id="top-clock-tz" class="top-clock-tz">---</span>
+        </div>
+        <span class="top-clock-divider">·</span>
+        <span id="top-clock-week" class="top-clock-week" title="ISO Week Number">
+          <span class="week-label-full">Week </span><span class="week-label-short">W</span><span id="top-clock-week-num">--</span>
+        </span>
+      </div>
+
+      <!-- Windows-curated Timezone Search -->
+      <div class="search-container">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-input" class="search-input" placeholder="+ Add place or Windows timezone..." autocomplete="off">
+        <div id="search-dropdown" class="search-dropdown"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="top-actions">
+        <div id="format-segmented" class="format-segmented-control" role="group" aria-label="Time format">
+          <button type="button" class="btn format-segment active" data-fmt="12" title="12-hour clock (am/pm)">am/pm</button>
+          <button type="button" class="btn format-segment" data-fmt="24" title="24-hour clock">24</button>
+          <button type="button" class="btn format-segment" data-fmt="mx" title="MX mode (country-specific format)">MX</button>
+        </div>
+        <button id="format-toggle" class="btn" style="display:none;" title="Format toggle (legacy)"></button>
+        <button id="copy-link-btn" class="btn" title="Copy permalink to current view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          <span class="btn-text-full">Link to this view</span>
+          <span class="btn-text-short">Link</span>
+        </button>
+        <button id="reset-btn" class="btn" title="Reset to default timezones (Local, US West, Europe, China)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+          Reset
+        </button>
+      </div>
+    </header>
+
+    <!-- Date Navigation Strip -->
+    <div class="date-bar">
+      <button id="today-btn" class="btn btn-today" title="Jump to current time today">
+        <span class="live-pulse"></span>
+        Today
+      </button>
+      <div id="date-tabs" class="date-tabs"></div>
+      <div class="date-picker-wrapper">
+        <input type="date" id="date-picker" class="date-input">
+      </div>
+    </div>
+
+    <!-- Mutual Business Hours Overlap Banner -->
+    <div id="overlap-banner" class="overlap-indicator" style="display:none;"></div>
+
+    <!-- Main Timeline Container -->
+    <div class="timeline-scroll-container">
+      <div class="timeline-content">
+        <!-- Sticky Crosshairs & Live Now Needle -->
+        <div id="ruler-cursor" class="ruler-cursor-column"></div>
+        <div id="ruler-pinned" class="ruler-pinned-column"></div>
+        <div id="ruler-now" class="ruler-now-line">
+          <div class="now-pill"><span class="now-pulse-dot"></span><span id="now-time-text">NOW</span></div>
+        </div>
+
+        <!-- Header Row -->
+        <div class="timeline-header-row">
+          <div class="timeline-header-left">
+            <span>Place / Timezone</span>
+            <div id="sidebar-resizer" class="sidebar-resizer" title="Drag to resize sidebar (Double-click to reset)"></div>
+          </div>
+          <div id="timeline-header-hours" class="timeline-header-hours"></div>
+        </div>
+
+        <!-- Time Rows -->
+        <div id="timeline-rows" class="timeline-rows-container"></div>
+      </div>
+    </div>
+
+    <!-- Pinned Time Comparison Bar -->
+    <div id="pinned-summary" class="pinned-summary-bar">
+      <div class="pinned-summary-main">
+        <div class="pinned-summary-content">
+          <div class="pinned-summary-header">
+            <strong style="color:#1e3a8a; white-space:nowrap;">Pinned Comparison:</strong>
+            <span id="pinned-work-count" class="pinned-work-counter"></span>
+          </div>
+          <div id="pinned-chips" class="pinned-summary-list"></div>
+        </div>
+        <button id="clear-pin-btn" class="btn btn-sm" title="Clear pinned time column">Clear Pin</button>
+      </div>
+
+      <!-- Human-Readable Natural Sentence Description -->
+      <div class="pinned-sentence-card">
+        <div class="pinned-sentence-prefix">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Summary:</span>
+        </div>
+        <div id="pinned-sentence-text" class="pinned-sentence-text" title="Click to copy description"></div>
+        <button id="copy-sentence-btn" class="btn btn-sm btn-copy-sentence" title="Copy sentence description to clipboard (for LLMs or emails)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span id="copy-sentence-label">Copy Description</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- App Footer / Attribution -->
+    <footer class="app-footer">
+      <span>Made with AI tools · Public domain (<a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>)</span>
+    </footer>
+  </div>
+
+  <!-- Self-Test Modal -->
+  <div id="test-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🧪 DST & Temporal Golden Assertions</h3>
+        <button id="close-modal-btn" class="btn btn-sm">✕</button>
+      </div>
+      <div id="test-results" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Load Curated Windows Zones (offline & file:// compatible) -->
+  <script src="zones.js"></script>
+  <!-- Load Main Application -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
