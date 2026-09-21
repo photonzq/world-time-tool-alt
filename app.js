@@ -1827,7 +1827,10 @@ class WTBApp {
   highlightColumn(colIdx) {
     document.querySelectorAll('.hour-header-cell').forEach(c => {
       const cIdx = parseInt(c.dataset.col, 10);
-      c.classList.toggle('active-col', (colIdx !== null && cIdx === colIdx) || cIdx === this.pinnedCol);
+      const isPinned = cIdx === this.pinnedCol;
+      const isHovered = colIdx !== null && cIdx === colIdx;
+      c.classList.toggle('pinned-col', isPinned);
+      c.classList.toggle('active-col', isHovered || isPinned);
     });
   }
 
