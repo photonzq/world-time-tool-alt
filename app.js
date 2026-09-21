@@ -1883,8 +1883,16 @@ class WTBApp {
         if (headerCell) {
           this.hoveredCol = col;
           if (this.rulerCursor) {
-            this.rulerCursor.style.left = `${headerCell.offsetLeft}px`;
-            this.rulerCursor.style.width = `${headerCell.offsetWidth}px`;
+            const contentContainer = document.querySelector('.timeline-content');
+            if (contentContainer) {
+              const contentRect = contentContainer.getBoundingClientRect();
+              const headerRect = headerCell.getBoundingClientRect();
+              this.rulerCursor.style.left = `${headerRect.left - contentRect.left}px`;
+              this.rulerCursor.style.width = `${headerRect.width}px`;
+            } else {
+              this.rulerCursor.style.left = `${headerCell.offsetLeft}px`;
+              this.rulerCursor.style.width = `${headerCell.offsetWidth}px`;
+            }
             this.rulerCursor.classList.add('visible');
           }
           this.highlightColumn(col);
@@ -1973,8 +1981,10 @@ class WTBApp {
     if (this.pinnedCol !== null && contentContainer) {
       const headerCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${this.pinnedCol}"]`);
       if (headerCell) {
-        this.rulerPinned.style.left = `${headerCell.offsetLeft}px`;
-        this.rulerPinned.style.width = `${headerCell.offsetWidth}px`;
+        const contentRect = contentContainer.getBoundingClientRect();
+        const headerRect = headerCell.getBoundingClientRect();
+        this.rulerPinned.style.left = `${headerRect.left - contentRect.left}px`;
+        this.rulerPinned.style.width = `${headerRect.width}px`;
         this.rulerPinned.classList.add('visible');
       }
       const homeZone = this.getHomeZone();
