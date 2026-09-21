@@ -553,6 +553,13 @@ export async function runSelfTests() {
     assert('NY in July resolves to EDT', window.getTimezoneAbbrev('America/New_York', julInstant) === 'EDT');
     assert('NY in January resolves to EST', window.getTimezoneAbbrev('America/New_York', janInstant) === 'EST');
 
+    // Real-time / sub-second timestamps (with non-zero seconds/ms) resolve to correct daylight time
+    const sepRealTimeInstant = new Date('2026-09-21T15:35:29.874Z');
+    assert('NY in September with live seconds resolves to EDT', window.getTimezoneAbbrev('America/New_York', sepRealTimeInstant) === 'EDT');
+    assert('LA in September with live seconds resolves to PDT', window.getTimezoneAbbrev('America/Los_Angeles', sepRealTimeInstant) === 'PDT');
+    assert('Berlin in September with live seconds resolves to CEST', window.getTimezoneAbbrev('Europe/Berlin', sepRealTimeInstant) === 'CEST');
+    assert('London in September with live seconds resolves to BST', window.getTimezoneAbbrev('Europe/London', sepRealTimeInstant) === 'BST');
+
     // London: BST (Summer) vs GMT (Winter)
     assert('London in July resolves to BST', window.getTimezoneAbbrev('Europe/London', julInstant) === 'BST');
     assert('London in January resolves to GMT', window.getTimezoneAbbrev('Europe/London', janInstant) === 'GMT');
@@ -816,6 +823,15 @@ export async function runSelfTests() {
       assert('Top clock time has populated non-empty text', timeEl.textContent.trim().length > 0 && timeEl.textContent !== '--:--', `Time: "${timeEl.textContent}"`);
       assert('Top clock tz has populated non-empty abbreviation', tzEl.textContent.trim().length > 0 && tzEl.textContent !== '---', `TZ: "${tzEl.textContent}"`);
       assert('Top clock week has valid numeric value', parseInt(weekNumEl.textContent, 10) >= 1 && parseInt(weekNumEl.textContent, 10) <= 53, `Week: "${weekNumEl.textContent}"`);
+
+      // Verify top clock displays accurate seasonal abbreviation for current home zone
+      if (window.app) {
+        const hz = window.app.getHomeZone();
+        if (hz) {
+          const expectedTz = window.getTimezoneAbbrev(hz.iana, new Date());
+          assert(`Top clock displays accurate seasonal timezone abbreviation (${expectedTz} for ${hz.label})`, tzEl.textContent === expectedTz, `Expected ${expectedTz}, got ${tzEl.textContent}`);
+        }
+      }
     }
 
     // Verify collapsible styling exists

@@ -143,7 +143,8 @@ window.getTimezoneAbbrev = function(iana, instant) {
           minute: '2-digit'
         }).formatToParts(d);
         const g = t => +p.find(x => x.type === t).value;
-        return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute')) - d.getTime();
+        const utcMs = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
+        return Math.round((utcMs - d.getTime()) / 60000) * 60000;
       } catch { return 0; }
     };
 
@@ -1158,6 +1159,14 @@ class WTBApp {
     // Jump to Today / Current Time
     if (this.todayBtn) {
       this.todayBtn.addEventListener('click', () => {
+        this.jumpToNow();
+      });
+    }
+
+    // Clicking top live clock jumps to current time and scrolls to now needle
+    if (this.topLiveClock) {
+      this.topLiveClock.style.cursor = 'pointer';
+      this.topLiveClock.addEventListener('click', () => {
         this.jumpToNow();
       });
     }
@@ -2311,7 +2320,7 @@ class WTBApp {
   updateTopLiveClock() {
     if (!this.topClockTime || !this.topClockTz || !this.topClockWeekNum) return;
     try {
-      const homeZone = this.getHomeZone();
+      const homeZone = this.getHomeZone() || { iana: this.getMachineTimeZone(), label: 'Local' };
       const is24 = this.isZone24Hour(homeZone.iana);
       let timeStr, tzAbbrev, weekNum;
 
@@ -2346,7 +2355,7 @@ class WTBApp {
       this.topClockWeekNum.textContent = weekNum;
 
       if (this.topLiveClock) {
-        this.topLiveClock.title = `Current Time: ${timeStr} ${tzAbbrev} (${homeZone.label}) • ISO Week ${weekNum}`;
+        this.topLiveClock.title = `Current Time: ${timeStr} ${tzAbbrev} (${homeZone.label}) • ISO Week ${weekNum} • Click to jump to current time`;
       }
     } catch (e) {
       console.warn('Error updating top live clock:', e);

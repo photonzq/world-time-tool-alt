@@ -3402,6 +3402,13 @@ async function runSelfTests() {
     assert('NY in July resolves to EDT', window.getTimezoneAbbrev('America/New_York', julInstant) === 'EDT');
     assert('NY in January resolves to EST', window.getTimezoneAbbrev('America/New_York', janInstant) === 'EST');
 
+    // Real-time / sub-second timestamps (with non-zero seconds/ms) resolve to correct daylight time
+    const sepRealTimeInstant = new Date('2026-09-21T15:35:29.874Z');
+    assert('NY in September with live seconds resolves to EDT', window.getTimezoneAbbrev('America/New_York', sepRealTimeInstant) === 'EDT');
+    assert('LA in September with live seconds resolves to PDT', window.getTimezoneAbbrev('America/Los_Angeles', sepRealTimeInstant) === 'PDT');
+    assert('Berlin in September with live seconds resolves to CEST', window.getTimezoneAbbrev('Europe/Berlin', sepRealTimeInstant) === 'CEST');
+    assert('London in September with live seconds resolves to BST', window.getTimezoneAbbrev('Europe/London', sepRealTimeInstant) === 'BST');
+
     // London: BST (Summer) vs GMT (Winter)
     assert('London in July resolves to BST', window.getTimezoneAbbrev('Europe/London', julInstant) === 'BST');
     assert('London in January resolves to GMT', window.getTimezoneAbbrev('Europe/London', janInstant) === 'GMT');
@@ -3665,6 +3672,15 @@ async function runSelfTests() {
       assert('Top clock time has populated non-empty text', timeEl.textContent.trim().length > 0 && timeEl.textContent !== '--:--', `Time: "${timeEl.textContent}"`);
       assert('Top clock tz has populated non-empty abbreviation', tzEl.textContent.trim().length > 0 && tzEl.textContent !== '---', `TZ: "${tzEl.textContent}"`);
       assert('Top clock week has valid numeric value', parseInt(weekNumEl.textContent, 10) >= 1 && parseInt(weekNumEl.textContent, 10) <= 53, `Week: "${weekNumEl.textContent}"`);
+
+      // Verify top clock displays accurate seasonal abbreviation for current home zone
+      if (window.app) {
+        const hz = window.app.getHomeZone();
+        if (hz) {
+          const expectedTz = window.getTimezoneAbbrev(hz.iana, new Date());
+          assert(`Top clock displays accurate seasonal timezone abbreviation (${expectedTz} for ${hz.label})`, tzEl.textContent === expectedTz, `Expected ${expectedTz}, got ${tzEl.textContent}`);
+        }
+      }
     }
 
     // Verify collapsible styling exists
@@ -3919,7 +3935,8 @@ window.getTimezoneAbbrev = function(iana, instant) {
           minute: '2-digit'
         }).formatToParts(d);
         const g = t => +p.find(x => x.type === t).value;
-        return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute')) - d.getTime();
+        const utcMs = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
+        return Math.round((utcMs - d.getTime()) / 60000) * 60000;
       } catch { return 0; }
     };
 
@@ -4934,6 +4951,14 @@ class WTBApp {
     // Jump to Today / Current Time
     if (this.todayBtn) {
       this.todayBtn.addEventListener('click', () => {
+        this.jumpToNow();
+      });
+    }
+
+    // Clicking top live clock jumps to current time and scrolls to now needle
+    if (this.topLiveClock) {
+      this.topLiveClock.style.cursor = 'pointer';
+      this.topLiveClock.addEventListener('click', () => {
         this.jumpToNow();
       });
     }
@@ -6087,7 +6112,7 @@ class WTBApp {
   updateTopLiveClock() {
     if (!this.topClockTime || !this.topClockTz || !this.topClockWeekNum) return;
     try {
-      const homeZone = this.getHomeZone();
+      const homeZone = this.getHomeZone() || { iana: this.getMachineTimeZone(), label: 'Local' };
       const is24 = this.isZone24Hour(homeZone.iana);
       let timeStr, tzAbbrev, weekNum;
 
@@ -6122,7 +6147,7 @@ class WTBApp {
       this.topClockWeekNum.textContent = weekNum;
 
       if (this.topLiveClock) {
-        this.topLiveClock.title = `Current Time: ${timeStr} ${tzAbbrev} (${homeZone.label}) • ISO Week ${weekNum}`;
+        this.topLiveClock.title = `Current Time: ${timeStr} ${tzAbbrev} (${homeZone.label}) • ISO Week ${weekNum} • Click to jump to current time`;
       }
     } catch (e) {
       console.warn('Error updating top live clock:', e);
