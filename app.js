@@ -804,11 +804,19 @@ class WTBApp {
     // 1. Check URL Hash
     if (window.location.hash.length > 1) {
       try {
-        const hash = new URLSearchParams(window.location.hash.slice(1));
-        const zonesParam = hash.get('zones');
-        const dateParam = hash.get('date');
-        const is24Param = hash.get('format');
-        const pinnedParam = hash.get('pinned');
+        const rawHash = window.location.hash.slice(1);
+        let hash;
+        if (!rawHash.includes('=')) {
+          // Shorthand plain zone list e.g. #21,9,50,104 or #New_York,London
+          hash = new URLSearchParams({ z: rawHash });
+        } else {
+          hash = new URLSearchParams(rawHash);
+        }
+
+        const zonesParam = hash.get('z') || hash.get('zones');
+        const dateParam = hash.get('d') || hash.get('date');
+        const formatParam = hash.get('t') || hash.get('format');
+        const pinnedParam = hash.get('p') || hash.get('pinned');
 
         if (zonesParam) {
           const tokens = zonesParam.split(',');
@@ -817,16 +825,38 @@ class WTBApp {
           tokens.forEach((token) => {
             const trimmed = token.trim();
             if (!trimmed) return;
-            const match = this.zonesDatabase.find(z => 
-              z.iana.toLowerCase() === trimmed.toLowerCase() ||
-              z.iana.toLowerCase().endsWith('/' + trimmed.toLowerCase().replace(/ /g, '_')) ||
-              z.label.toLowerCase().includes(trimmed.toLowerCase())
-            ) || {
-              id: trimmed,
-              label: trimmed.split('/').pop().replace(/_/g, ' '),
-              sub: trimmed.includes('/') ? trimmed.split('/')[0] : '',
-              iana: trimmed
-            };
+
+            let match = null;
+
+            // 1. Check if numeric index into WINDOWS_ZONES (0..138)
+            if (/^\d+$/.test(trimmed)) {
+              const idx = parseInt(trimmed, 10);
+              if (Array.isArray(window.WINDOWS_ZONES) && idx >= 0 && idx < window.WINDOWS_ZONES.length) {
+                match = window.WINDOWS_ZONES[idx];
+              }
+            }
+
+            // 2. Match against zonesDatabase (by IANA, id, city suffix, or label)
+            if (!match) {
+              const lower = trimmed.toLowerCase();
+              const lowerCity = lower.replace(/ /g, '_');
+              match = this.zonesDatabase.find(z => 
+                z.iana.toLowerCase() === lower ||
+                z.id.toLowerCase() === lower ||
+                z.iana.toLowerCase().endsWith('/' + lowerCity) ||
+                z.label.toLowerCase().includes(lower)
+              );
+            }
+
+            if (!match) {
+              match = {
+                id: trimmed,
+                label: trimmed.split('/').pop().replace(/_/g, ' '),
+                sub: trimmed.includes('/') ? trimmed.split('/')[0] : '',
+                iana: trimmed
+              };
+            }
+
             const resolvedIana = match.iana;
             if (seen.has(resolvedIana)) return;
             seen.add(resolvedIana);
@@ -839,10 +869,16 @@ class WTBApp {
           if (loaded.length > 0) this.trackedZones = loaded;
         }
 
-        if (dateParam && window.isValidDateString(dateParam)) {
-          this.currentDate = dateParam;
+        if (dateParam) {
+          let cleanDate = dateParam;
+          if (/^\d{8}$/.test(dateParam)) {
+            cleanDate = `${dateParam.slice(0, 4)}-${dateParam.slice(4, 6)}-${dateParam.slice(6, 8)}`;
+          }
+          if (window.isValidDateString(cleanDate)) {
+            this.currentDate = cleanDate;
+          }
         }
-        const formatParam = hash.get('t') || hash.get('format');
+
         if (formatParam !== null) {
           const norm = formatParam.toLowerCase();
           if (norm === 'mx') {
@@ -853,6 +889,7 @@ class WTBApp {
             this.format = '12';
           }
         }
+
         if (pinnedParam !== null) {
           const p = parseInt(pinnedParam, 10);
           if (!isNaN(p) && p >= 0) {
@@ -906,6 +943,63 @@ class WTBApp {
     }
   }
 
+  encodeZoneToken(zone) {
+    if (!zone) return '';
+    // 1. Prefer curated WINDOWS_ZONES index (0..138)
+    if (Array.isArray(window.WINDOWS_ZONES)) {
+      const idx = window.WINDOWS_ZONES.findIndex(wz => wz.iana === zone.iana || wz.id === zone.id);
+      if (idx !== -1) {
+        return idx.toString();
+      }
+    }
+    // 2. Check if clean city name is unique in zonesDatabase
+    if (zone.iana && zone.iana.includes('/')) {
+      const city = zone.iana.split('/').pop();
+      const matches = this.zonesDatabase.filter(z => z.iana.endsWith('/' + city));
+      if (matches.length === 1) {
+        return city;
+      }
+      return zone.iana;
+    }
+    return zone.iana || zone.id || '';
+  }
+
+  getShareHash() {
+    const parts = [];
+
+    // 1. Zones: encoded as compact tokens
+    const zoneTokens = (this.trackedZones || []).map(z => this.encodeZoneToken(z)).filter(Boolean);
+    if (zoneTokens.length > 0) {
+      parts.push(`z=${zoneTokens.join(',')}`);
+    }
+
+    // 2. Date: omit if today, otherwise d=YYYY-MM-DD
+    const homeZone = this.getHomeZone ? this.getHomeZone() : (this.trackedZones[0] || {});
+    const todayStr = homeZone && homeZone.iana ? this.getTodayDateString(homeZone.iana) : '';
+    if (this.currentDate && this.currentDate !== todayStr) {
+      parts.push(`d=${this.currentDate}`);
+    }
+
+    // 3. Format: omit if '12' (default), otherwise t=24 or t=mx
+    if (this.format && this.format !== '12') {
+      parts.push(`t=${this.format}`);
+    }
+
+    // 4. Pinned Column: omit if null/undefined, otherwise p=colIdx
+    if (this.pinnedCol !== null && this.pinnedCol !== undefined) {
+      parts.push(`p=${this.pinnedCol}`);
+    }
+
+    return parts.join('&');
+  }
+
+  getShareUrl() {
+    const shareHash = this.getShareHash();
+    const url = new URL(window.location.href);
+    url.hash = shareHash ? '#' + shareHash : '';
+    return url.toString();
+  }
+
   saveState() {
     try {
       localStorage.setItem('wtb_state_v3', JSON.stringify({
@@ -915,15 +1009,13 @@ class WTBApp {
         is24Hour: this.format === '24'
       }));
 
-      // Update URL hash without reloading
-      const params = new URLSearchParams();
-      params.set('zones', this.trackedZones.map(z => z.iana).join(','));
-      params.set('date', this.currentDate);
-      params.set('t', this.format);
-      if (this.pinnedCol !== null) {
-        params.set('pinned', this.pinnedCol);
+      // Update URL hash with clean, compact shortened format without reloading
+      const shareHash = this.getShareHash();
+      if (shareHash) {
+        history.replaceState(null, '', '#' + shareHash);
+      } else {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
       }
-      history.replaceState(null, '', '#' + params.toString());
     } catch (e) {
       console.warn('Could not save state:', e);
     }
@@ -1137,13 +1229,46 @@ class WTBApp {
     // Copy Link Button
     this.copyLinkBtn.addEventListener('click', () => {
       this.saveState();
-      navigator.clipboard.writeText(window.location.href).then(() => {
+      const shareUrl = this.getShareUrl();
+      const copyToClipboard = (text) => {
+        const fallbackCopy = () => {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return Promise.resolve(successful);
+          } catch (err) {
+            return Promise.reject(err);
+          }
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text).catch(fallbackCopy);
+        }
+        return fallbackCopy();
+      };
+
+      copyToClipboard(shareUrl).then(() => {
         const originalText = this.copyLinkBtn.innerHTML;
         this.copyLinkBtn.innerHTML = `✓ Copied!`;
         setTimeout(() => {
           this.copyLinkBtn.innerHTML = originalText;
         }, 1800);
+      }).catch(err => {
+        console.warn('Copy link error:', err);
       });
+    });
+
+    // Hash change listener (for browser back/forward and direct URL hash paste)
+    window.addEventListener('hashchange', () => {
+      this.loadState();
+      this.render();
+      this.renderRulerHighlights();
     });
 
     // Reset Defaults Button

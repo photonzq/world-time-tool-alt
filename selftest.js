@@ -840,6 +840,82 @@ export async function runSelfTests() {
     assert('Top bar live clock test', false, e.message);
   }
 
+  // 36. URL Shortening & Hash State Serialization Suite
+  try {
+    if (window.app) {
+      const app = window.app;
+      const originalZones = app.trackedZones;
+      const originalPinned = app.pinnedCol;
+      const originalFormat = app.format;
+      const originalDate = app.currentDate;
+
+      // Test 1: Short numeric encoding of curated zones
+      const tokenNY = app.encodeZoneToken({ iana: 'America/New_York', id: 'Eastern Standard Time' });
+      const tokenLA = app.encodeZoneToken({ iana: 'America/Los_Angeles', id: 'Pacific Standard Time' });
+      const tokenBerlin = app.encodeZoneToken({ iana: 'Europe/Berlin', id: 'W. Europe Standard Time' });
+      const tokenShanghai = app.encodeZoneToken({ iana: 'Asia/Shanghai', id: 'China Standard Time' });
+
+      assert('America/New_York encodes to index "21"', tokenNY === '21', `Got: ${tokenNY}`);
+      assert('America/Los_Angeles encodes to index "9"', tokenLA === '9', `Got: ${tokenLA}`);
+      assert('Europe/Berlin encodes to index "50"', tokenBerlin === '50', `Got: ${tokenBerlin}`);
+      assert('Asia/Shanghai encodes to index "104"', tokenShanghai === '104', `Got: ${tokenShanghai}`);
+
+      // Test 2: Generate concise hash with pinned column
+      app.trackedZones = [
+        { iana: 'America/New_York', id: 'Eastern Standard Time', isHome: true },
+        { iana: 'America/Los_Angeles', id: 'Pacific Standard Time' },
+        { iana: 'Europe/Berlin', id: 'W. Europe Standard Time' },
+        { iana: 'Asia/Shanghai', id: 'China Standard Time' }
+      ];
+      app.pinnedCol = 9;
+      app.format = '12';
+      const homeZone = app.getHomeZone();
+      app.currentDate = app.getTodayDateString(homeZone.iana);
+
+      const shortHash = app.getShareHash();
+      assert('Short hash for 4 default zones with pin 9 is "z=21,9,50,104&p=9"', shortHash === 'z=21,9,50,104&p=9', `Got: "${shortHash}"`);
+      assert('Short hash length is <= 20 characters (vs >110 chars previously)', shortHash.length <= 20, `Length: ${shortHash.length}`);
+
+      // Test 3: Omit pinned column when null
+      app.pinnedCol = null;
+      const noPinHash = app.getShareHash();
+      assert('Short hash omits pin param when unpinned: "z=21,9,50,104"', noPinHash === 'z=21,9,50,104', `Got: "${noPinHash}"`);
+
+      // Test 4: Include date and format when non-default
+      app.currentDate = '2026-10-15';
+      app.format = '24';
+      app.pinnedCol = 14;
+      const customHash = app.getShareHash();
+      assert('Short hash includes non-today date and 24h format', customHash === 'z=21,9,50,104&d=2026-10-15&t=24&p=14', `Got: "${customHash}"`);
+
+      // Test 5: Verify getShareUrl returns valid URL with hash
+      const shareUrl = app.getShareUrl();
+      assert('getShareUrl returns full URL containing shortened hash', shareUrl.includes('#' + customHash), `URL: ${shareUrl}`);
+
+      // Test 6: Round-trip decoding of short hash via loadState
+      window.location.hash = '#z=21,9,50,104&p=9';
+      app.loadState();
+      assert('loadState accurately decodes 4 zones from short index tokens', app.trackedZones.length === 4);
+      assert('loadState accurately decodes first zone as America/New_York (Home)', app.trackedZones[0].iana === 'America/New_York' && app.trackedZones[0].isHome === true);
+      assert('loadState accurately decodes second zone as America/Los_Angeles', app.trackedZones[1].iana === 'America/Los_Angeles');
+      assert('loadState accurately decodes pinned column 9', app.pinnedCol === 9, `pinnedCol: ${app.pinnedCol}`);
+
+      // Test 7: Backward-compatibility: loadState supports legacy verbose hash
+      window.location.hash = '#zones=America%2FNew_York%2CAmerica%2FLos_Angeles%2CEurope%2FBerlin%2CAsia%2FShanghai&date=2026-11-20&format=24&pinned=15';
+      app.loadState();
+      assert('loadState supports legacy verbose hash with full backward compatibility', app.trackedZones.length === 4 && app.currentDate === '2026-11-20' && app.format === '24' && app.pinnedCol === 15);
+
+      // Restore original state
+      app.trackedZones = originalZones;
+      app.pinnedCol = originalPinned;
+      app.format = originalFormat;
+      app.currentDate = originalDate;
+      window.location.hash = '';
+    }
+  } catch (e) {
+    assert('URL Shortening & Hash State Suite', false, e.message);
+  }
+
   return results;
 }
 
