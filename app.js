@@ -442,34 +442,70 @@ window.downloadIcsFile = function(filename, icsContent) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-// DST Drift Scanner: Detects offset shifts within ±3 days
-window.scanDstDrift = function(instant, trackedZones, daysWindow = 3) {
+// DST Drift Scanner: Detects offset shifts within ±3 days and mid-meeting transitions
+window.scanDstDrift = function(instant, trackedZones, daysWindow = 3, durationMin = 60) {
   if (!instant || !trackedZones || trackedZones.length < 2) return [];
   const home = trackedZones[0];
   const ms = Number(instant.epochMilliseconds !== undefined ? instant.epochMilliseconds : (instant.epochNanoseconds ? instant.epochNanoseconds / 1000000n : instant));
   const alerts = [];
 
-  const getOffsetDiffHours = (timeMs, zoneIana) => {
+  const getTzOffsetMs = (t, tz) => {
     try {
-      const getTzOffsetMs = (t, tz) => {
-        const p = new Intl.DateTimeFormat('en-US', {
-          timeZone: tz, hourCycle: 'h23',
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit'
-        }).formatToParts(new Date(t));
-        const g = type => +p.find(x => x.type === type).value;
-        const wallUtc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
-        return wallUtc - t;
-      };
-      const homeOff = getTzOffsetMs(timeMs, home.iana);
-      const zoneOff = getTzOffsetMs(timeMs, zoneIana);
-      return (zoneOff - homeOff) / 3600000;
+      const p = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, hourCycle: 'h23',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      }).formatToParts(new Date(t));
+      const g = type => +p.find(x => x.type === type).value;
+      const wallUtc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
+      return wallUtc - t;
     } catch {
       return 0;
     }
   };
 
+  const getOffsetDiffHours = (timeMs, zoneIana) => {
+    const homeOff = getTzOffsetMs(timeMs, home.iana);
+    const zoneOff = getTzOffsetMs(timeMs, zoneIana);
+    return (zoneOff - homeOff) / 3600000;
+  };
+
+  const formatDayName = (timeMs, tz) => {
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      }).format(new Date(timeMs));
+    } catch {
+      return '';
+    }
+  };
+
   const otherZones = trackedZones.slice(1);
+
+  // 1. Check for clock change DURING meeting duration
+  const endMs = ms + (durationMin || 60) * 60000;
+  for (const zone of otherZones) {
+    const startDiff = getOffsetDiffHours(ms, zone.iana);
+    const endDiff = getOffsetDiffHours(endMs - 1000, zone.iana);
+    if (Math.abs(endDiff - startDiff) >= 0.25) {
+      const diffBefore = startDiff >= 0 ? `+${startDiff}h` : `${startDiff}h`;
+      const diffAfter = endDiff >= 0 ? `+${endDiff}h` : `${endDiff}h`;
+      alerts.push({
+        type: 'mid-meeting',
+        critical: true,
+        days: 0,
+        zoneLabel: zone.label,
+        message: `⚠️ Clock change DURING meeting: gap between ${zone.label} and ${home.label} shifts from ${diffBefore} to ${diffAfter}!`,
+        title: `DST transition occurs during this meeting`,
+        details: `The time offset between ${zone.label} and ${home.label} changes mid-meeting.`
+      });
+    }
+  }
+
+  // 2. Check future and past days
   otherZones.forEach(zone => {
     const baseDiff = getOffsetDiffHours(ms, zone.iana);
     let driftFound = null;
@@ -482,11 +518,24 @@ window.scanDstDrift = function(instant, trackedZones, daysWindow = 3) {
         const dayWord = d === 1 ? 'tomorrow' : `in ${d} days`;
         const diffBefore = baseDiff >= 0 ? `+${baseDiff}h` : `${baseDiff}h`;
         const diffAfter = futureDiff >= 0 ? `+${futureDiff}h` : `${futureDiff}h`;
+        const dayStr = formatDayName(futureMs, zone.iana);
+
+        const homeShifted = Math.abs(getTzOffsetMs(futureMs, home.iana) - getTzOffsetMs(ms, home.iana)) >= 900000;
+        const zoneShifted = Math.abs(getTzOffsetMs(futureMs, zone.iana) - getTzOffsetMs(ms, zone.iana)) >= 900000;
+
+        let labelSubject = zone.label;
+        if (homeShifted && !zoneShifted) {
+          labelSubject = `${home.label} (Home)`;
+        }
+
         driftFound = {
           type: 'future',
+          critical: false,
           days: d,
           zoneLabel: zone.label,
-          message: `⚠️ ${zone.label} shifts DST ${dayWord} (gap changes from ${diffBefore} to ${diffAfter})`
+          message: `⚠️ ${zone.label} shifts DST in ${d} days (gap changes from ${diffBefore} to ${diffAfter}${dayStr ? ` on ${dayStr}` : ''})`,
+          title: `${labelSubject} clock change ${dayWord}`,
+          details: `Time gap between ${home.label} and ${zone.label} changes from ${diffBefore} to ${diffAfter}${dayStr ? ` on ${dayStr}` : ''}.`
         };
         break;
       }
@@ -501,11 +550,24 @@ window.scanDstDrift = function(instant, trackedZones, daysWindow = 3) {
           const dayWord = d === 1 ? 'yesterday' : `${d} days ago`;
           const diffBefore = pastDiff >= 0 ? `+${pastDiff}h` : `${pastDiff}h`;
           const diffNow = baseDiff >= 0 ? `+${baseDiff}h` : `${baseDiff}h`;
+          const dayStr = formatDayName(pastMs, zone.iana);
+
+          const homeShifted = Math.abs(getTzOffsetMs(pastMs, home.iana) - getTzOffsetMs(ms, home.iana)) >= 900000;
+          const zoneShifted = Math.abs(getTzOffsetMs(pastMs, zone.iana) - getTzOffsetMs(ms, zone.iana)) >= 900000;
+
+          let labelSubject = zone.label;
+          if (homeShifted && !zoneShifted) {
+            labelSubject = `${home.label} (Home)`;
+          }
+
           driftFound = {
             type: 'past',
+            critical: false,
             days: -d,
             zoneLabel: zone.label,
-            message: `⚠️ ${zone.label} shifted DST ${dayWord} (gap shifted from ${diffBefore} to ${diffNow})`
+            message: `⚠️ ${zone.label} shifted DST ${dayWord} (gap shifted from ${diffBefore} to ${diffNow}${dayStr ? ` on ${dayStr}` : ''})`,
+            title: `${labelSubject} clock change ${dayWord}`,
+            details: `Time gap between ${home.label} and ${zone.label} recently shifted from ${diffBefore} to ${diffNow}.`
           };
           break;
         }
@@ -1998,16 +2060,22 @@ class WTBApp {
       // 0. Offset match
       if (targetOffsetMin !== null) {
         try {
-          const d = new Date();
-          const p = new Intl.DateTimeFormat('en-US', {
-            timeZone: zIana, hourCycle: 'h23',
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit'
-          }).formatToParts(d);
-          const g = type => +p.find(x => x.type === type).value;
-          const wallUtc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
-          const offMin = Math.round((wallUtc - d.getTime()) / 60000);
-          if (offMin === targetOffsetMin) return true;
+          if (typeof Temporal !== 'undefined' && Temporal.Now) {
+            const offMin = Math.round(Number(Temporal.Now.zonedDateTimeISO(zIana).offsetNanoseconds) / 60000000000);
+            if (offMin === targetOffsetMin) return true;
+          } else {
+            const d = new Date();
+            const dSec = Math.floor(d.getTime() / 1000) * 1000;
+            const p = new Intl.DateTimeFormat('en-US', {
+              timeZone: zIana, hourCycle: 'h23',
+              year: 'numeric', month: '2-digit', day: '2-digit',
+              hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).formatToParts(new Date(dSec));
+            const g = type => +p.find(x => x.type === type).value;
+            const wallUtc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second'));
+            const offMin = Math.round((wallUtc - dSec) / 60000);
+            if (offMin === targetOffsetMin) return true;
+          }
         } catch {}
       }
 
@@ -2114,6 +2182,17 @@ class WTBApp {
     const temp = this.trackedZones[index];
     this.trackedZones[index] = this.trackedZones[target];
     this.trackedZones[target] = temp;
+    this.saveState();
+    this.render();
+  }
+
+  reorderZone(fromIndex, toIndex) {
+    if (fromIndex < 0 || fromIndex >= this.trackedZones.length) return;
+    if (toIndex < 0 || toIndex >= this.trackedZones.length) return;
+    if (fromIndex === toIndex) return;
+
+    const [moved] = this.trackedZones.splice(fromIndex, 1);
+    this.trackedZones.splice(toIndex, 0, moved);
     this.saveState();
     this.render();
   }
@@ -2348,13 +2427,37 @@ class WTBApp {
         `;
       }).join('');
 
+      // Check if zone has a DST transition on the displayed day
+      let zoneDstNotice = '';
+      try {
+        const parts = this.currentDate.split('-').map(Number);
+        const zdt1 = Temporal.ZonedDateTime.from({ year: parts[0], month: parts[1], day: parts[2], timeZone: zone.iana });
+        const zdt2 = zdt1.add({ days: 1 });
+        const hours = (zdt2.epochMilliseconds - zdt1.epochMilliseconds) / 3600000;
+        if (hours === 23 || hours === 25) {
+          zoneDstNotice = `<span class="zone-dst-shift-badge" title="DST transition today (${hours}h day)">DST ${hours}h</span>`;
+        }
+      } catch {}
+
       rowsHtml += `
         <div class="zone-row" data-row="${rowIdx}">
           <div class="zone-sidebar">
             <div class="zone-meta-left">
               <div class="zone-reorder">
-                <button class="btn-icon-tiny move-up-btn" data-row="${rowIdx}" title="Move up" ${upDisabled}>▲</button>
-                <button class="btn-icon-tiny move-down-btn" data-row="${rowIdx}" title="Move down" ${downDisabled}>▼</button>
+                <div class="zone-drag-handle" data-row="${rowIdx}" title="Drag to reorder · Use ▲ ▼ to move" tabindex="0" role="button" aria-label="Drag to reorder ${zone.label}">
+                  <svg width="8" height="13" viewBox="0 0 8 13" fill="currentColor">
+                    <circle cx="2" cy="2" r="1.1" />
+                    <circle cx="6" cy="2" r="1.1" />
+                    <circle cx="2" cy="6.5" r="1.1" />
+                    <circle cx="6" cy="6.5" r="1.1" />
+                    <circle cx="2" cy="11" r="1.1" />
+                    <circle cx="6" cy="11" r="1.1" />
+                  </svg>
+                </div>
+                <div class="zone-reorder-buttons">
+                  <button class="btn-icon-tiny move-up-btn" data-row="${rowIdx}" title="Move up" ${upDisabled}>▲</button>
+                  <button class="btn-icon-tiny move-down-btn" data-row="${rowIdx}" title="Move down" ${downDisabled}>▼</button>
+                </div>
               </div>
               <button class="zone-home-btn ${isHomeClass}" data-row="${rowIdx}" title="${zone.isHome ? 'Home zone' : 'Set as home zone'}">
                 ${zone.isHome ? '★' : '☆'}
@@ -2366,6 +2469,7 @@ class WTBApp {
                 <div class="zone-sub-row">
                   <span class="zone-offset-badge ${isHomeClass}">${diffBadge}</span>
                   <span class="zone-dst-badge">${shortTzName}</span>
+                  ${zoneDstNotice}
                   <span class="zone-country" title="${zone.sub}">${zone.sub}</span>
                 </div>
               </div>
@@ -2477,7 +2581,7 @@ class WTBApp {
   }
 
   attachRowEvents(columnInstants) {
-    // Row Actions: Move, Home, Remove
+    // Row Actions: Move buttons, Home button, Remove button
     this.timelineRowsContainer.querySelectorAll('.move-up-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -2504,6 +2608,195 @@ class WTBApp {
         e.stopPropagation();
         this.removeZone(parseInt(btn.dataset.row, 10));
       });
+    });
+
+    // Keyboard accessibility on drag handles (ArrowUp/k, ArrowDown/j)
+    this.timelineRowsContainer.querySelectorAll('.zone-drag-handle').forEach(handle => {
+      handle.addEventListener('keydown', (e) => {
+        const rowIdx = parseInt(handle.dataset.row, 10);
+        if (e.key === 'ArrowUp' || e.key === 'k') {
+          e.preventDefault();
+          if (rowIdx > 0) {
+            this.reorderZone(rowIdx, rowIdx - 1);
+            setTimeout(() => {
+              const nextHandle = this.timelineRowsContainer.querySelector(`.zone-drag-handle[data-row="${rowIdx - 1}"]`);
+              if (nextHandle) nextHandle.focus();
+            }, 40);
+          }
+        } else if (e.key === 'ArrowDown' || e.key === 'j') {
+          e.preventDefault();
+          if (rowIdx < this.trackedZones.length - 1) {
+            this.reorderZone(rowIdx, rowIdx + 1);
+            setTimeout(() => {
+              const nextHandle = this.timelineRowsContainer.querySelector(`.zone-drag-handle[data-row="${rowIdx + 1}"]`);
+              if (nextHandle) nextHandle.focus();
+            }, 40);
+          }
+        }
+      });
+    });
+
+    // Row Drag & Drop Reordering (Pointer Events for desktop mouse & mobile touch)
+    const rowElements = Array.from(this.timelineRowsContainer.querySelectorAll('.zone-row'));
+    let activeDrag = null;
+
+    const startDrag = (fromIdx, startY) => {
+      if (rowElements.length < 2 || !rowElements[fromIdx]) return false;
+
+      const rowRects = rowElements.map(el => el.getBoundingClientRect());
+      let dropLine = this.timelineRowsContainer.querySelector('.zone-drop-line');
+      if (!dropLine) {
+        dropLine = document.createElement('div');
+        dropLine.className = 'zone-drop-line';
+        this.timelineRowsContainer.appendChild(dropLine);
+      }
+
+      rowElements[fromIdx].classList.add('is-dragging');
+      document.body.classList.add('is-row-dragging');
+
+      activeDrag = {
+        fromIdx,
+        startY,
+        rowElements,
+        rowRects,
+        dropLine,
+        currentToIdx: fromIdx
+      };
+
+      updateDrag(startY);
+      return true;
+    };
+
+    const updateDrag = (clientY) => {
+      if (!activeDrag) return;
+      const { fromIdx, rowElements, rowRects, dropLine } = activeDrag;
+
+      let toIdx = rowRects.length;
+      for (let i = 0; i < rowRects.length; i++) {
+        const midY = rowRects[i].top + rowRects[i].height / 2;
+        if (clientY < midY) {
+          toIdx = i;
+          break;
+        }
+      }
+      activeDrag.currentToIdx = toIdx;
+
+      let lineTop = 0;
+      if (toIdx < rowElements.length) {
+        lineTop = rowElements[toIdx].offsetTop;
+      } else {
+        const lastEl = rowElements[rowElements.length - 1];
+        lineTop = lastEl.offsetTop + lastEl.offsetHeight;
+      }
+      dropLine.style.top = `${lineTop - 1}px`;
+    };
+
+    const endDrag = (commit) => {
+      if (!activeDrag) return;
+      const { fromIdx, currentToIdx, dropLine, rowElements } = activeDrag;
+      activeDrag = null;
+
+      if (dropLine) dropLine.remove();
+      document.body.classList.remove('is-row-dragging');
+      if (rowElements[fromIdx]) {
+        rowElements[fromIdx].classList.remove('is-dragging');
+      }
+
+      if (!commit || currentToIdx === null) return;
+
+      let finalIdx = currentToIdx;
+      if (finalIdx > fromIdx) finalIdx--;
+      if (finalIdx !== fromIdx) {
+        this.reorderZone(fromIdx, finalIdx);
+      }
+    };
+
+    // Pointer listeners on drag handles
+    this.timelineRowsContainer.querySelectorAll('.zone-drag-handle').forEach(handle => {
+      handle.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const fromIdx = parseInt(handle.dataset.row, 10);
+        if (!startDrag(fromIdx, e.clientY)) return;
+
+        try {
+          handle.setPointerCapture(e.pointerId);
+        } catch {}
+
+        const onMove = (ev) => {
+          if (ev.pointerId === e.pointerId) {
+            updateDrag(ev.clientY);
+          }
+        };
+
+        const onUp = (ev) => {
+          if (ev.pointerId === e.pointerId) {
+            handle.removeEventListener('pointermove', onMove);
+            handle.removeEventListener('pointerup', onUp);
+            handle.removeEventListener('pointercancel', onUp);
+            try {
+              handle.releasePointerCapture(e.pointerId);
+            } catch {}
+            endDrag(true);
+          }
+        };
+
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onUp);
+        handle.addEventListener('pointercancel', onUp);
+      });
+    });
+
+    // Touch long-press on .zone-sidebar (mobile friendly)
+    this.timelineRowsContainer.querySelectorAll('.zone-sidebar').forEach((sidebar, rowIdx) => {
+      let touchTimer = null;
+      let startX = 0;
+      let startY = 0;
+      let armed = false;
+
+      sidebar.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        if (e.target.closest('button, .zone-drag-handle')) return;
+
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        armed = false;
+        clearTimeout(touchTimer);
+
+        touchTimer = setTimeout(() => {
+          armed = startDrag(rowIdx, startY);
+          if (armed && navigator.vibrate) {
+            try { navigator.vibrate(25); } catch {}
+          }
+        }, 320);
+      }, { passive: true });
+
+      sidebar.addEventListener('touchmove', (e) => {
+        if (!armed) {
+          const dx = Math.abs(e.touches[0].clientX - startX);
+          const dy = Math.abs(e.touches[0].clientY - startY);
+          if (dx > 8 || dy > 8) {
+            clearTimeout(touchTimer);
+          }
+          return;
+        }
+
+        e.preventDefault();
+        updateDrag(e.touches[0].clientY);
+      }, { passive: false });
+
+      const onTouchEnd = (e) => {
+        clearTimeout(touchTimer);
+        if (armed) {
+          armed = false;
+          endDrag(true);
+        }
+      };
+
+      sidebar.addEventListener('touchend', onTouchEnd);
+      sidebar.addEventListener('touchcancel', onTouchEnd);
     });
   }
 
@@ -2962,9 +3255,17 @@ class WTBApp {
 
     // DST Drift Alerts
     if (this.pinnedDriftAlerts) {
-      const alerts = window.scanDstDrift ? window.scanDstDrift(startInstant, this.trackedZones, 3) : [];
+      const alerts = window.scanDstDrift ? window.scanDstDrift(startInstant, this.trackedZones, 3, this.pinDurationMin || 60) : [];
       if (alerts.length > 0) {
-        this.pinnedDriftAlerts.innerHTML = alerts.map(a => `<div class="drift-alert-pill">${a.message}</div>`).join('');
+        this.pinnedDriftAlerts.innerHTML = alerts.map(a => `
+          <div class="drift-alert-pill ${a.critical ? 'alert-critical' : ''}">
+            <span class="drift-alert-icon">${a.critical ? '🚨' : '⚠️'}</span>
+            <div class="drift-alert-body">
+              <div class="drift-alert-title">${a.title || a.message}</div>
+              <div class="drift-alert-desc">${a.details || a.message}</div>
+            </div>
+          </div>
+        `).join('');
         this.pinnedDriftAlerts.style.display = 'flex';
       } else {
         this.pinnedDriftAlerts.style.display = 'none';

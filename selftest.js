@@ -1086,6 +1086,44 @@ export async function runSelfTests() {
     assert('Meeting Controls State Suite', false, e.message);
   }
 
+  // 48. Row Reorder & Dragging Logic
+  try {
+    const app = window.app || window.wtbApp;
+    if (app && app.trackedZones) {
+      const origZones = JSON.parse(JSON.stringify(app.trackedZones));
+      if (app.trackedZones.length >= 2) {
+        const firstLabel = app.trackedZones[0].label;
+        const secondLabel = app.trackedZones[1].label;
+
+        // Move row 0 down to index 1
+        app.reorderZone(0, 1);
+        assert('reorderZone(0, 1) swaps first two zones', app.trackedZones[0].label === secondLabel && app.trackedZones[1].label === firstLabel);
+
+        // Move row 1 back to index 0
+        app.reorderZone(1, 0);
+        assert('reorderZone(1, 0) restores original order', app.trackedZones[0].label === firstLabel && app.trackedZones[1].label === secondLabel);
+      }
+      app.trackedZones = origZones;
+      app.saveState();
+    }
+  } catch (e) {
+    assert('Row Reorder Suite', false, e.message);
+  }
+
+  // 49. Mid-Meeting DST Transition Detection
+  try {
+    const dstTransitionInstant = Temporal.Instant.from('2026-10-25T00:30:00Z');
+    const zones = [
+      { iana: 'UTC', label: 'UTC', isHome: true },
+      { iana: 'Europe/Berlin', label: 'Berlin' }
+    ];
+    // A 90-minute meeting spanning 00:30Z to 02:00Z on Oct 25 crosses Berlin 01:00Z (03:00 CEST -> 02:00 CET)
+    const midMeetingAlerts = window.scanDstDrift(dstTransitionInstant, zones, 1, 90);
+    assert('scanDstDrift detects mid-meeting clock change', midMeetingAlerts.some(a => a.type === 'mid-meeting' && a.critical), JSON.stringify(midMeetingAlerts));
+  } catch (e) {
+    assert('Mid-Meeting DST Transition Suite', false, e.message);
+  }
+
   return results;
 }
 
