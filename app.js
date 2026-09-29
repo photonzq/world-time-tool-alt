@@ -957,6 +957,58 @@ window.buildZonesDatabase = function() {
   return merged;
 };
 
+// --- Week Calendar & ISO 8601 Week Helpers ---
+window.getIsoWeek = function(y, mo, d) {
+  if (typeof Temporal === 'object' && Temporal.PlainDate) {
+    try {
+      const pd = Temporal.PlainDate.from({ year: y, month: mo, day: d });
+      return { w: pd.weekOfYear, y: pd.yearOfWeek || y };
+    } catch (e) {}
+  }
+  const t = new Date(Date.UTC(y, mo - 1, d));
+  t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7) + 3);
+  const thu = t.getTime(), isoY = t.getUTCFullYear();
+  const j = new Date(Date.UTC(isoY, 0, 4));
+  j.setUTCDate(j.getUTCDate() - ((j.getUTCDay() + 6) % 7) + 3);
+  return { w: 1 + Math.round((thu - j.getTime()) / 604800000), y: isoY };
+};
+
+window.calAddDays = function(dt, n) {
+  const t = new Date(Date.UTC(dt.y, dt.mo - 1, dt.d + n));
+  return { y: t.getUTCFullYear(), mo: t.getUTCMonth() + 1, d: t.getUTCDate() };
+};
+
+window.calDow = function(dt) {
+  return (new Date(Date.UTC(dt.y, dt.mo - 1, dt.d)).getUTCDay() + 6) % 7; // Mon 0..Sun 6
+};
+
+window.calMondayOf = function(dt) {
+  return window.calAddDays(dt, -window.calDow(dt));
+};
+
+window.calWeeksForMonth = function(y, mo) {
+  const out = [];
+  let m = window.calMondayOf({ y, mo, d: 1 });
+  while (m.y * 12 + m.mo <= y * 12 + mo) {
+    out.push(m);
+    m = window.calAddDays(m, 7);
+  }
+  return out;
+};
+
+window.calSameWeekday = function(fromDt, targetMon) {
+  return window.calAddDays(targetMon, window.calDow(fromDt));
+};
+
+window.calWeekTitle = function(mon, y) {
+  const su = window.calAddDays(mon, 6);
+  const w = window.getIsoWeek(mon.y, mon.mo, mon.d);
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return "Week " + w.w + (w.y !== y ? " of " + w.y : "") + ": " +
+    (mon.mo === su.mo ? mon.d : mon.d + " " + monthNames[mon.mo - 1]) + "–" +
+    su.d + " " + monthNames[su.mo - 1];
+};
+
 class WTBApp {
   constructor() {
     window.app = this;
@@ -967,6 +1019,12 @@ class WTBApp {
     this.pinStartMin = 0;
     this.pinDurationMin = 60;
     this.isFirstRender = true;
+
+    // Week Calendar state
+    this.isWeekCalendarOpen = false;
+    this.calYear = 2026;
+    this.calMonth = 9;
+    this.calFocusDate = null;
 
     // Initialize default tracked rows: Machine TZ (Home), US West Coast, Europe (Berlin), China (Beijing)
     this.trackedZones = this.getDefaultZones();
@@ -1441,6 +1499,9 @@ class WTBApp {
     this.formatToggleBtn = document.getElementById('format-toggle');
     this.dateTabsContainer = document.getElementById('date-tabs');
     this.datePicker = document.getElementById('date-picker');
+    this.weekCalBtn = document.getElementById('week-cal-btn');
+    this.weekCalBadge = document.getElementById('week-cal-badge');
+    this.weekCalendarPopover = document.getElementById('week-calendar-popover');
     this.timelineHeaderHours = document.getElementById('timeline-header-hours');
     this.timelineRowsContainer = document.getElementById('timeline-rows');
     this.overlapBanner = document.getElementById('overlap-banner');
@@ -1578,6 +1639,8 @@ class WTBApp {
   }
 
   attachEvents() {
+    this.initWeekCalendar();
+
     // Jump to Today / Current Time
     if (this.todayBtn) {
       this.todayBtn.addEventListener('click', () => {
@@ -1874,6 +1937,340 @@ class WTBApp {
     this.initTimelineEvents();
   }
 
+  parseDateString(str) {
+    if (!str || typeof str !== 'string') return { y: 2026, mo: 1, d: 1 };
+    const parts = str.split('-').map(Number);
+    return { y: parts[0] || 2026, mo: parts[1] || 1, d: parts[2] || 1 };
+  }
+
+  formatDateString(dt) {
+    const y = String(dt.y).padStart(4, '0');
+    const mo = String(dt.mo).padStart(2, '0');
+    const d = String(dt.d).padStart(2, '0');
+    return `${y}-${mo}-${d}`;
+  }
+
+  initWeekCalendar() {
+    if (!this.weekCalBtn || !this.weekCalendarPopover) return;
+
+    // Trigger button toggle
+    this.weekCalBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.isWeekCalendarOpen) {
+        this.closeWeekCalendar(true);
+      } else {
+        this.openWeekCalendar();
+      }
+    });
+
+    // Top live clock week badge toggle
+    const topClockWeek = document.getElementById('top-clock-week');
+    if (topClockWeek) {
+      topClockWeek.style.cursor = 'pointer';
+      topClockWeek.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.isWeekCalendarOpen) {
+          this.closeWeekCalendar(true);
+        } else {
+          this.openWeekCalendar();
+        }
+      });
+    }
+
+    // Dismiss when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!this.isWeekCalendarOpen) return;
+      const pop = this.weekCalendarPopover;
+      const btn = this.weekCalBtn;
+      const topWk = document.getElementById('top-clock-week');
+      if (pop && !pop.contains(e.target) && (!btn || !btn.contains(e.target)) && (!topWk || !topWk.contains(e.target))) {
+        this.closeWeekCalendar(false);
+      }
+    });
+
+    // Window resize updates position if popover is open
+    window.addEventListener('resize', () => {
+      if (this.isWeekCalendarOpen) this.positionWeekCalendar();
+    });
+
+    // Delegated click handler inside popover
+    this.weekCalendarPopover.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn || btn.disabled) return;
+
+      // Month Navigation
+      if (btn.dataset.action === 'prev') {
+        this.shiftCalendarMonth(-1);
+        return;
+      }
+      if (btn.dataset.action === 'next') {
+        this.shiftCalendarMonth(1);
+        return;
+      }
+
+      // Today quick-jump link in footer
+      if (btn.id === 'cal-today-link' || btn.classList.contains('cal-today-link')) {
+        this.closeWeekCalendar(true);
+        this.jumpToNow();
+        return;
+      }
+
+      // Week Number Click (Jump to week preserving current weekday)
+      if (btn.dataset.cw) {
+        this.selectCalendarWeek(btn.dataset.cw);
+        return;
+      }
+
+      // Day Click (Jump to specific date)
+      if (btn.dataset.cd) {
+        this.selectCalendarDate(btn.dataset.cd);
+        return;
+      }
+    });
+
+    // Keyboard accessibility inside popover
+    this.weekCalendarPopover.addEventListener('keydown', (e) => {
+      const k = e.key;
+      if (k === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        this.closeWeekCalendar(true);
+        return;
+      }
+
+      const active = document.activeElement;
+      const isDay = active && active.dataset && active.dataset.cd;
+      const isWk = active && active.dataset && active.dataset.cw;
+
+      if (k === 'Tab') {
+        const focusables = Array.from(this.weekCalendarPopover.querySelectorAll('button:not(:disabled)'));
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && active === first) {
+          e.preventDefault();
+          this.closeWeekCalendar(true);
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          this.closeWeekCalendar(false);
+          if (this.datePicker) this.datePicker.focus();
+        }
+        return;
+      }
+
+      if (k === 'PageUp' || k === 'PageDown') {
+        e.preventDefault();
+        e.stopPropagation();
+        const delta = (k === 'PageUp' ? -1 : 1) * (e.shiftKey ? 12 : 1);
+        this.shiftCalendarMonth(delta);
+        return;
+      }
+
+      if (!isDay && !isWk) return;
+
+      const curFocus = this.calFocusDate || this.parseDateString(this.currentDate);
+      let step = 0;
+      if (k === 'ArrowLeft') step = -1;
+      else if (k === 'ArrowRight') step = 1;
+      else if (k === 'ArrowUp') step = -7;
+      else if (k === 'ArrowDown') step = 7;
+
+      let nextDt = null;
+      if (isWk) {
+        if (k === 'ArrowUp' || k === 'ArrowDown') {
+          nextDt = window.calAddDays(curFocus, step);
+        } else if (k === 'ArrowRight') {
+          nextDt = window.calMondayOf(curFocus);
+        }
+      } else if (step !== 0) {
+        nextDt = window.calAddDays(curFocus, step);
+      } else if (k === 'Home') {
+        nextDt = window.calMondayOf(curFocus);
+      } else if (k === 'End') {
+        nextDt = window.calAddDays(window.calMondayOf(curFocus), 6);
+      }
+
+      if (nextDt) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.calFocusDate = nextDt;
+        if (nextDt.mo !== this.calMonth || nextDt.y !== this.calYear) {
+          this.calYear = nextDt.y;
+          this.calMonth = nextDt.mo;
+          this.renderCalendarContent();
+        }
+        const nextStr = this.formatDateString(nextDt);
+        const nextBtn = this.weekCalendarPopover.querySelector(`[data-cd="${nextStr}"]`);
+        if (nextBtn) nextBtn.focus();
+      }
+    });
+  }
+
+  openWeekCalendar() {
+    if (this.isWeekCalendarOpen) return;
+    this.isWeekCalendarOpen = true;
+    const curParts = this.parseDateString(this.currentDate);
+    this.calYear = curParts.y;
+    this.calMonth = curParts.mo;
+    this.calFocusDate = { ...curParts };
+
+    this.renderCalendarContent();
+    this.weekCalendarPopover.style.display = 'block';
+    if (this.weekCalBtn) this.weekCalBtn.setAttribute('aria-expanded', 'true');
+    this.positionWeekCalendar();
+
+    // Focus currently selected date cell
+    const selBtn = this.weekCalendarPopover.querySelector(`[data-cd="${this.currentDate}"]`);
+    if (selBtn) {
+      selBtn.focus();
+    } else {
+      const firstBtn = this.weekCalendarPopover.querySelector('.cal-day-btn');
+      if (firstBtn) firstBtn.focus();
+    }
+  }
+
+  closeWeekCalendar(refocus = false) {
+    if (!this.isWeekCalendarOpen) return;
+    this.isWeekCalendarOpen = false;
+    if (this.weekCalendarPopover) {
+      this.weekCalendarPopover.style.display = 'none';
+    }
+    if (this.weekCalBtn) {
+      this.weekCalBtn.setAttribute('aria-expanded', 'false');
+      if (refocus) this.weekCalBtn.focus();
+    }
+  }
+
+  positionWeekCalendar() {
+    if (!this.weekCalendarPopover || !this.isWeekCalendarOpen) return;
+    const pop = this.weekCalendarPopover;
+    const anchor = this.weekCalBtn || this.datePicker;
+    if (!anchor) return;
+
+    const rect = anchor.getBoundingClientRect();
+    const popW = pop.offsetWidth || 292;
+    const popH = pop.offsetHeight || 290;
+
+    let left = rect.right - popW;
+    if (left < 8) left = 8;
+    if (left + popW > window.innerWidth - 8) {
+      left = Math.max(8, window.innerWidth - popW - 8);
+    }
+
+    let top = rect.bottom + 6;
+    if (top + popH > window.innerHeight - 8) {
+      const topAbove = rect.top - popH - 6;
+      if (topAbove >= 8) {
+        top = topAbove;
+      }
+    }
+
+    pop.style.top = `${Math.round(top)}px`;
+    pop.style.left = `${Math.round(left)}px`;
+  }
+
+  shiftCalendarMonth(delta) {
+    let totalMonths = this.calYear * 12 + (this.calMonth - 1) + delta;
+    this.calYear = Math.floor(totalMonths / 12);
+    this.calMonth = (totalMonths % 12) + 1;
+    const daysInNewMonth = new Date(Date.UTC(this.calYear, this.calMonth, 0)).getUTCDate();
+    if (this.calFocusDate) {
+      this.calFocusDate = {
+        y: this.calYear,
+        mo: this.calMonth,
+        d: Math.min(this.calFocusDate.d, daysInNewMonth)
+      };
+    }
+    this.renderCalendarContent();
+    this.positionWeekCalendar();
+  }
+
+  selectCalendarDate(dateStr) {
+    this.currentDate = dateStr;
+    if (this.datePicker) this.datePicker.value = dateStr;
+    this.closeWeekCalendar(true);
+    this.saveState();
+    this.render();
+    setTimeout(() => this.scrollToActiveTime('auto'), 50);
+  }
+
+  selectCalendarWeek(monDateStr) {
+    const curParts = this.parseDateString(this.currentDate);
+    const monParts = this.parseDateString(monDateStr);
+    const targetDt = window.calSameWeekday(curParts, monParts);
+    const targetDateStr = this.formatDateString(targetDt);
+    this.selectCalendarDate(targetDateStr);
+  }
+
+  renderCalendarContent() {
+    if (!this.weekCalendarPopover) return;
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const curDt = this.parseDateString(this.currentDate);
+    const homeZone = this.getHomeZone() || { iana: this.getMachineTimeZone() };
+    const todayStr = this.getTodayDateString(homeZone.iana);
+    const todayDt = this.parseDateString(todayStr);
+    const selMon = window.calMondayOf(curDt);
+
+    let html = `
+      <div class="cal-header">
+        <button type="button" class="cal-nav-btn" data-action="prev" aria-label="Previous month" title="Previous month">&#8249;</button>
+        <span class="cal-title" aria-live="polite">${monthNames[this.calMonth - 1]} ${this.calYear}</span>
+        <button type="button" class="cal-nav-btn" data-action="next" aria-label="Next month" title="Next month">&#8250;</button>
+      </div>
+      <div class="cal-grid-row cal-head-row">
+        <span class="cal-head-wk" title="ISO 8601 Week Number">Wk</span>
+        <span>Mo</span>
+        <span>Tu</span>
+        <span>We</span>
+        <span>Th</span>
+        <span>Fr</span>
+        <span class="is-weekend">Sa</span>
+        <span class="is-weekend">Su</span>
+      </div>
+    `;
+
+    const weeks = window.calWeeksForMonth(this.calYear, this.calMonth);
+    for (const mon of weeks) {
+      const isCurWeek = mon.y === selMon.y && mon.mo === selMon.mo && mon.d === selMon.d;
+      const monStr = this.formatDateString(mon);
+      const isoWk = window.getIsoWeek(mon.y, mon.mo, mon.d);
+      const weekTitle = window.calWeekTitle(mon, this.calYear);
+
+      html += `<div class="cal-grid-row ${isCurWeek ? 'is-current-week' : ''}">`;
+      html += `<button type="button" class="cal-wk-btn" data-cw="${monStr}" title="${weekTitle}" aria-label="${weekTitle}">${isoWk.w}</button>`;
+
+      for (let i = 0; i < 7; i++) {
+        const dayDt = window.calAddDays(mon, i);
+        const dayStr = this.formatDateString(dayDt);
+        const isSel = dayDt.y === curDt.y && dayDt.mo === curDt.mo && dayDt.d === curDt.d;
+        const isToday = dayDt.y === todayDt.y && dayDt.mo === todayDt.mo && dayDt.d === todayDt.d;
+        const isOut = dayDt.mo !== this.calMonth;
+        const isWeekend = i >= 5;
+
+        let cls = 'cal-day-btn';
+        if (isOut) cls += ' out-of-month';
+        if (isWeekend) cls += ' is-weekend';
+        if (isSel) cls += ' is-selected';
+        if (isToday) cls += ' is-today';
+
+        const dayName = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][i];
+        const aria = `${dayName} ${dayDt.d} ${monthNames[dayDt.mo - 1]} ${dayDt.y}${isSel ? ', selected' : ''}${isToday ? ', today' : ''}`;
+
+        html += `<button type="button" class="${cls}" data-cd="${dayStr}" aria-label="${aria}">${dayDt.d}</button>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `
+      <div class="cal-footer">
+        <span>Click week number to jump</span>
+        <button type="button" class="cal-today-link" id="cal-today-link">Today</button>
+      </div>
+    `;
+
+    this.weekCalendarPopover.innerHTML = html;
+  }
+
   setPinStartMin(min) {
     if (![0, 15, 30, 45].includes(min)) return;
     this.pinStartMin = min;
@@ -2015,6 +2412,19 @@ class WTBApp {
           setTimeout(() => this.scrollToActiveTime('auto'), 50);
         });
       });
+
+      if (this.weekCalBadge) {
+        const curParts = this.parseDateString(this.currentDate);
+        const isoWk = window.getIsoWeek(curParts.y, curParts.mo, curParts.d);
+        this.weekCalBadge.textContent = 'W' + isoWk.w;
+        if (this.weekCalBtn) {
+          this.weekCalBtn.title = `ISO Week ${isoWk.w} (${this.currentDate}) - Click to open calendar`;
+        }
+      }
+      if (this.isWeekCalendarOpen) {
+        this.renderCalendarContent();
+        this.positionWeekCalendar();
+      }
     } catch (e) {
       console.warn('Error rendering date tabs:', e);
     }
@@ -3394,7 +3804,8 @@ class WTBApp {
           hour12: !is24
         });
         tzAbbrev = this.getTimezoneAbbrev(homeZone.iana, now);
-        weekNum = zdt.weekOfYear || (window.getISOWeekNumber ? window.getISOWeekNumber() : 38);
+        const iso = window.getIsoWeek(zdt.year, zdt.month, zdt.day);
+        weekNum = iso.w;
       } else {
         const now = new Date();
         timeStr = new Intl.DateTimeFormat('en-US', {
@@ -3405,7 +3816,8 @@ class WTBApp {
           hour12: !is24
         }).format(now);
         tzAbbrev = this.getTimezoneAbbrev(homeZone.iana, now);
-        weekNum = window.getISOWeekNumber ? window.getISOWeekNumber(now) : 38;
+        const iso = window.getIsoWeek(now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate());
+        weekNum = iso.w;
       }
 
       this.topClockTime.textContent = timeStr;

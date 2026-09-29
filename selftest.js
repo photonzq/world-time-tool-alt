@@ -1124,6 +1124,79 @@ export async function runSelfTests() {
     assert('Mid-Meeting DST Transition Suite', false, e.message);
   }
 
+  // 50. ISO Week Calculation & Interactive Week Calendar Suite
+  try {
+    // 50.1 getIsoWeek math
+    const wSep1 = window.getIsoWeek(2026, 9, 1);
+    assert('2026-09-01 is ISO Week 36', wSep1.w === 36 && wSep1.y === 2026, JSON.stringify(wSep1));
+
+    const wSep28 = window.getIsoWeek(2026, 9, 28);
+    assert('2026-09-28 is ISO Week 40', wSep28.w === 40 && wSep28.y === 2026, JSON.stringify(wSep28));
+
+    const wDec28 = window.getIsoWeek(2026, 12, 28);
+    assert('2026-12-28 is ISO Week 53', wDec28.w === 53 && wDec28.y === 2026, JSON.stringify(wDec28));
+
+    const wJan1 = window.getIsoWeek(2027, 1, 1);
+    assert('2027-01-01 is ISO Week 53 of 2026', wJan1.w === 53 && wJan1.y === 2026, JSON.stringify(wJan1));
+
+    const wJan4 = window.getIsoWeek(2027, 1, 4);
+    assert('2027-01-04 is ISO Week 1 of 2027', wJan4.w === 1 && wJan4.y === 2027, JSON.stringify(wJan4));
+
+    const wFeb2021 = window.getIsoWeek(2021, 2, 1);
+    assert('2021-02-01 is ISO Week 5 of 2021', wFeb2021.w === 5 && wFeb2021.y === 2021, JSON.stringify(wFeb2021));
+
+    // 50.2 calWeeksForMonth
+    const weeksSep26 = window.calWeeksForMonth(2026, 9);
+    assert('September 2026 touches exactly 5 weeks starting 2026-08-31',
+      weeksSep26.length === 5 && weeksSep26[0].mo === 8 && weeksSep26[0].d === 31,
+      JSON.stringify(weeksSep26));
+
+    const weeksAug26 = window.calWeeksForMonth(2026, 8);
+    assert('August 2026 touches 6 weeks', weeksAug26.length === 6, weeksAug26.length);
+
+    const weeksFeb21 = window.calWeeksForMonth(2021, 2);
+    assert('February 2021 touches 4 weeks', weeksFeb21.length === 4, weeksFeb21.length);
+
+    // 50.3 calSameWeekday preservation
+    const wednesday = { y: 2026, mo: 9, d: 30 }; // Wed
+    const octWeek42Mon = { y: 2026, mo: 10, d: 12 }; // Mon of W42
+    const targetWed = window.calSameWeekday(wednesday, octWeek42Mon);
+    assert('Jumping from Wednesday 2026-09-30 to W42 lands on Wednesday 2026-10-14',
+      targetWed.y === 2026 && targetWed.mo === 10 && targetWed.d === 14,
+      JSON.stringify(targetWed));
+
+    // 50.4 DOM Elements & Interaction
+    const app = window.app || window.wtbApp;
+    const weekCalBtn = document.getElementById('week-cal-btn');
+    const weekCalBadge = document.getElementById('week-cal-badge');
+    const weekCalPopover = document.getElementById('week-calendar-popover');
+
+    assert('Week calendar button exists in DOM', Boolean(weekCalBtn));
+    assert('Week calendar badge exists in DOM', Boolean(weekCalBadge) && weekCalBadge.textContent.startsWith('W'));
+    assert('Week calendar popover exists in DOM', Boolean(weekCalPopover));
+
+    if (app && weekCalBtn && weekCalPopover) {
+      // Test opening popover
+      app.openWeekCalendar();
+      assert('openWeekCalendar() shows popover', weekCalPopover.style.display === 'block' && app.isWeekCalendarOpen);
+      assert('Button has aria-expanded="true" when open', weekCalBtn.getAttribute('aria-expanded') === 'true');
+
+      const wkButtons = weekCalPopover.querySelectorAll('.cal-wk-btn');
+      const dayButtons = weekCalPopover.querySelectorAll('.cal-day-btn');
+      assert('Calendar renders week buttons and day buttons', wkButtons.length >= 4 && dayButtons.length >= 28);
+
+      const titleEl = weekCalPopover.querySelector('.cal-title');
+      assert('Calendar displays month and year title', Boolean(titleEl && titleEl.textContent));
+
+      // Test closing popover
+      app.closeWeekCalendar();
+      assert('closeWeekCalendar() hides popover', weekCalPopover.style.display === 'none' && !app.isWeekCalendarOpen);
+      assert('Button has aria-expanded="false" when closed', weekCalBtn.getAttribute('aria-expanded') === 'false');
+    }
+  } catch (e) {
+    assert('ISO Week Calendar Suite', false, e.message);
+  }
+
   return results;
 }
 

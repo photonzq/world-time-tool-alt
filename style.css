@@ -539,6 +539,220 @@ body {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
+/* Week Calendar Button & Popover */
+.btn-week-cal {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 9px;
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-week-cal:hover,
+.btn-week-cal[aria-expanded="true"] {
+  background: #e2e8f0;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.week-cal-badge {
+  color: #2563eb;
+  font-weight: 700;
+  font-feature-settings: "tnum";
+}
+
+.week-cal-popover {
+  position: fixed;
+  z-index: 10000;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.08);
+  padding: 10px 12px;
+  width: 292px;
+  user-select: none;
+  font-family: inherit;
+}
+
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.cal-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cal-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.cal-nav-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.cal-grid-row {
+  display: grid;
+  grid-template-columns: 32px repeat(7, 32px);
+  gap: 2px;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.cal-head-row span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-align: center;
+  padding: 3px 0;
+  text-transform: uppercase;
+}
+
+.cal-head-row span.cal-head-wk {
+  color: #2563eb;
+}
+
+.cal-head-row span.is-weekend {
+  color: #ef4444;
+}
+
+.cal-wk-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-feature-settings: "tnum";
+}
+
+.cal-wk-btn:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.cal-day-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #1e293b;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.12s, color 0.12s;
+  font-feature-settings: "tnum";
+}
+
+.cal-day-btn:hover {
+  background: #e2e8f0;
+}
+
+.cal-grid-row:hover .cal-day-btn:not(.is-selected) {
+  background: #eff6ff;
+}
+
+.cal-grid-row.is-current-week .cal-wk-btn {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.cal-day-btn.is-weekend {
+  color: #dc2626;
+}
+
+.cal-day-btn.out-of-month {
+  color: #cbd5e1;
+}
+
+.cal-day-btn.out-of-month.is-weekend {
+  color: #fca5a5;
+}
+
+.cal-day-btn.is-selected {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.cal-day-btn.is-today::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+
+.cal-day-btn.is-selected.is-today::after {
+  background: #ffffff;
+}
+
+.cal-footer {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+.cal-today-link {
+  color: #2563eb;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.cal-today-link:hover {
+  text-decoration: underline;
+}
+
 /* Overlap & Pinned Indicator Banner */
 .overlap-indicator {
   display: flex;
