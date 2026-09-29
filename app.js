@@ -81,6 +81,55 @@ window.getISOWeekNumber = function(dateObj) {
   return Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
 };
 
+// Add minute offset to an Instant (supporting Temporal.Instant and fallback instant objects)
+window.addMinutesToInstant = function(instant, minutes) {
+  if (!instant) return null;
+  const ms = Number(instant.epochMilliseconds !== undefined ? instant.epochMilliseconds : (instant.epochNanoseconds ? instant.epochNanoseconds / 1000000n : instant));
+  const newMs = ms + minutes * 60000;
+  if (typeof Temporal === 'object' && Temporal.Instant && typeof Temporal.Instant.fromEpochMilliseconds === 'function') {
+    return Temporal.Instant.fromEpochMilliseconds(newMs);
+  }
+  return {
+    epochNanoseconds: BigInt(newMs) * 1000000n,
+    epochMilliseconds: newMs,
+    toZonedDateTimeISO: (tz) => {
+      const p = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, hourCycle: 'h23',
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric',
+        weekday: 'short', timeZoneName: 'short'
+      }).formatToParts(new Date(newMs));
+      const g = t => p.find(x => x.type === t)?.value;
+      const hour = parseInt(g('hour'), 10);
+      const minute = parseInt(g('minute'), 10);
+      const y = parseInt(g('year'), 10);
+      const m = parseInt(g('month'), 10);
+      const d = parseInt(g('day'), 10);
+      const wallUtc = Date.UTC(y, m - 1, d, hour, minute);
+      const offsetMs = wallUtc - newMs;
+      const offsetNanos = BigInt(offsetMs) * 1000000n;
+      const sign = offsetMs >= 0 ? '+' : '-';
+      const absOff = Math.abs(offsetMs);
+      const offH = String(Math.floor(absOff / 3600000)).padStart(2, '0');
+      const offM = String(Math.floor((absOff % 3600000) / 60000)).padStart(2, '0');
+      const offsetStr = `${sign}${offH}:${offM}`;
+      const dayOfWeek = (new Date(newMs).getUTCDay() || 7);
+      return {
+        year: y, month: m, day: d, hour, minute,
+        dayOfWeek,
+        offset: offsetStr,
+        offsetNanoseconds: offsetNanos,
+        toPlainDate: () => ({
+          year: y, month: m, day: d,
+          toString: () => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+          equals: (other) => other && other.year === y && other.month === m && other.day === d
+        }),
+        toLocaleString: (loc, opts) => new Intl.DateTimeFormat(loc, { timeZone: tz, ...opts }).format(new Date(newMs))
+      };
+    }
+  };
+};
+
 // Working Hours & Status Categorization Helper for Pinned Columns
 window.getPinnedHourStatus = function(zdt) {
   const fractionalHour = zdt.hour + zdt.minute / 60;
@@ -234,8 +283,8 @@ window._reset12HourZonesSet = function() {
   _h12ZonesSet = null;
 };
 
-// Natural Language Summary Sentence Generator for Pinned Column
-window.generatePinnedSentence = function(instant, trackedZones, formatOrIs24 = '12', homeZone = null) {
+// Natural Language Summary Sentence Generator for Pinned Column / Meeting Range
+window.generatePinnedSentence = function(instant, trackedZones, formatOrIs24 = '12', homeZone = null, endInstant = null) {
   if (!instant || !trackedZones || trackedZones.length === 0) return '';
   const home = homeZone || trackedZones[0];
   const isZone24 = (iana) => {
@@ -245,8 +294,11 @@ window.generatePinnedSentence = function(instant, trackedZones, formatOrIs24 = '
     return Boolean(formatOrIs24);
   };
 
+  const hasEnd = Boolean(endInstant && endInstant !== instant);
   const homeIs24 = isZone24(home.iana);
   const homeZdt = instant.toZonedDateTimeISO(home.iana);
+  const homeEndZdt = hasEnd ? endInstant.toZonedDateTimeISO(home.iana) : null;
+
   const homeDateFormatted = homeZdt.toLocaleString('en-US', {
     weekday: 'long',
     month: 'short',
@@ -258,37 +310,57 @@ window.generatePinnedSentence = function(instant, trackedZones, formatOrIs24 = '
     minute: '2-digit',
     hour12: !homeIs24
   });
+  const homeEndTimeStr = homeEndZdt ? homeEndZdt.toLocaleString('en-US', {
+    hour: homeIs24 ? '2-digit' : 'numeric',
+    minute: '2-digit',
+    hour12: !homeIs24
+  }) : '';
+
   const homeAbbrev = window.getTimezoneAbbrev ? window.getTimezoneAbbrev(home.iana, instant) : '';
   const homeAbbrevStr = homeAbbrev ? ` ${homeAbbrev}` : '';
-  const homeClause = `${homeDateFormatted} at ${homeTimeStr}${homeAbbrevStr} (${home.label})`;
+
+  const homeClause = hasEnd
+    ? `${homeDateFormatted}, ${homeTimeStr} – ${homeEndTimeStr}${homeAbbrevStr} (${home.label})`
+    : `${homeDateFormatted} at ${homeTimeStr}${homeAbbrevStr} (${home.label})`;
 
   const otherZones = trackedZones.slice(1);
   if (otherZones.length === 0) return `${homeClause}.`;
 
-  const formatZoneTime = (zone, zdt, includeDate = false, includeYear = false) => {
+  const formatZoneTime = (zone, zdt, endZdt, includeDate = false, includeYear = false) => {
     const zoneIs24 = isZone24(zone.iana);
     const timeStr = zdt.toLocaleString('en-US', {
       hour: zoneIs24 ? '2-digit' : 'numeric',
       minute: '2-digit',
       hour12: !zoneIs24
     });
+    const endTimeStr = endZdt ? endZdt.toLocaleString('en-US', {
+      hour: zoneIs24 ? '2-digit' : 'numeric',
+      minute: '2-digit',
+      hour12: !zoneIs24
+    }) : '';
     const abbrev = window.getTimezoneAbbrev ? window.getTimezoneAbbrev(zone.iana, instant) : '';
     const abbrevStr = abbrev ? ` ${abbrev}` : '';
+    const timeRange = hasEnd ? `${timeStr} – ${endTimeStr}` : timeStr;
+
     if (includeDate) {
       const dateOpts = includeYear
         ? { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }
         : { weekday: 'short', month: 'short', day: 'numeric' };
       const dateStr = zdt.toLocaleString('en-US', dateOpts);
+      if (hasEnd) {
+        return `${dateStr}, ${timeRange}${abbrevStr} (${zone.label})`;
+      }
       return `${dateStr} at ${timeStr}${abbrevStr} (${zone.label})`;
     }
-    return `${timeStr}${abbrevStr} (${zone.label})`;
+    return `${timeRange}${abbrevStr} (${zone.label})`;
   };
 
   const otherParts = otherZones.map(zone => {
     const zdt = instant.toZonedDateTimeISO(zone.iana);
+    const endZdt = hasEnd ? endInstant.toZonedDateTimeISO(zone.iana) : null;
     const isDiffDate = !zdt.toPlainDate().equals(homeZdt.toPlainDate());
     const isDiffYear = zdt.year !== homeZdt.year;
-    return formatZoneTime(zone, zdt, isDiffDate, isDiffYear);
+    return formatZoneTime(zone, zdt, endZdt, isDiffDate, isDiffYear);
   });
 
   if (otherParts.length === 1) {
@@ -300,6 +372,200 @@ window.generatePinnedSentence = function(instant, trackedZones, formatOrIs24 = '
   const allButLast = otherParts.slice(0, -1).join(', ');
   const last = otherParts[otherParts.length - 1];
   return `${homeClause} corresponds to ${allButLast}, and ${last}.`;
+};
+
+// RFC 5545 iCalendar (.ics) Generator & Downloader
+window.generateIcsContent = function(startInstant, endInstant, trackedZones, title = 'Meeting', url = '') {
+  if (!startInstant) return '';
+  const startMs = Number(startInstant.epochMilliseconds !== undefined ? startInstant.epochMilliseconds : (startInstant.epochNanoseconds ? startInstant.epochNanoseconds / 1000000n : startInstant));
+  const endMs = endInstant
+    ? Number(endInstant.epochMilliseconds !== undefined ? endInstant.epochMilliseconds : (endInstant.epochNanoseconds ? endInstant.epochNanoseconds / 1000000n : endInstant))
+    : (startMs + 3600000);
+
+  const formatUtcIcs = (ms) => {
+    const d = new Date(ms);
+    return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  };
+
+  const dtStart = formatUtcIcs(startMs);
+  const dtEnd = formatUtcIcs(endMs);
+  const dtStamp = formatUtcIcs(Date.now());
+  const uid = `wtb-${startMs}-${Math.random().toString(36).substring(2, 9)}@worldtimebuddy`;
+
+  // Multi-zone summary for invite description
+  const descLines = ['Time conversions for attendees:'];
+  (trackedZones || []).forEach(zone => {
+    try {
+      const zdt1 = startInstant.toZonedDateTimeISO(zone.iana);
+      const zdt2 = endInstant ? endInstant.toZonedDateTimeISO(zone.iana) : null;
+      const t1 = zdt1.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const t2 = zdt2 ? zdt2.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+      const d1 = zdt1.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const abbrev = window.getTimezoneAbbrev ? window.getTimezoneAbbrev(zone.iana, startInstant) : '';
+      descLines.push(`• ${zone.label}: ${t1}${t2 ? ' - ' + t2 : ''} ${abbrev} (${d1})`);
+    } catch {}
+  });
+  if (url) {
+    descLines.push('');
+    descLines.push(`View & adjust in World Time Buddy: ${url}`);
+  }
+  const cleanDescription = descLines.join('\\n');
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//World Time Buddy Clone//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${dtStamp}`,
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${cleanDescription}`,
+    url ? `URL:${url}` : '',
+    'STATUS:CONFIRMED',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].filter(Boolean).join('\r\n');
+};
+
+window.downloadIcsFile = function(filename, icsContent) {
+  const blob = new Blob(['\uFEFF', icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.ics') ? filename : `${filename}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+// DST Drift Scanner: Detects offset shifts within ±3 days
+window.scanDstDrift = function(instant, trackedZones, daysWindow = 3) {
+  if (!instant || !trackedZones || trackedZones.length < 2) return [];
+  const home = trackedZones[0];
+  const ms = Number(instant.epochMilliseconds !== undefined ? instant.epochMilliseconds : (instant.epochNanoseconds ? instant.epochNanoseconds / 1000000n : instant));
+  const alerts = [];
+
+  const getOffsetDiffHours = (timeMs, zoneIana) => {
+    try {
+      const getTzOffsetMs = (t, tz) => {
+        const p = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz, hourCycle: 'h23',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit'
+        }).formatToParts(new Date(t));
+        const g = type => +p.find(x => x.type === type).value;
+        const wallUtc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
+        return wallUtc - t;
+      };
+      const homeOff = getTzOffsetMs(timeMs, home.iana);
+      const zoneOff = getTzOffsetMs(timeMs, zoneIana);
+      return (zoneOff - homeOff) / 3600000;
+    } catch {
+      return 0;
+    }
+  };
+
+  const otherZones = trackedZones.slice(1);
+  otherZones.forEach(zone => {
+    const baseDiff = getOffsetDiffHours(ms, zone.iana);
+    let driftFound = null;
+
+    // Check future shift (+1..+daysWindow)
+    for (let d = 1; d <= daysWindow; d++) {
+      const futureMs = ms + d * 86400000;
+      const futureDiff = getOffsetDiffHours(futureMs, zone.iana);
+      if (Math.abs(futureDiff - baseDiff) >= 0.25) {
+        const dayWord = d === 1 ? 'tomorrow' : `in ${d} days`;
+        const diffBefore = baseDiff >= 0 ? `+${baseDiff}h` : `${baseDiff}h`;
+        const diffAfter = futureDiff >= 0 ? `+${futureDiff}h` : `${futureDiff}h`;
+        driftFound = {
+          type: 'future',
+          days: d,
+          zoneLabel: zone.label,
+          message: `⚠️ ${zone.label} shifts DST ${dayWord} (gap changes from ${diffBefore} to ${diffAfter})`
+        };
+        break;
+      }
+    }
+
+    // Check past shift (-daysWindow..-1)
+    if (!driftFound) {
+      for (let d = 1; d <= daysWindow; d++) {
+        const pastMs = ms - d * 86400000;
+        const pastDiff = getOffsetDiffHours(pastMs, zone.iana);
+        if (Math.abs(pastDiff - baseDiff) >= 0.25) {
+          const dayWord = d === 1 ? 'yesterday' : `${d} days ago`;
+          const diffBefore = pastDiff >= 0 ? `+${pastDiff}h` : `${pastDiff}h`;
+          const diffNow = baseDiff >= 0 ? `+${baseDiff}h` : `${baseDiff}h`;
+          driftFound = {
+            type: 'past',
+            days: -d,
+            zoneLabel: zone.label,
+            message: `⚠️ ${zone.label} shifted DST ${dayWord} (gap shifted from ${diffBefore} to ${diffNow})`
+          };
+          break;
+        }
+      }
+    }
+
+    if (driftFound) {
+      alerts.push(driftFound);
+    }
+  });
+
+  return alerts;
+};
+
+// "Least-Bad Hours" Optimizer / Slot Scorer
+window.computeLeastBadHours = function(columnInstants, trackedZones, durationMin = 60) {
+  if (!columnInstants || columnInstants.length === 0 || !trackedZones || trackedZones.length === 0) return [];
+  const homeZone = trackedZones[0];
+
+  const getDiscomfortScore = (zdt) => {
+    const isWeekend = zdt.dayOfWeek >= 6;
+    if (isWeekend) return 15;
+    const fHour = zdt.hour + zdt.minute / 60;
+    if (fHour >= 9 && fHour < 17) return 0; // standard work
+    if (fHour >= 8 && fHour < 9) return 1;
+    if (fHour >= 17 && fHour < 18) return 1.5;
+    if (fHour >= 18 && fHour < 20) return 3;
+    if (fHour >= 7 && fHour < 8) return 3.5;
+    if (fHour >= 20 && fHour < 22) return 6;
+    return 14; // sleep / late night
+  };
+
+  const scores = columnInstants.map((colInstant, colIdx) => {
+    let totalPenalty = 0;
+    const endInstant = window.addMinutesToInstant(colInstant, durationMin);
+
+    trackedZones.forEach(zone => {
+      const zdtStart = colInstant.toZonedDateTimeISO(zone.iana);
+      const zdtEnd = endInstant.toZonedDateTimeISO(zone.iana);
+      const startScore = getDiscomfortScore(zdtStart);
+      const endScore = getDiscomfortScore(zdtEnd);
+      totalPenalty += Math.max(startScore, endScore);
+    });
+
+    const homeZdt = colInstant.toZonedDateTimeISO(homeZone.iana);
+    const homeIs24 = window.isZone24Hour ? window.isZone24Hour(homeZone.iana) : false;
+    const hourLabel = homeIs24
+      ? `${String(homeZdt.hour).padStart(2, '0')}:00`
+      : `${homeZdt.hour % 12 || 12}${homeZdt.hour >= 12 ? 'pm' : 'am'}`;
+
+    return {
+      colIdx,
+      score: totalPenalty,
+      instant: colInstant,
+      hourLabel
+    };
+  });
+
+  return scores;
 };
 
 // Global helper for computeColumns (native Temporal when available, fallback to Intl)
@@ -427,6 +693,7 @@ window.getDiurnalColor = function(hourFloat) {
 
 // Search alias table mapping modern city and colloquial names to legacy ICU/IANA identifiers
 const SEARCH_ALIASES = {
+  // Cities & colloquial names
   'kolkata': 'Asia/Calcutta',
   'calcutta': 'Asia/Calcutta',
   'mumbai': 'Asia/Calcutta',
@@ -446,7 +713,50 @@ const SEARCH_ALIASES = {
   'astana': 'Asia/Almaty',
   'nur-sultan': 'Asia/Almaty',
   'peking': 'Asia/Shanghai',
-  'beijing': 'Asia/Shanghai'
+  'beijing': 'Asia/Shanghai',
+  'nyc': 'America/New_York',
+  'sf': 'America/Los_Angeles',
+  'la': 'America/Los_Angeles',
+  'taipei': 'Asia/Taipei',
+  'hong kong': 'Asia/Hong_Kong',
+  // Countries
+  'usa': 'America/New_York',
+  'united states': 'America/New_York',
+  'uk': 'Europe/London',
+  'united kingdom': 'Europe/London',
+  'england': 'Europe/London',
+  'britain': 'Europe/London',
+  'germany': 'Europe/Berlin',
+  'france': 'Europe/Paris',
+  'china': 'Asia/Shanghai',
+  'japan': 'Asia/Tokyo',
+  'india': 'Asia/Calcutta',
+  'australia': 'Australia/Sydney',
+  'canada': 'America/Toronto',
+  'brazil': 'America/Sao_Paulo',
+  'mexico': 'America/Mexico_City',
+  'spain': 'Europe/Madrid',
+  'italy': 'Europe/Rome',
+  'netherlands': 'Europe/Amsterdam',
+  'switzerland': 'Europe/Zurich',
+  'russia': 'Europe/Moscow',
+  'south korea': 'Asia/Seoul',
+  'korea': 'Asia/Seoul',
+  'singapore': 'Asia/Singapore',
+  'new zealand': 'Pacific/Auckland',
+  'ireland': 'Europe/Dublin',
+  'sweden': 'Europe/Stockholm',
+  'norway': 'Europe/Oslo',
+  'denmark': 'Europe/Copenhagen',
+  'poland': 'Europe/Warsaw',
+  'turkey': 'Europe/Istanbul',
+  'uae': 'Asia/Dubai',
+  'dubai': 'Asia/Dubai',
+  'egypt': 'Africa/Cairo',
+  'south africa': 'Africa/Johannesburg',
+  'argentina': 'America/Argentina/Buenos_Aires',
+  'colombia': 'America/Bogota',
+  'chile': 'America/Santiago'
 };
 
 // Universal Timezone Shorthands & Abbreviations
@@ -593,6 +903,8 @@ class WTBApp {
     this.format = '12'; // '12' | '24' | 'mx'
     this.pinnedCol = null;
     this.hoveredCol = null;
+    this.pinStartMin = 0;
+    this.pinDurationMin = 60;
     this.isFirstRender = true;
 
     // Initialize default tracked rows: Machine TZ (Home), US West Coast, Europe (Berlin), China (Beijing)
@@ -897,6 +1209,22 @@ class WTBApp {
             this.pinnedCol = p;
           }
         }
+
+        const minParam = hash.get('m') || hash.get('min');
+        if (minParam !== null) {
+          const m = parseInt(minParam, 10);
+          if ([0, 15, 30, 45].includes(m)) {
+            this.pinStartMin = m;
+          }
+        }
+
+        const durParam = hash.get('l') || hash.get('len') || hash.get('dur');
+        if (durParam !== null) {
+          const d = parseInt(durParam, 10);
+          if (!isNaN(d) && d >= 15 && d <= 1440) {
+            this.pinDurationMin = d;
+          }
+        }
         return;
       } catch (e) {
         console.warn('Could not parse URL hash state:', e);
@@ -933,6 +1261,12 @@ class WTBApp {
           this.format = data.h24 ? '24' : '12';
         } else if (data.is24Hour !== undefined) {
           this.format = data.is24Hour ? '24' : '12';
+        }
+        if (data.pinStartMin !== undefined && [0, 15, 30, 45].includes(data.pinStartMin)) {
+          this.pinStartMin = data.pinStartMin;
+        }
+        if (data.pinDurationMin !== undefined && data.pinDurationMin >= 15 && data.pinDurationMin <= 1440) {
+          this.pinDurationMin = data.pinDurationMin;
         }
       } else {
         // Clear older schemas so updated full subtitles load cleanly
@@ -991,6 +1325,16 @@ class WTBApp {
       parts.push(`p=${this.pinnedCol}`);
     }
 
+    // 5. Start Minute: omit if 0 (default :00)
+    if (this.pinStartMin !== undefined && this.pinStartMin !== 0) {
+      parts.push(`m=${this.pinStartMin}`);
+    }
+
+    // 6. Meeting Duration: omit if 60 (default 1h)
+    if (this.pinDurationMin !== undefined && this.pinDurationMin !== 60) {
+      parts.push(`l=${this.pinDurationMin}`);
+    }
+
     return parts.join('&');
   }
 
@@ -1007,7 +1351,9 @@ class WTBApp {
         version: 3,
         trackedZones: this.trackedZones,
         format: this.format,
-        is24Hour: this.format === '24'
+        is24Hour: this.format === '24',
+        pinStartMin: this.pinStartMin,
+        pinDurationMin: this.pinDurationMin
       }));
 
       // Update URL hash with clean, compact shortened format without reloading
@@ -1056,8 +1402,23 @@ class WTBApp {
     this.closeModalBtn = document.getElementById('close-modal-btn');
     this.testResultsContainer = document.getElementById('test-results');
 
+    // Meeting Duration, Steppers & Recommendation Bar Controls
+    this.pinStartSegments = document.getElementById('pin-start-segments');
+    this.pinLenDec = document.getElementById('pin-len-dec');
+    this.pinLenInc = document.getElementById('pin-len-inc');
+    this.pinLenLabel = document.getElementById('pin-len-label');
+    this.pinPresetSegments = document.getElementById('pin-preset-segments');
+    this.pinShiftPrev = document.getElementById('pin-shift-prev');
+    this.pinShiftNext = document.getElementById('pin-shift-next');
+    this.addToCalendarBtn = document.getElementById('add-to-calendar-btn');
+    this.pinnedDriftAlerts = document.getElementById('pinned-drift-alerts');
+    this.bestSlotBar = document.getElementById('best-slot-bar');
+    this.bestSlotText = document.getElementById('best-slot-text');
+    this.bestSlotButtons = document.getElementById('best-slot-buttons');
+
     this.datePicker.value = this.currentDate;
     this.updateFormatButton();
+    this.updatePinControlsUI();
     this.initSidebarResizer();
   }
 
@@ -1315,6 +1676,103 @@ class WTBApp {
       this.pinnedSentenceText.addEventListener('click', () => this.copySentenceToClipboard());
     }
 
+    // Meeting Start Minute Segments (:00, :15, :30, :45)
+    if (this.pinStartSegments) {
+      this.pinStartSegments.querySelectorAll('.pin-seg-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const m = parseInt(btn.dataset.min, 10);
+          this.setPinStartMin(m);
+        });
+      });
+    }
+
+    // Meeting Duration Stepper (- / + 15 min)
+    if (this.pinLenDec) {
+      this.pinLenDec.addEventListener('click', () => this.setPinDuration(this.pinDurationMin - 15));
+    }
+    if (this.pinLenInc) {
+      this.pinLenInc.addEventListener('click', () => this.setPinDuration(this.pinDurationMin + 15));
+    }
+
+    // Meeting Duration Presets (30m, 45m, 1h, 1.5h, 2h)
+    if (this.pinPresetSegments) {
+      this.pinPresetSegments.querySelectorAll('.pin-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const d = parseInt(btn.dataset.dur, 10);
+          this.setPinDuration(d);
+        });
+      });
+    }
+
+    // Meeting Shift Controls (‹ 1h and 1h ›)
+    if (this.pinShiftPrev) {
+      this.pinShiftPrev.addEventListener('click', () => this.shiftMeeting(-1));
+    }
+    if (this.pinShiftNext) {
+      this.pinShiftNext.addEventListener('click', () => this.shiftMeeting(1));
+    }
+
+    // Add to Calendar (.ics download)
+    if (this.addToCalendarBtn) {
+      this.addToCalendarBtn.addEventListener('click', () => this.exportIcsCalendar());
+    }
+
+    // Keyboard Shortcuts: ArrowLeft/Right to shift meeting, [/] for duration, T for today, / for search, C for copy
+    window.addEventListener('keydown', (e) => {
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) {
+        if (e.key === 'Escape' && this.searchInput) {
+          this.searchInput.blur();
+          if (this.searchDropdown) this.searchDropdown.classList.remove('open');
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (e.altKey || e.shiftKey) {
+          this.stepDate(-1);
+        } else {
+          this.shiftMeeting(-1);
+        }
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (e.altKey || e.shiftKey) {
+          this.stepDate(1);
+        } else {
+          this.shiftMeeting(1);
+        }
+      } else if (e.key === '[') {
+        e.preventDefault();
+        this.setPinDuration(this.pinDurationMin - 15);
+      } else if (e.key === ']') {
+        e.preventDefault();
+        this.setPinDuration(this.pinDurationMin + 15);
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        this.jumpToNow();
+      } else if (e.key === '/') {
+        e.preventDefault();
+        if (this.searchInput) {
+          this.searchInput.focus();
+          this.searchInput.select();
+        }
+      } else if (e.key === 'c' || e.key === 'C') {
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          this.copySentenceToClipboard();
+        }
+      } else if (e.key === 'Escape') {
+        if (this.pinnedCol !== null) {
+          this.pinnedCol = null;
+          this.saveState();
+          this.renderRulerHighlights();
+        }
+        if (this.testModal) this.testModal.classList.remove('open');
+        if (this.searchDropdown) this.searchDropdown.classList.remove('open');
+      }
+    });
+
     // Self-test modal (if elements exist)
     if (this.selftestBtn) {
       this.selftestBtn.addEventListener('click', () => this.triggerSelfTestModal());
@@ -1325,6 +1783,115 @@ class WTBApp {
 
     // Attach timeline scrub/touch/tap events once
     this.initTimelineEvents();
+  }
+
+  setPinStartMin(min) {
+    if (![0, 15, 30, 45].includes(min)) return;
+    this.pinStartMin = min;
+    this.updatePinControlsUI();
+    this.saveState();
+    this.renderRulerHighlights();
+  }
+
+  setPinDuration(durMin) {
+    const clamped = Math.max(15, Math.min(1440, durMin));
+    this.pinDurationMin = clamped;
+    this.updatePinControlsUI();
+    this.saveState();
+    this.renderRulerHighlights();
+  }
+
+  shiftMeeting(deltaHours) {
+    const homeZone = this.getHomeZone();
+    const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+    const numCols = columnInstants.length || 24;
+
+    if (this.pinnedCol === null) {
+      this.pinnedCol = 9;
+    } else {
+      let target = this.pinnedCol + deltaHours;
+      if (target < 0) {
+        this.stepDate(-1);
+        this.pinnedCol = 23;
+      } else if (target >= numCols) {
+        this.stepDate(1);
+        this.pinnedCol = 0;
+      } else {
+        this.pinnedCol = target;
+      }
+    }
+    this.saveState();
+    this.renderRulerHighlights();
+    this.scrollToActiveTime('smooth');
+  }
+
+  stepDate(deltaDays) {
+    try {
+      const base = Temporal.PlainDate.from(this.currentDate);
+      const nextDate = base.add({ days: deltaDays }).toString();
+      this.currentDate = nextDate;
+      if (this.datePicker) this.datePicker.value = nextDate;
+      this.saveState();
+      this.render();
+      setTimeout(() => this.scrollToActiveTime('auto'), 50);
+    } catch {
+      const parts = this.currentDate.split('-').map(Number);
+      const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + deltaDays));
+      const nextDate = dt.toISOString().split('T')[0];
+      this.currentDate = nextDate;
+      if (this.datePicker) this.datePicker.value = nextDate;
+      this.saveState();
+      this.render();
+      setTimeout(() => this.scrollToActiveTime('auto'), 50);
+    }
+  }
+
+  updatePinControlsUI() {
+    if (this.pinStartSegments) {
+      this.pinStartSegments.querySelectorAll('.pin-seg-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.min, 10) === this.pinStartMin);
+      });
+    }
+
+    if (this.pinLenLabel) {
+      const h = Math.floor(this.pinDurationMin / 60);
+      const m = this.pinDurationMin % 60;
+      let text = '';
+      if (h > 0) text += `${h}h`;
+      if (m > 0) text += `${text ? ' ' : ''}${m}m`;
+      if (!text) text = '0m';
+      this.pinLenLabel.textContent = text;
+    }
+
+    if (this.pinPresetSegments) {
+      this.pinPresetSegments.querySelectorAll('.pin-preset-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.dur, 10) === this.pinDurationMin);
+      });
+    }
+  }
+
+  exportIcsCalendar() {
+    const homeZone = this.getHomeZone();
+    const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+    const colIdx = this.pinnedCol !== null ? this.pinnedCol : 9;
+    const baseInstant = columnInstants[colIdx] || columnInstants[0];
+    if (!baseInstant) return;
+
+    const startInstant = window.addMinutesToInstant(baseInstant, this.pinStartMin);
+    const endInstant = window.addMinutesToInstant(startInstant, this.pinDurationMin);
+    const title = `Sync: ${this.trackedZones.map(z => z.label).slice(0, 3).join(' / ')}`;
+    const url = this.getShareUrl();
+
+    const ics = window.generateIcsContent(startInstant, endInstant, this.trackedZones, title, url);
+    window.downloadIcsFile('world-time-meeting.ics', ics);
+
+    if (this.addToCalendarBtn) {
+      const origText = this.addToCalendarBtn.innerHTML;
+      this.addToCalendarBtn.innerHTML = `✓ Downloaded .ics`;
+      setTimeout(() => {
+        this.addToCalendarBtn.innerHTML = origText;
+      }, 2000);
+    }
   }
 
   renderDateTabs() {
@@ -1377,8 +1944,21 @@ class WTBApp {
     // Direct shorthand lookup (e.g. "EDT", "BST", "IST")
     const shorthandZones = (window.TIMEZONE_SHORTHANDS && window.TIMEZONE_SHORTHANDS[qUpper]) || [];
 
-    // Resolve alias (e.g. "kolkata" -> "Asia/Calcutta", "kyiv" -> "Europe/Kiev")
-    const aliasIana = SEARCH_ALIASES[q] || Object.entries(SEARCH_ALIASES).find(([k]) => q.includes(k) || k.includes(q))?.[1];
+    // Parse offset search (e.g. "utc+8", "utc-5", "+5:30", "gmt-3", "+08:00")
+    const cleanOffset = q.replace(/^(utc|gmt)\s*/i, '').trim();
+    const offsetMatch = cleanOffset.match(/^([+-])(\d{1,2})(?::(\d{2}))?$/);
+    let targetOffsetMin = null;
+    if (offsetMatch) {
+      const sign = offsetMatch[1];
+      const h = parseInt(offsetMatch[2], 10);
+      const m = offsetMatch[3] ? parseInt(offsetMatch[3], 10) : 0;
+      if (h <= 14 && m <= 59) {
+        targetOffsetMin = (h * 60 + m) * (sign === '-' ? -1 : 1);
+      }
+    }
+
+    // Resolve alias (e.g. "kolkata" -> "Asia/Calcutta", "kyiv" -> "Europe/Kiev", "uk" -> "Europe/London")
+    const aliasIana = SEARCH_ALIASES[q] || Object.entries(SEARCH_ALIASES).find(([k]) => q === k || q.includes(k) || k.includes(q))?.[1];
 
     // Normalize underscores to spaces so "new york" matches "America/New_York"
     const matches = this.zonesDatabase.filter(z => {
@@ -1386,15 +1966,35 @@ class WTBApp {
       const labelNorm = z.label.toLowerCase();
       const ianaNorm = zIana.toLowerCase().replace(/_/g, ' ');
       const idNorm = z.id.toLowerCase();
+      const subNorm = (z.sub || '').toLowerCase();
+
+      // 0. Offset match
+      if (targetOffsetMin !== null) {
+        try {
+          const d = new Date();
+          const p = new Intl.DateTimeFormat('en-US', {
+            timeZone: zIana, hourCycle: 'h23',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit'
+          }).formatToParts(d);
+          const g = type => +p.find(x => x.type === type).value;
+          const wallUtc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
+          const offMin = Math.round((wallUtc - d.getTime()) / 60000);
+          if (offMin === targetOffsetMin) return true;
+        } catch {}
+      }
 
       // 1. Shorthand match (e.g. EDT, EST, BST, CET, IST, JST)
       if (shorthandZones.includes(zIana)) return true;
       if (z.shorthands && z.shorthands.some(s => s.toLowerCase() === q || s.toUpperCase() === qUpper)) return true;
 
-      // 2. City Alias match (e.g. Kolkata -> Calcutta)
+      // 2. City Alias / Country match (e.g. Kolkata -> Calcutta)
       if (aliasIana && zIana.toLowerCase() === aliasIana.toLowerCase()) return true;
 
-      // 3. Text query match
+      // 3. Subtitle / Country text match
+      if (subNorm.includes(q)) return true;
+
+      // 4. Text query match
       return labelNorm.includes(q) || ianaNorm.includes(q) || idNorm.includes(q);
     }).slice(0, 14);
 
@@ -1763,18 +2363,67 @@ class WTBApp {
       }
     });
 
-    // Update Overlap Banner
+    // Least-Bad Hours Optimization
+    const slotScores = window.computeLeastBadHours ? window.computeLeastBadHours(columnInstants, this.trackedZones, this.pinDurationMin) : [];
+    const sortedSlots = [...slotScores].sort((a, b) => a.score - b.score);
+    const topSlots = sortedSlots.slice(0, 3);
+    const topColSet = new Set(topSlots.map(s => s.colIdx));
+
+    // If no mutual overlap, annotate top slots with ★ in header
+    if (overlapCols.size === 0 && this.trackedZones.length > 1) {
+      headerCells.forEach(cell => {
+        const c = parseInt(cell.dataset.col, 10);
+        if (topColSet.has(c)) {
+          const matchSlot = topSlots.find(s => s.colIdx === c);
+          cell.title = `Recommended compromised slot (Discomfort penalty: ${matchSlot?.score || 0})`;
+          const hourSpan = cell.querySelector('span');
+          if (hourSpan && !hourSpan.innerHTML.startsWith('★')) {
+            hourSpan.innerHTML = `<span style="color:#d97706; font-size:0.75rem; margin-right:1px;">★</span>${hourSpan.innerHTML}`;
+          }
+        }
+      });
+    }
+
+    // Update Overlap Banner or Best Slot Recommendation Bar
     if (overlapCols.size > 0) {
       const overlapHours = Array.from(overlapCols).map(c => {
         const homeIs24 = this.isZone24Hour(homeZone.iana);
-        return homeIs24 ? `${String(homeZdt.hour).padStart(2, '0')}:00` : `${homeZdt.hour % 12 || 12}${homeZdt.hour >= 12 ? 'pm' : 'am'}`;
+        const zdt = columnInstants[c].toZonedDateTimeISO(homeZone.iana);
+        return homeIs24 ? `${String(zdt.hour).padStart(2, '0')}:00` : `${zdt.hour % 12 || 12}${zdt.hour >= 12 ? 'pm' : 'am'}`;
       });
       this.overlapBanner.style.display = 'flex';
       this.overlapBanner.innerHTML = `
         <span>★ <strong>Mutual Business Hours Available:</strong> ${overlapHours.join(', ')} (${homeZone.label} time)</span>
       `;
+      if (this.bestSlotBar) this.bestSlotBar.style.display = 'none';
     } else {
       this.overlapBanner.style.display = 'none';
+
+      // Show Best Slot Bar
+      if (this.bestSlotBar && topSlots.length > 0 && this.trackedZones.length > 1) {
+        this.bestSlotBar.style.display = 'flex';
+        if (this.bestSlotText) {
+          this.bestSlotText.textContent = 'No mutual 9–5 hours found across all zones. Least-disruptive slots:';
+        }
+        if (this.bestSlotButtons) {
+          this.bestSlotButtons.innerHTML = topSlots.map(s => `
+            <button type="button" class="slot-chip-btn" data-col="${s.colIdx}" title="Jump to ${s.hourLabel} (Score ${s.score})">
+              ★ ${s.hourLabel} <span style="font-size:0.7rem; opacity:0.8; font-weight:normal;">(cost ${s.score})</span>
+            </button>
+          `).join('');
+          this.bestSlotButtons.querySelectorAll('.slot-chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const col = parseInt(btn.dataset.col, 10);
+              this.pinnedCol = col;
+              this.saveState();
+              this.renderRulerHighlights();
+              this.scrollToActiveTime('smooth');
+            });
+          });
+        }
+      } else if (this.bestSlotBar) {
+        this.bestSlotBar.style.display = 'none';
+      }
     }
 
     // Attach row events
@@ -1967,9 +2616,12 @@ class WTBApp {
   }
 
   highlightColumn(colIdx) {
+    const startH = (this.pinnedCol !== null) ? (this.pinnedCol + (this.pinStartMin || 0) / 60) : -999;
+    const endH = startH + ((this.pinDurationMin || 60) / 60);
+
     document.querySelectorAll('.hour-header-cell').forEach(c => {
       const cIdx = parseInt(c.dataset.col, 10);
-      const isPinned = cIdx === this.pinnedCol;
+      const isPinned = (cIdx + 1 > startH && cIdx < endH);
       const isHovered = colIdx !== null && cIdx === colIdx;
       c.classList.toggle('pinned-col', isPinned);
       c.classList.toggle('active-col', isHovered || isPinned);
@@ -1983,8 +2635,12 @@ class WTBApp {
       if (headerCell) {
         const contentRect = contentContainer.getBoundingClientRect();
         const headerRect = headerCell.getBoundingClientRect();
-        this.rulerPinned.style.left = `${headerRect.left - contentRect.left}px`;
-        this.rulerPinned.style.width = `${headerRect.width}px`;
+        const colWidth = headerRect.width;
+        const leftOffset = (headerRect.left - contentRect.left) + colWidth * ((this.pinStartMin || 0) / 60);
+        const pinWidth = colWidth * ((this.pinDurationMin || 60) / 60);
+
+        this.rulerPinned.style.left = `${leftOffset}px`;
+        this.rulerPinned.style.width = `${pinWidth}px`;
         this.rulerPinned.classList.add('visible');
       }
       const homeZone = this.getHomeZone();
@@ -2182,31 +2838,79 @@ class WTBApp {
   updatePinnedSummary(columnInstants) {
     if (this.pinnedCol === null || !columnInstants[this.pinnedCol]) return;
 
-    const instant = columnInstants[this.pinnedCol];
+    const baseInstant = columnInstants[this.pinnedCol];
+    const startInstant = window.addMinutesToInstant(baseInstant, this.pinStartMin || 0);
+    const endInstant = window.addMinutesToInstant(startInstant, this.pinDurationMin || 60);
+    const homeZone = this.getHomeZone();
+
     let workCount = 0;
 
     const chipsHtml = this.trackedZones.map(zone => {
-      const zdt = instant.toZonedDateTimeISO(zone.iana);
+      const zdtStart = startInstant.toZonedDateTimeISO(zone.iana);
+      const zdtEnd = endInstant.toZonedDateTimeISO(zone.iana);
       const is24 = this.isZone24Hour(zone.iana);
-      const timeStr = zdt.toLocaleString('en-US', {
+
+      const timeStartStr = zdtStart.toLocaleString('en-US', {
         hour: is24 ? '2-digit' : 'numeric',
         minute: '2-digit',
         hour12: !is24
       });
-      const dateStr = zdt.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      const status = this.getPinnedHourStatus(zdt);
+      const timeEndStr = zdtEnd.toLocaleString('en-US', {
+        hour: is24 ? '2-digit' : 'numeric',
+        minute: '2-digit',
+        hour12: !is24
+      });
 
-      if (status.category === 'work') {
+      const dateStr = zdtStart.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+      // Compare dates relative to home zone date for clear date badges
+      const homePlainDate = startInstant.toZonedDateTimeISO(homeZone.iana).toPlainDate();
+      const zonePlainDate = zdtStart.toPlainDate();
+      let dateBadge = '';
+      if (!zonePlainDate.equals(homePlainDate)) {
+        try {
+          const dayDiff = zonePlainDate.since ? zonePlainDate.since(homePlainDate).days : (zonePlainDate.day - homePlainDate.day);
+          dateBadge = `<span class="date-diff-pill ${dayDiff > 0 ? 'next-day' : 'prev-day'}">${dayDiff > 0 ? `+${dayDiff}d` : `${dayDiff}d`}</span>`;
+        } catch {
+          dateBadge = `<span class="date-diff-pill next-day">diff date</span>`;
+        }
+      }
+
+      // Check if meeting crosses midnight locally
+      if (!zdtStart.toPlainDate().equals(zdtEnd.toPlainDate())) {
+        dateBadge += `<span class="date-diff-pill next-day" title="Ends next day">ends next day</span>`;
+      }
+
+      // Working status over entire span:
+      const st1 = this.getPinnedHourStatus(zdtStart);
+      const st2 = this.getPinnedHourStatus(zdtEnd);
+
+      let effectiveStatus = st1;
+      if (st1.category === 'weekend' || st2.category === 'weekend') {
+        effectiveStatus = { category: 'weekend', statusClass: 'status-weekend', statusLabel: 'Weekend', tooltip: 'Touches weekend' };
+      } else if (st1.category === 'night' || st2.category === 'night') {
+        effectiveStatus = { category: 'night', statusClass: 'status-night', statusLabel: 'Night', tooltip: 'Touches sleep / night hours' };
+      } else if (st1.category === 'work' && st2.category === 'work') {
+        effectiveStatus = { category: 'work', statusClass: 'status-work', statusLabel: 'Work', tooltip: 'Entirely within business hours (9am–5pm)' };
+      } else {
+        effectiveStatus = { category: 'shoulder', statusClass: 'status-shoulder', statusLabel: 'Off-hours', tooltip: 'Partially or wholly in off-work awake hours' };
+      }
+
+      if (effectiveStatus.category === 'work') {
         workCount++;
       }
 
+      const abbrev = window.getTimezoneAbbrev ? window.getTimezoneAbbrev(zone.iana, startInstant) : '';
+
       return `
-        <div class="pinned-chip ${status.statusClass}" title="${zone.label}: ${status.tooltip}">
-          <span class="pinned-status-dot ${status.statusClass}"></span>
+        <div class="pinned-chip ${effectiveStatus.statusClass}" title="${zone.label}: ${effectiveStatus.tooltip}">
+          <span class="pinned-status-dot ${effectiveStatus.statusClass}"></span>
           <span class="pinned-zone-name">${zone.label}:</span>
-          <span class="pinned-time">${timeStr}</span>
+          <span class="pinned-time">${timeStartStr} – ${timeEndStr}</span>
+          ${abbrev ? `<span class="pinned-tz-code">${abbrev}</span>` : ''}
           <span class="pinned-date">(${dateStr})</span>
-          <span class="pinned-status-badge ${status.statusClass}">${status.statusLabel}</span>
+          ${dateBadge}
+          <span class="pinned-status-badge ${effectiveStatus.statusClass}">${effectiveStatus.statusLabel}</span>
         </div>
       `;
     }).join('');
@@ -2224,15 +2928,26 @@ class WTBApp {
       }
     }
 
+    // DST Drift Alerts
+    if (this.pinnedDriftAlerts) {
+      const alerts = window.scanDstDrift ? window.scanDstDrift(startInstant, this.trackedZones, 3) : [];
+      if (alerts.length > 0) {
+        this.pinnedDriftAlerts.innerHTML = alerts.map(a => `<div class="drift-alert-pill">${a.message}</div>`).join('');
+        this.pinnedDriftAlerts.style.display = 'flex';
+      } else {
+        this.pinnedDriftAlerts.style.display = 'none';
+      }
+    }
+
     if (this.pinnedSentenceText) {
-      this.pinnedSentenceText.textContent = this.generatePinnedSentence(instant);
+      this.pinnedSentenceText.textContent = this.generatePinnedSentence(startInstant, endInstant);
     }
 
     this.pinnedSummary.classList.add('visible');
   }
 
-  generatePinnedSentence(instant) {
-    return window.generatePinnedSentence(instant, this.trackedZones, this.format, this.getHomeZone());
+  generatePinnedSentence(instant, endInstant = null) {
+    return window.generatePinnedSentence(instant, this.trackedZones, this.format, this.getHomeZone(), endInstant);
   }
 
   copySentenceToClipboard() {

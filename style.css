@@ -1109,6 +1109,156 @@ body.resizing-sidebar {
   white-space: nowrap;
 }
 
+/* Pinned Meeting Controls Row */
+.pinned-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.pinned-ctrl-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pinned-ctrl-label {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.pin-segmented-group,
+.pin-stepper-group,
+.pin-presets-group {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pin-seg-btn,
+.pin-preset-btn,
+.pin-step-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #334155;
+  padding: 3px 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.pin-seg-btn:not(:last-child),
+.pin-preset-btn:not(:last-child),
+.pin-step-btn:not(:last-child) {
+  border-right: 1px solid var(--border-light);
+}
+
+.pin-seg-btn:hover,
+.pin-preset-btn:hover,
+.pin-step-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.pin-seg-btn.active,
+.pin-preset-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.pin-len-display {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #0f172a;
+  padding: 3px 8px;
+  min-width: 36px;
+  text-align: center;
+  background: #f8fafc;
+  border-right: 1px solid var(--border-light);
+}
+
+.pinned-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* DST Drift Alerts Container */
+.pinned-drift-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 2px 0;
+}
+
+.drift-alert-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  padding: 3px 8px;
+  border-radius: 4px;
+  line-height: 1.3;
+}
+
+/* Best Slot Recommendation Bar */
+.best-slot-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #eff6ff;
+  border-top: 1px solid #dbeafe;
+  font-size: 0.78rem;
+  color: #1e40af;
+  flex-wrap: wrap;
+}
+
+.slot-bar-icon {
+  color: #f59e0b;
+  font-size: 0.85rem;
+}
+
+.slot-bar-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slot-chip-btn {
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.slot-chip-btn:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
 #clear-pin-btn {
   white-space: nowrap;
   flex-shrink: 0;

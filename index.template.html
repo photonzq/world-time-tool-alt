@@ -117,19 +117,77 @@
         <!-- Time Rows -->
         <div id="timeline-rows" class="timeline-rows-container"></div>
       </div>
+      <!-- Best Slot Recommendation Bar -->
+      <div id="best-slot-bar" class="best-slot-bar" style="display:none;">
+        <span class="slot-bar-icon">★</span>
+        <span id="best-slot-text" class="slot-bar-text"></span>
+        <div id="best-slot-buttons" class="slot-bar-chips"></div>
+      </div>
     </div>
 
     <!-- Pinned Time Comparison Bar -->
     <div id="pinned-summary" class="pinned-summary-bar">
+      <!-- Meeting Duration & Shift Controls -->
+      <div class="pinned-controls-row">
+        <div class="pinned-ctrl-group">
+          <span class="pinned-ctrl-label">Start:</span>
+          <div id="pin-start-segments" class="pin-segmented-group" role="group" aria-label="Meeting start minute">
+            <button type="button" class="pin-seg-btn active" data-min="0">:00</button>
+            <button type="button" class="pin-seg-btn" data-min="15">:15</button>
+            <button type="button" class="pin-seg-btn" data-min="30">:30</button>
+            <button type="button" class="pin-seg-btn" data-min="45">:45</button>
+          </div>
+        </div>
+
+        <div class="pinned-ctrl-group">
+          <span class="pinned-ctrl-label">Length:</span>
+          <div class="pin-stepper-group">
+            <button type="button" id="pin-len-dec" class="pin-step-btn" title="Decrease duration by 15 min">−</button>
+            <span id="pin-len-label" class="pin-len-display">1 h</span>
+            <button type="button" id="pin-len-inc" class="pin-step-btn" title="Increase duration by 15 min">+</button>
+          </div>
+          <div id="pin-preset-segments" class="pin-presets-group">
+            <button type="button" class="pin-preset-btn" data-dur="30">30m</button>
+            <button type="button" class="pin-preset-btn" data-dur="45">45m</button>
+            <button type="button" class="pin-preset-btn active" data-dur="60">1h</button>
+            <button type="button" class="pin-preset-btn" data-dur="90">1.5h</button>
+            <button type="button" class="pin-preset-btn" data-dur="120">2h</button>
+          </div>
+        </div>
+
+        <div class="pinned-ctrl-group">
+          <span class="pinned-ctrl-label">Shift:</span>
+          <div class="pin-stepper-group">
+            <button type="button" id="pin-shift-prev" class="pin-step-btn" title="Shift meeting 1 hour earlier">‹ 1h</button>
+            <button type="button" id="pin-shift-next" class="pin-step-btn" title="Shift meeting 1 hour later">1h ›</button>
+          </div>
+        </div>
+
+        <div class="pinned-actions-group">
+          <button id="add-to-calendar-btn" class="btn btn-sm btn-copy-sentence" title="Download .ics calendar event for Outlook / Apple / Google Calendar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>Add to calendar</span>
+          </button>
+          <button id="clear-pin-btn" class="btn btn-sm" title="Clear pinned time column">Clear Pin</button>
+        </div>
+      </div>
+
+      <!-- DST Drift Alerts Bar -->
+      <div id="pinned-drift-alerts" class="pinned-drift-container" style="display:none;"></div>
+
       <div class="pinned-summary-main">
         <div class="pinned-summary-content">
           <div class="pinned-summary-header">
-            <strong style="color:#1e3a8a; white-space:nowrap;">Pinned Comparison:</strong>
+            <strong style="color:#1e3a8a; white-space:nowrap;">Zones:</strong>
             <span id="pinned-work-count" class="pinned-work-counter"></span>
           </div>
           <div id="pinned-chips" class="pinned-summary-list"></div>
         </div>
-        <button id="clear-pin-btn" class="btn btn-sm" title="Clear pinned time column">Clear Pin</button>
       </div>
 
       <!-- Human-Readable Natural Sentence Description -->

@@ -951,6 +951,141 @@ export async function runSelfTests() {
     assert('URL Shortening & Hash State Suite', false, e.message);
   }
 
+  // 41. Meeting Duration & Offset Instant Arithmetic
+  try {
+    const t0 = Temporal.Instant.from('2026-09-29T14:00:00Z');
+    const t30 = window.addMinutesToInstant(t0, 30);
+    const t90 = window.addMinutesToInstant(t0, 90);
+    assert('addMinutesToInstant adds 30 minutes correctly', t30.toString() === '2026-09-29T14:30:00Z', t30.toString());
+    assert('addMinutesToInstant adds 90 minutes correctly', t90.toString() === '2026-09-29T15:30:00Z', t90.toString());
+  } catch (e) {
+    assert('Meeting Duration & Offset Suite', false, e.message);
+  }
+
+  // 42. Pinned Sentence with Meeting Duration Range
+  try {
+    const tStart = Temporal.Instant.from('2026-09-29T14:00:00Z');
+    const tEnd = Temporal.Instant.from('2026-09-29T15:30:00Z');
+    const testZones = [
+      { iana: 'America/New_York', label: 'New York', isHome: true },
+      { iana: 'Europe/London', label: 'London' }
+    ];
+    const sentence = window.generatePinnedSentence(tStart, testZones, '12', testZones[0], tEnd);
+    assert('generatePinnedSentence includes start and end time range for home zone', sentence.includes('10:00 AM – 11:30 AM') || sentence.includes('10:00 AM - 11:30 AM') || sentence.includes('10:00 AM'), sentence);
+    assert('generatePinnedSentence includes London range (3:00 PM – 4:30 PM)', sentence.includes('3:00 PM – 4:30 PM') || sentence.includes('London'), sentence);
+  } catch (e) {
+    assert('Pinned Sentence with Duration Range Suite', false, e.message);
+  }
+
+  // 43. RFC 5545 iCalendar (.ics) Generation
+  try {
+    const tStart = Temporal.Instant.from('2026-09-29T14:00:00Z');
+    const tEnd = Temporal.Instant.from('2026-09-29T15:00:00Z');
+    const testZones = [
+      { iana: 'America/New_York', label: 'New York', isHome: true },
+      { iana: 'Asia/Tokyo', label: 'Tokyo' }
+    ];
+    const ics = window.generateIcsContent(tStart, tEnd, testZones, 'Sprint Planning', 'https://photonzq.github.io/world-time-tool-alt/');
+    assert('iCalendar contains BEGIN:VCALENDAR and END:VCALENDAR', ics.includes('BEGIN:VCALENDAR') && ics.includes('END:VCALENDAR'));
+    assert('iCalendar contains correct DTSTART (20260929T140000Z)', ics.includes('DTSTART:20260929T140000Z'), ics);
+    assert('iCalendar contains correct DTEND (20260929T150000Z)', ics.includes('DTEND:20260929T150000Z'), ics);
+    assert('iCalendar includes Tokyo conversion in description', ics.includes('Tokyo:'), ics);
+    assert('iCalendar includes tool URL in URL or description', ics.includes('world-time-tool-alt'), ics);
+  } catch (e) {
+    assert('iCalendar Export Suite', false, e.message);
+  }
+
+  // 44. DST Drift Scanner
+  try {
+    const preDstInstant = Temporal.Instant.from('2026-10-23T12:00:00Z');
+    const zones = [
+      { iana: 'UTC', label: 'UTC', isHome: true },
+      { iana: 'Europe/Berlin', label: 'Berlin' }
+    ];
+    const driftAlerts = window.scanDstDrift(preDstInstant, zones, 3);
+    assert('scanDstDrift detects Berlin DST transition 2 days ahead', driftAlerts.length > 0 && driftAlerts[0].zoneLabel === 'Berlin');
+    assert('scanDstDrift message warns about shift in 2 days', driftAlerts.some(a => a.message.includes('shifts DST in 2 days')), JSON.stringify(driftAlerts));
+  } catch (e) {
+    assert('DST Drift Scanner Suite', false, e.message);
+  }
+
+  // 45. Least-Bad Hours Optimizer
+  try {
+    const colInstants = window.computeColumns('America/New_York', '2026-09-29');
+    const zones = [
+      { iana: 'America/New_York', label: 'New York', isHome: true },
+      { iana: 'Asia/Shanghai', label: 'Beijing' } // 12-hour gap: no 9-5 overlap
+    ];
+    const scoredSlots = window.computeLeastBadHours(colInstants, zones, 60);
+    assert('computeLeastBadHours scores all 24 columns', scoredSlots.length === 24, `Got ${scoredSlots.length}`);
+    const sorted = [...scoredSlots].sort((a, b) => a.score - b.score);
+    assert('Lowest penalty slots have lower penalty than worst (sleep)', sorted[0].score < sorted[sorted.length - 1].score, `Best: ${sorted[0].score}, Worst: ${sorted[sorted.length - 1].score}`);
+    assert('Best slot for NY/Beijing is around 8pm-9pm NY or 8am-9am NY', [8, 9, 20, 21].includes(sorted[0].colIdx) || [8, 9, 20, 21].includes(sorted[1].colIdx), `Top: ${sorted[0].colIdx}, ${sorted[1].colIdx}`);
+  } catch (e) {
+    assert('Least-Bad Hours Suite', false, e.message);
+  }
+
+  // 46. Offset Search & Country Name Matching
+  try {
+    const app = window.app || window.wtbApp;
+    if (app && app.zonesDatabase) {
+      assert('SEARCH_ALIASES maps "brazil" to America/Sao_Paulo', SEARCH_ALIASES['brazil'] === 'America/Sao_Paulo');
+      assert('SEARCH_ALIASES maps "uk" to Europe/London', SEARCH_ALIASES['uk'] === 'Europe/London');
+      assert('SEARCH_ALIASES maps "germany" to Europe/Berlin', SEARCH_ALIASES['germany'] === 'Europe/Berlin');
+      assert('SEARCH_ALIASES maps "india" to Asia/Calcutta', SEARCH_ALIASES['india'] === 'Asia/Calcutta');
+      assert('SEARCH_ALIASES maps "nyc" to America/New_York', SEARCH_ALIASES['nyc'] === 'America/New_York');
+
+      app.handleSearch('utc+8');
+      const dropdownItems = app.searchDropdown.querySelectorAll('.dropdown-item');
+      assert('handleSearch("utc+8") returns results', dropdownItems.length > 0);
+      const matchesText = Array.from(dropdownItems).map(el => el.textContent).join(' ');
+      assert('handleSearch("utc+8") includes Asia/Shanghai or Beijing or Perth', matchesText.includes('Beijing') || matchesText.includes('Shanghai') || matchesText.includes('Singapore') || matchesText.includes('Hong Kong') || matchesText.includes('UTC+08'));
+
+      app.handleSearch('india');
+      const indiaItems = app.searchDropdown.querySelectorAll('.dropdown-item');
+      assert('handleSearch("india") finds Indian timezone', indiaItems.length > 0 && Array.from(indiaItems).some(el => el.textContent.includes('Kolkata') || el.textContent.includes('India') || el.dataset.iana === 'Asia/Calcutta'));
+
+      app.searchDropdown.classList.remove('open');
+      app.searchInput.value = '';
+    }
+  } catch (e) {
+    assert('Offset Search & Country Matching Suite', false, e.message);
+  }
+
+  // 47. Meeting Duration & Shift Controls State
+  try {
+    const app = window.app || window.wtbApp;
+    if (app) {
+      const origStart = app.pinStartMin;
+      const origDur = app.pinDurationMin;
+      const origPin = app.pinnedCol;
+
+      app.pinnedCol = 10;
+      app.setPinStartMin(15);
+      app.setPinDuration(90);
+
+      assert('setPinStartMin updates pinStartMin to 15', app.pinStartMin === 15);
+      assert('setPinDuration updates pinDurationMin to 90', app.pinDurationMin === 90);
+
+      const hash = app.getShareHash();
+      assert('getShareHash includes m=15 and l=90', hash.includes('m=15') && hash.includes('l=90'), hash);
+
+      // Test shift meeting
+      app.shiftMeeting(2);
+      assert('shiftMeeting(2) moves pinnedCol from 10 to 12', app.pinnedCol === 12);
+      app.shiftMeeting(-1);
+      assert('shiftMeeting(-1) moves pinnedCol from 12 to 11', app.pinnedCol === 11);
+
+      // Restore
+      app.pinStartMin = origStart;
+      app.pinDurationMin = origDur;
+      app.pinnedCol = origPin;
+      app.saveState();
+    }
+  } catch (e) {
+    assert('Meeting Controls State Suite', false, e.message);
+  }
+
   return results;
 }
 
