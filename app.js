@@ -1590,6 +1590,34 @@ class WTBApp {
       }
     });
 
+    this.searchInput.addEventListener('keydown', (e) => {
+      if (!this.searchDropdown.classList.contains('open')) return;
+      const items = Array.from(this.searchDropdown.querySelectorAll('.dropdown-item'));
+      if (items.length === 0) return;
+
+      let activeIndex = items.findIndex(el => el.classList.contains('active'));
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (activeIndex >= 0) items[activeIndex].classList.remove('active');
+        activeIndex = (activeIndex + 1) % items.length;
+        items[activeIndex].classList.add('active');
+        items[activeIndex].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (activeIndex >= 0) items[activeIndex].classList.remove('active');
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+        items[activeIndex].classList.add('active');
+        items[activeIndex].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const target = activeIndex >= 0 ? items[activeIndex] : items[0];
+        if (target) target.click();
+      } else if (e.key === 'Escape') {
+        this.searchDropdown.classList.remove('open');
+      }
+    });
+
     document.addEventListener('click', (e) => {
       if (!this.searchInput.contains(e.target) && !this.searchDropdown.contains(e.target)) {
         this.searchDropdown.classList.remove('open');
@@ -2004,29 +2032,34 @@ class WTBApp {
       return;
     }
 
-    this.searchDropdown.innerHTML = matches.map(m => `
-      <div class="dropdown-item" data-iana="${m.iana}" data-id="${m.id}" data-label="${m.label}">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-          <strong>${m.label}</strong>
-          ${m.shorthands && m.shorthands.length > 0 ? `
-            <span class="shorthand-badge" style="
-              font-size: 0.72rem;
-              font-weight: 600;
-              background: #f1f5f9;
-              color: #2563eb;
-              border: 1px solid #cbd5e1;
-              padding: 1px 6px;
-              border-radius: 4px;
-              white-space: nowrap;
-              letter-spacing: 0.02em;
-            ">${m.shorthands.slice(0, 3).join(' / ')}</span>
-          ` : ''}
+    this.searchDropdown.innerHTML = matches.map((m, idx) => {
+      const offMatch = m.label.match(/^(\(UTC[+-]\d{2}:\d{2}\))\s*(.*)$/);
+      const offsetTag = offMatch ? offMatch[1] : '';
+      const placeName = offMatch ? offMatch[2] : m.label;
+      const ianaClean = m.iana.replace(/_/g, ' ');
+      const hasBadges = m.shorthands && m.shorthands.length > 0;
+      const badgeText = hasBadges ? m.shorthands.slice(0, 3).join(' / ') : '';
+
+      return `
+        <div class="dropdown-item${idx === 0 ? ' active' : ''}" data-iana="${m.iana}" data-id="${m.id}" data-label="${m.label}">
+          <div class="dropdown-item-main">
+            <div class="dropdown-item-header">
+              ${offsetTag ? `<span class="tz-offset">${offsetTag}</span>` : ''}
+              <strong class="tz-name">${placeName}</strong>
+            </div>
+            <div class="tz-iana">${ianaClean}</div>
+          </div>
+          ${hasBadges ? `<span class="shorthand-badge">${badgeText}</span>` : ''}
         </div>
-        <div class="tz-iana" style="color:#64748b; font-size:0.75rem; margin-top:2px;">${m.iana.replace(/_/g, ' ')}</div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     this.searchDropdown.querySelectorAll('.dropdown-item').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        this.searchDropdown.querySelectorAll('.dropdown-item.active').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+      });
+
       el.addEventListener('click', () => {
         const parsed = this.parseZoneInfo({
           id: el.dataset.id,
