@@ -46,12 +46,12 @@ app_inlined = re.sub(r"import\s*\{\s*runSelfTests\s*\}\s*from\s*['\"]\.\/selftes
 template = re.sub(r'<link\s+rel=["\']stylesheet["\'][^>]*>', lambda m: f'<style>\n{css_content}\n</style>', template)
 
 # Replace scripts with inlined scripts
-script_replacement = f"""  <!-- Inlined Windows Zones Database -->
+script_replacement = f"""  <!-- Inlined Zones Database -->
   <script>
 {zones_content}
   </script>
 
-  <!-- Inlined DST & Golden Self-Tests -->
+  <!-- Inlined Self-Tests -->
   <script>
 {selftest_inlined}
   </script>
@@ -62,7 +62,7 @@ script_replacement = f"""  <!-- Inlined Windows Zones Database -->
   </script>"""
 
 template = re.sub(
-    r'<!--\s*Load Curated Windows Zones.*?<!--\s*Load Main Application\s*-->\s*<script[^>]*src=["\']app\.js["\'][^>]*></script>',
+    r'<!--\s*Load.*?Zones.*?<script[^>]*src=["\']app\.js["\'][^>]*></script>',
     lambda m: script_replacement,
     template,
     flags=re.DOTALL

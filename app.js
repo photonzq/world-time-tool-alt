@@ -1,6 +1,5 @@
 /**
- * World Time Buddy Clone - Main Application Logic
- * Powered by native Temporal API & curated Windows Time Zones.
+ * World Time Tool - Application Engine
  */
 
 import { runSelfTests } from './selftest.js';

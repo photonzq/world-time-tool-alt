@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>World Time Tool - Windows Timezone Edition</title>
+  <title>World Time Tool</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
@@ -44,13 +44,13 @@
         </span>
       </div>
 
-      <!-- Windows-curated Timezone Search -->
+      <!-- Timezone Search -->
       <div class="search-container">
         <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="search-input" class="search-input" placeholder="+ Add place or Windows timezone..." autocomplete="off">
+        <input type="text" id="search-input" class="search-input" placeholder="+ Add place or timezone..." autocomplete="off">
         <div id="search-dropdown" class="search-dropdown"></div>
       </div>
 
@@ -70,7 +70,7 @@
           <span class="btn-text-full">Link to this view</span>
           <span class="btn-text-short">Link</span>
         </button>
-        <button id="reset-btn" class="btn" title="Reset to default timezones (Local, US West, Europe, China)">
+        <button id="reset-btn" class="btn" title="Reset to default timezones">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
             <path d="M3 3v5h5"></path>
@@ -199,7 +199,7 @@
           <span>Summary:</span>
         </div>
         <div id="pinned-sentence-text" class="pinned-sentence-text" title="Click to copy description"></div>
-        <button id="copy-sentence-btn" class="btn btn-sm btn-copy-sentence" title="Copy sentence description to clipboard (for LLMs or emails)">
+        <button id="copy-sentence-btn" class="btn btn-sm btn-copy-sentence" title="Copy meeting summary to clipboard">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -208,25 +208,20 @@
         </button>
       </div>
     </div>
-
-    <!-- App Footer / Attribution -->
-    <footer class="app-footer">
-      <span>Made with AI tools · Public domain (<a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>)</span>
-    </footer>
   </div>
 
   <!-- Self-Test Modal -->
   <div id="test-modal" class="modal-backdrop">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>🧪 DST & Temporal Golden Assertions</h3>
+        <h3>Self-Test Suite</h3>
         <button id="close-modal-btn" class="btn btn-sm">✕</button>
       </div>
       <div id="test-results" class="modal-body"></div>
     </div>
   </div>
 
-  <!-- Load Curated Windows Zones (offline & file:// compatible) -->
+  <!-- Load Zones Database (offline & file:// compatible) -->
   <script src="zones.js"></script>
   <!-- Load Main Application -->
   <script type="module" src="app.js"></script>
