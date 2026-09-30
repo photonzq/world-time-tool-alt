@@ -2491,15 +2491,27 @@ body.is-row-dragging {
   }
   .pinned-controls-row {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
     gap: 12px;
   }
   .pinned-ctrl-group {
-    justify-content: space-between;
+    flex-wrap: wrap;
+    justify-content: flex-start;
     width: 100%;
+    gap: 8px;
+  }
+  .pinned-ctrl-label {
+    min-width: 60px;
+  }
+  .pin-stepper-group, .pin-segmented-group {
+    flex: 1;
+  }
+  .pin-presets-group {
+    flex: 1 1 100%;
+    margin-left: 68px; /* align with the stepper visually, skipping the label */
   }
   .pin-seg-btn, .pin-preset-btn, .pin-step-btn {
-    padding: 6px 8px;
+    padding: 8px 6px;
     flex: 1;
   }
   .pinned-actions-group {
@@ -2507,6 +2519,7 @@ body.is-row-dragging {
     width: 100%;
     justify-content: space-between;
     margin-top: 4px;
+    gap: 10px;
   }
   #add-to-calendar-btn, #clear-pin-btn {
     flex: 1;
