@@ -1498,7 +1498,7 @@ class WTBApp {
     this.formatSegments = document.querySelectorAll('.format-segment');
     this.formatToggleBtn = document.getElementById('format-toggle');
     this.dateTabsContainer = document.getElementById('date-tabs');
-    this.datePicker = document.getElementById('date-picker');
+    this.datePickerLabel = document.getElementById('date-picker-label');
     this.weekCalBtn = document.getElementById('week-cal-btn');
     this.weekCalBadge = document.getElementById('week-cal-badge');
     this.weekCalendarPopover = document.getElementById('week-calendar-popover');
@@ -1538,7 +1538,7 @@ class WTBApp {
     this.bestSlotText = document.getElementById('best-slot-text');
     this.bestSlotButtons = document.getElementById('best-slot-buttons');
 
-    this.datePicker.value = this.currentDate;
+    if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
     this.updateFormatButton();
     this.updatePinControlsUI();
     this.initSidebarResizer();
@@ -1694,14 +1694,7 @@ class WTBApp {
     }
 
     // Date Picker Input
-    this.datePicker.addEventListener('change', (e) => {
-      if (e.target.value) {
-        this.currentDate = e.target.value;
-        this.saveState();
-        this.render();
-        setTimeout(() => this.scrollToActiveTime('auto'), 50);
-      }
-    });
+    
 
     // Search Autocomplete Input
     this.searchInput.addEventListener('input', (e) => {
@@ -1805,7 +1798,7 @@ class WTBApp {
         this.trackedZones = this.getDefaultZones();
         this.pinnedCol = null;
         this.currentDate = this.getTodayDateString(this.getHomeZone().iana);
-        this.datePicker.value = this.currentDate;
+        if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
         this.saveState();
         this.render();
       });
@@ -1980,6 +1973,7 @@ class WTBApp {
     // Dismiss when clicking outside
     document.addEventListener('click', (e) => {
       if (!this.isWeekCalendarOpen) return;
+      if (!document.body.contains(e.target)) return;
       const pop = this.weekCalendarPopover;
       const btn = this.weekCalBtn;
       const topWk = document.getElementById('top-clock-week');
@@ -2053,7 +2047,7 @@ class WTBApp {
         } else if (!e.shiftKey && active === last) {
           e.preventDefault();
           this.closeWeekCalendar(false);
-          if (this.datePicker) this.datePicker.focus();
+          if (this.weekCalBtn) this.weekCalBtn.focus();
         }
         return;
       }
@@ -2144,7 +2138,7 @@ class WTBApp {
   positionWeekCalendar() {
     if (!this.weekCalendarPopover || !this.isWeekCalendarOpen) return;
     const pop = this.weekCalendarPopover;
-    const anchor = this.weekCalBtn || this.datePicker;
+    const anchor = this.weekCalBtn;
     if (!anchor) return;
 
     const rect = anchor.getBoundingClientRect();
@@ -2187,7 +2181,7 @@ class WTBApp {
 
   selectCalendarDate(dateStr) {
     this.currentDate = dateStr;
-    if (this.datePicker) this.datePicker.value = dateStr;
+    if (this.datePickerLabel) { const parts = this.parseDateString(dateStr); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
     this.closeWeekCalendar(true);
     this.saveState();
     this.render();
@@ -2316,7 +2310,7 @@ class WTBApp {
       const base = Temporal.PlainDate.from(this.currentDate);
       const nextDate = base.add({ days: deltaDays }).toString();
       this.currentDate = nextDate;
-      if (this.datePicker) this.datePicker.value = nextDate;
+      if (this.datePickerLabel) { const parts = this.parseDateString(nextDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
       this.saveState();
       this.render();
       setTimeout(() => this.scrollToActiveTime('auto'), 50);
@@ -2325,7 +2319,7 @@ class WTBApp {
       const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + deltaDays));
       const nextDate = dt.toISOString().split('T')[0];
       this.currentDate = nextDate;
-      if (this.datePicker) this.datePicker.value = nextDate;
+      if (this.datePickerLabel) { const parts = this.parseDateString(nextDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
       this.saveState();
       this.render();
       setTimeout(() => this.scrollToActiveTime('auto'), 50);
@@ -2406,7 +2400,7 @@ class WTBApp {
       this.dateTabsContainer.querySelectorAll('.date-tab').forEach(btn => {
         btn.addEventListener('click', () => {
           this.currentDate = btn.dataset.date;
-          this.datePicker.value = this.currentDate;
+          if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
           this.saveState();
           this.render();
           setTimeout(() => this.scrollToActiveTime('auto'), 50);
@@ -3462,7 +3456,7 @@ class WTBApp {
   jumpToNow() {
     const homeZone = this.getHomeZone();
     this.currentDate = this.getTodayDateString(homeZone.iana);
-    this.datePicker.value = this.currentDate;
+    if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
     this.saveState();
     this.render();
 

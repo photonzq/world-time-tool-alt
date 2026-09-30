@@ -539,53 +539,46 @@ body {
 .date-picker-wrapper {
   display: flex;
   align-items: center;
-  gap: 6px;
+  position: relative;
 }
 
-.date-input {
-  padding: 5px 10px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: #fff;
-  color: var(--text-main);
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-
-.date-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-}
-
-/* Week Calendar Button & Popover */
 .btn-week-cal {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  height: 30px;
-  padding: 0 9px;
-  background: #f1f5f9;
-  border: 1px solid var(--border-color);
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
   border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #334155;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
   cursor: pointer;
-  white-space: nowrap;
-  box-sizing: border-box;
   transition: all 0.15s ease;
-  user-select: none;
 }
 
 .btn-week-cal:hover,
 .btn-week-cal[aria-expanded="true"] {
-  background: #e2e8f0;
-  color: #1d4ed8;
+  background: #f8fafc;
   border-color: #93c5fd;
+  color: #1d4ed8;
 }
+
+.date-picker-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9rem;
+  letter-spacing: -0.2px;
+  color: var(--text-main);
+}
+
+.date-picker-sep {
+  color: #cbd5e1;
+  font-weight: 300;
+}
+
+
 
 .week-cal-badge {
   color: #2563eb;
@@ -2195,15 +2188,13 @@ body.is-row-dragging {
   .date-picker-wrapper {
     /* No flex order needed */
   }
-  .date-input {
-    height: 30px;
-    padding: 2px 8px;
-    font-size: 16px !important;
-    font-weight: 600;
-    border-radius: 6px;
-    background: #ffffff;
-    border: 1px solid var(--border-color);
-    color: var(--text-main);
+  .btn-week-cal {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 16px !important; /* prevent zoom on iOS just in case */
+  }
+  .date-picker-label {
+    font-size: 0.95rem;
   }
   .date-tabs {
     width: 100%;
@@ -2669,14 +2660,15 @@ body.is-row-dragging {
       </button>
       <div id="date-tabs" class="date-tabs"></div>
       <div class="date-picker-wrapper">
-        <input type="date" id="date-picker" class="date-input">
-        <button id="week-cal-btn" class="btn-week-cal" type="button" title="Interactive calendar with ISO week numbers" aria-haspopup="dialog" aria-expanded="false" aria-label="Open calendar with ISO week numbers">
+        <button id="week-cal-btn" class="btn-week-cal" type="button" title="Interactive calendar" aria-haspopup="dialog" aria-expanded="false" aria-label="Open calendar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="16" y1="2" x2="16" y2="6"></line>
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
+          <span id="date-picker-label" class="date-picker-label">-- . -- . ----</span>
+          <span class="date-picker-sep">|</span>
           <span id="week-cal-badge" class="week-cal-badge">W--</span>
         </button>
       </div>
@@ -6234,7 +6226,7 @@ class WTBApp {
     this.formatSegments = document.querySelectorAll('.format-segment');
     this.formatToggleBtn = document.getElementById('format-toggle');
     this.dateTabsContainer = document.getElementById('date-tabs');
-    this.datePicker = document.getElementById('date-picker');
+    this.datePickerLabel = document.getElementById('date-picker-label');
     this.weekCalBtn = document.getElementById('week-cal-btn');
     this.weekCalBadge = document.getElementById('week-cal-badge');
     this.weekCalendarPopover = document.getElementById('week-calendar-popover');
@@ -6274,7 +6266,7 @@ class WTBApp {
     this.bestSlotText = document.getElementById('best-slot-text');
     this.bestSlotButtons = document.getElementById('best-slot-buttons');
 
-    this.datePicker.value = this.currentDate;
+    if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
     this.updateFormatButton();
     this.updatePinControlsUI();
     this.initSidebarResizer();
@@ -6430,14 +6422,7 @@ class WTBApp {
     }
 
     // Date Picker Input
-    this.datePicker.addEventListener('change', (e) => {
-      if (e.target.value) {
-        this.currentDate = e.target.value;
-        this.saveState();
-        this.render();
-        setTimeout(() => this.scrollToActiveTime('auto'), 50);
-      }
-    });
+    
 
     // Search Autocomplete Input
     this.searchInput.addEventListener('input', (e) => {
@@ -6541,7 +6526,7 @@ class WTBApp {
         this.trackedZones = this.getDefaultZones();
         this.pinnedCol = null;
         this.currentDate = this.getTodayDateString(this.getHomeZone().iana);
-        this.datePicker.value = this.currentDate;
+        if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
         this.saveState();
         this.render();
       });
@@ -6716,6 +6701,7 @@ class WTBApp {
     // Dismiss when clicking outside
     document.addEventListener('click', (e) => {
       if (!this.isWeekCalendarOpen) return;
+      if (!document.body.contains(e.target)) return;
       const pop = this.weekCalendarPopover;
       const btn = this.weekCalBtn;
       const topWk = document.getElementById('top-clock-week');
@@ -6789,7 +6775,7 @@ class WTBApp {
         } else if (!e.shiftKey && active === last) {
           e.preventDefault();
           this.closeWeekCalendar(false);
-          if (this.datePicker) this.datePicker.focus();
+          if (this.weekCalBtn) this.weekCalBtn.focus();
         }
         return;
       }
@@ -6880,7 +6866,7 @@ class WTBApp {
   positionWeekCalendar() {
     if (!this.weekCalendarPopover || !this.isWeekCalendarOpen) return;
     const pop = this.weekCalendarPopover;
-    const anchor = this.weekCalBtn || this.datePicker;
+    const anchor = this.weekCalBtn;
     if (!anchor) return;
 
     const rect = anchor.getBoundingClientRect();
@@ -6923,7 +6909,7 @@ class WTBApp {
 
   selectCalendarDate(dateStr) {
     this.currentDate = dateStr;
-    if (this.datePicker) this.datePicker.value = dateStr;
+    if (this.datePickerLabel) { const parts = this.parseDateString(dateStr); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
     this.closeWeekCalendar(true);
     this.saveState();
     this.render();
@@ -7052,7 +7038,7 @@ class WTBApp {
       const base = Temporal.PlainDate.from(this.currentDate);
       const nextDate = base.add({ days: deltaDays }).toString();
       this.currentDate = nextDate;
-      if (this.datePicker) this.datePicker.value = nextDate;
+      if (this.datePickerLabel) { const parts = this.parseDateString(nextDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
       this.saveState();
       this.render();
       setTimeout(() => this.scrollToActiveTime('auto'), 50);
@@ -7061,7 +7047,7 @@ class WTBApp {
       const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + deltaDays));
       const nextDate = dt.toISOString().split('T')[0];
       this.currentDate = nextDate;
-      if (this.datePicker) this.datePicker.value = nextDate;
+      if (this.datePickerLabel) { const parts = this.parseDateString(nextDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
       this.saveState();
       this.render();
       setTimeout(() => this.scrollToActiveTime('auto'), 50);
@@ -7142,7 +7128,7 @@ class WTBApp {
       this.dateTabsContainer.querySelectorAll('.date-tab').forEach(btn => {
         btn.addEventListener('click', () => {
           this.currentDate = btn.dataset.date;
-          this.datePicker.value = this.currentDate;
+          if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
           this.saveState();
           this.render();
           setTimeout(() => this.scrollToActiveTime('auto'), 50);
@@ -8198,7 +8184,7 @@ class WTBApp {
   jumpToNow() {
     const homeZone = this.getHomeZone();
     this.currentDate = this.getTodayDateString(homeZone.iana);
-    this.datePicker.value = this.currentDate;
+    if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
     this.saveState();
     this.render();
 
