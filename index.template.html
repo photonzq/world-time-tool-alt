@@ -111,7 +111,18 @@
       <div class="timeline-content">
         <!-- Sticky Crosshairs & Live Now Needle -->
         <div id="ruler-cursor" class="ruler-cursor-column"></div>
-        <div id="ruler-pinned" class="ruler-pinned-column"></div>
+        <div id="ruler-pinned" class="ruler-pinned-column">
+          <div class="ruler-top-badge" id="ruler-top-badge" title="Meeting duration">
+            <span class="ruler-badge-time" id="ruler-badge-time">1h</span>
+          </div>
+          <div class="ruler-handle ruler-handle-start" id="ruler-handle-start" title="Drag to adjust start time" role="slider" aria-label="Adjust meeting start time" tabindex="0">
+            <div class="ruler-handle-grip"></div>
+          </div>
+          <div class="ruler-body-drag" id="ruler-body-drag" title="Drag to shift meeting" role="button" aria-label="Drag to shift meeting"></div>
+          <div class="ruler-handle ruler-handle-end" id="ruler-handle-end" title="Drag to adjust meeting length" role="slider" aria-label="Adjust meeting length" tabindex="0">
+            <div class="ruler-handle-grip"></div>
+          </div>
+        </div>
         <div id="ruler-now" class="ruler-now-line">
           <div class="now-pill"><span class="now-pulse-dot"></span><span id="now-time-text">NOW</span></div>
         </div>

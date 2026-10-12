@@ -1514,6 +1514,11 @@ class WTBApp {
     this.copySentenceLabel = document.getElementById('copy-sentence-label');
     this.rulerCursor = document.getElementById('ruler-cursor');
     this.rulerPinned = document.getElementById('ruler-pinned');
+    this.rulerTopBadge = document.getElementById('ruler-top-badge');
+    this.rulerBadgeTime = document.getElementById('ruler-badge-time');
+    this.rulerHandleStart = document.getElementById('ruler-handle-start');
+    this.rulerHandleEnd = document.getElementById('ruler-handle-end');
+    this.rulerBodyDrag = document.getElementById('ruler-body-drag');
     this.rulerNow = document.getElementById('ruler-now');
     this.todayBtn = document.getElementById('today-btn');
     this.copyLinkBtn = document.getElementById('copy-link-btn');
@@ -1542,6 +1547,7 @@ class WTBApp {
     this.updateFormatButton();
     this.updatePinControlsUI();
     this.initSidebarResizer();
+    this.initRulerHandles();
   }
 
   initSidebarResizer() {
@@ -3204,136 +3210,354 @@ class WTBApp {
     });
   }
 
+  initRulerHandles() {
+    if (!this.rulerPinned) return;
+
+    // Helper to get column width
+    const getColWidth = () => {
+      const firstCol = this.timelineHeaderHours?.querySelector('.hour-header-cell');
+      return firstCol ? firstCol.getBoundingClientRect().width : 36;
+    };
+
+    // 1. Right Handle: Adjust Meeting Duration by drag or touch
+    if (this.rulerHandleEnd) {
+      let isDragging = false;
+      let startX = 0;
+      let origDuration = 60;
+
+      const onPointerDown = (e) => {
+        if (e.button && e.button !== 0) return;
+        isDragging = true;
+        startX = e.clientX;
+        origDuration = this.pinDurationMin || 60;
+        this.rulerHandleEnd.classList.add('is-dragging');
+        try { this.rulerHandleEnd.setPointerCapture(e.pointerId); } catch (_) {}
+        e.stopPropagation();
+        e.preventDefault();
+      };
+
+      const onPointerMove = (e) => {
+        if (!isDragging) return;
+        const colWidth = getColWidth();
+        const deltaX = e.clientX - startX;
+        const deltaMin = (deltaX / colWidth) * 60;
+        let newDuration = Math.round((origDuration + deltaMin) / 15) * 15;
+        newDuration = Math.max(15, Math.min(1440, newDuration));
+        if (newDuration !== this.pinDurationMin) {
+          this.pinDurationMin = newDuration;
+          this.renderRulerHighlights();
+          this.updatePinControlsUI();
+        }
+        e.stopPropagation();
+        e.preventDefault();
+      };
+
+      const onPointerUp = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        this.rulerHandleEnd.classList.remove('is-dragging');
+        try { this.rulerHandleEnd.releasePointerCapture(e.pointerId); } catch (_) {}
+        this.saveState();
+        e.stopPropagation();
+        e.preventDefault();
+      };
+
+      this.rulerHandleEnd.addEventListener('pointerdown', onPointerDown);
+      this.rulerHandleEnd.addEventListener('pointermove', onPointerMove);
+      this.rulerHandleEnd.addEventListener('pointerup', onPointerUp);
+      this.rulerHandleEnd.addEventListener('pointercancel', onPointerUp);
+      this.rulerHandleEnd.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      this.rulerHandleEnd.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.setPinDuration((this.pinDurationMin || 60) + 15);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          this.setPinDuration((this.pinDurationMin || 60) - 15);
+        }
+      });
+    }
+
+    // 2. Left Handle: Adjust Start Time by drag or touch
+    if (this.rulerHandleStart) {
+      let isDragging = false;
+      let startX = 0;
+      let origStartTotalMin = 0;
+      let origEndTotalMin = 0;
+
+      const onPointerDown = (e) => {
+        if (e.button && e.button !== 0) return;
+        isDragging = true;
+        startX = e.clientX;
+        origStartTotalMin = (this.pinnedCol || 0) * 60 + (this.pinStartMin || 0);
+        origEndTotalMin = origStartTotalMin + (this.pinDurationMin || 60);
+        this.rulerHandleStart.classList.add('is-dragging');
+        try { this.rulerHandleStart.setPointerCapture(e.pointerId); } catch (_) {}
+        e.stopPropagation();
+        e.preventDefault();
+      };
+
+      const onPointerMove = (e) => {
+        if (!isDragging) return;
+        const colWidth = getColWidth();
+        const deltaX = e.clientX - startX;
+        const deltaMin = (deltaX / colWidth) * 60;
+        let newStartMin = Math.round((origStartTotalMin + deltaMin) / 15) * 15;
+        newStartMin = Math.max(0, Math.min(origEndTotalMin - 15, newStartMin));
+        const newCol = Math.floor(newStartMin / 60);
+        const newStartOffset = newStartMin % 60;
+        const newDuration = origEndTotalMin - newStartMin;
+
+        if (newCol !== this.pinnedCol || newStartOffset !== this.pinStartMin || newDuration !== this.pinDurationMin) {
+          this.pinnedCol = newCol;
+          this.pinStartMin = newStartOffset;
+          this.pinDurationMin = newDuration;
+          this.renderRulerHighlights();
+          this.updatePinControlsUI();
+        }
+        e.stopPropagation();
+        e.preventDefault();
+      };
+
+      const onPointerUp = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        this.rulerHandleStart.classList.remove('is-dragging');
+        try { this.rulerHandleStart.releasePointerCapture(e.pointerId); } catch (_) {}
+        this.saveState();
+        e.stopPropagation();
+        e.preventDefault();
+      };
+
+      this.rulerHandleStart.addEventListener('pointerdown', onPointerDown);
+      this.rulerHandleStart.addEventListener('pointermove', onPointerMove);
+      this.rulerHandleStart.addEventListener('pointerup', onPointerUp);
+      this.rulerHandleStart.addEventListener('pointercancel', onPointerUp);
+      this.rulerHandleStart.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      this.rulerHandleStart.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          this.setPinStartMin(Math.max(0, (this.pinStartMin || 0) - 15));
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          this.setPinStartMin(Math.min(45, (this.pinStartMin || 0) + 15));
+        }
+      });
+    }
+
+    // 3. Center Body: Shift Meeting Earlier or Later
+    if (this.rulerBodyDrag) {
+      let isDragging = false;
+      let startX = 0;
+      let origCol = 0;
+
+      const onPointerDown = (e) => {
+        if (e.button && e.button !== 0) return;
+        isDragging = true;
+        startX = e.clientX;
+        origCol = this.pinnedCol || 0;
+        this.rulerBodyDrag.classList.add('is-dragging');
+        try { this.rulerBodyDrag.setPointerCapture(e.pointerId); } catch (_) {}
+        e.stopPropagation();
+        e.preventDefault();
+      };
+
+      const onPointerMove = (e) => {
+        if (!isDragging) return;
+        const colWidth = getColWidth();
+        const deltaX = e.clientX - startX;
+        const deltaCols = Math.round(deltaX / colWidth);
+        const newCol = Math.max(0, Math.min(23, origCol + deltaCols));
+        if (newCol !== this.pinnedCol) {
+          this.pinnedCol = newCol;
+          this.renderRulerHighlights();
+          this.updatePinControlsUI();
+        }
+        e.stopPropagation();
+        e.preventDefault();
+      };
+
+      const onPointerUp = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        this.rulerBodyDrag.classList.remove('is-dragging');
+        try { this.rulerBodyDrag.releasePointerCapture(e.pointerId); } catch (_) {}
+        this.saveState();
+        e.stopPropagation();
+        e.preventDefault();
+      };
+
+      this.rulerBodyDrag.addEventListener('pointerdown', onPointerDown);
+      this.rulerBodyDrag.addEventListener('pointermove', onPointerMove);
+      this.rulerBodyDrag.addEventListener('pointerup', onPointerUp);
+      this.rulerBodyDrag.addEventListener('pointercancel', onPointerUp);
+      this.rulerBodyDrag.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+  }
+
+  updateHoverCursor(col) {
+    const headerCell = this.timelineHeaderHours?.querySelector(`.hour-header-cell[data-col="${col}"]`);
+    if (!headerCell) return;
+    this.hoveredCol = col;
+    if (this.rulerCursor) {
+      const contentContainer = document.querySelector('.timeline-content');
+      if (contentContainer) {
+        const contentRect = contentContainer.getBoundingClientRect();
+        const headerRect = headerCell.getBoundingClientRect();
+        this.rulerCursor.style.left = `${headerRect.left - contentRect.left}px`;
+        this.rulerCursor.style.width = `${headerRect.width}px`;
+      } else {
+        this.rulerCursor.style.left = `${headerCell.offsetLeft}px`;
+        this.rulerCursor.style.width = `${headerCell.offsetWidth}px`;
+      }
+      this.rulerCursor.classList.add('visible');
+    }
+    this.highlightColumn(col);
+  }
+
+  clearHoverCursor() {
+    this.hoveredCol = null;
+    if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
+    this.highlightColumn(null);
+  }
+
   initTimelineEvents() {
     const scrollContainer = document.querySelector('.timeline-scroll-container');
     if (!scrollContainer) return;
 
-    let isMouseDown = false;
-    let isTouchDown = false;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let hasTouchMoved = false;
-    let lastTouchEndTime = 0;
+    let isPointerDown = false;
+    let isDraggingRange = false;
+    let dragStartCol = null;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let capturedPointerId = null;
+    let lastTapTime = 0;
 
-    // Pointerdown: Handles both touch and mouse
+    const getColAtClientX = (clientX) => {
+      const cells = this.timelineHeaderHours?.querySelectorAll('.hour-header-cell');
+      if (!cells || !cells.length) return null;
+      for (const cell of cells) {
+        const rect = cell.getBoundingClientRect();
+        if (clientX >= rect.left && clientX <= rect.right) {
+          return parseInt(cell.dataset.col, 10);
+        }
+      }
+      const firstRect = cells[0].getBoundingClientRect();
+      if (clientX < firstRect.left) return 0;
+      const lastRect = cells[cells.length - 1].getBoundingClientRect();
+      if (clientX > lastRect.right) return cells.length - 1;
+      return null;
+    };
+
     scrollContainer.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-        isTouchDown = true;
-        hasTouchMoved = false;
-        touchStartX = e.clientX;
-        touchStartY = e.clientY;
-        if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
-        return;
-      }
-
-      // Mouse left-click: begin scrub
-      if (e.button === 0) {
-        const cell = e.target.closest('.time-cell') || e.target.closest('.hour-header-cell');
-        if (cell && cell.dataset.col !== undefined) {
-          isMouseDown = true;
-          const col = parseInt(cell.dataset.col, 10);
-          this.pinnedCol = col;
-          this.renderRulerHighlights();
-        }
-      }
-    });
-
-    // Pointermove: Distinguishes touch scroll vs mouse scrub/hover
-    scrollContainer.addEventListener('pointermove', (e) => {
-      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-        if (isTouchDown) {
-          const dx = Math.abs(e.clientX - touchStartX);
-          const dy = Math.abs(e.clientY - touchStartY);
-          if (dx > 8 || dy > 8) {
-            hasTouchMoved = true;
-          }
-        }
-        return;
-      }
-
-      // Mouse hover and drag scrub (ignore synthetic mouse shortly after touch)
-      if (Date.now() - lastTouchEndTime < 500) return;
+      // Ignore if clicking on ruler handles, resizer, drag handles, or buttons
+      if (e.target.closest('.ruler-handle, .ruler-body-drag, button, .zone-drag-handle, .sidebar-resizer')) return;
 
       const cell = e.target.closest('.time-cell') || e.target.closest('.hour-header-cell');
-      if (cell && cell.dataset.col !== undefined) {
-        const col = parseInt(cell.dataset.col, 10);
-        const headerCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${col}"]`);
-        if (headerCell) {
-          this.hoveredCol = col;
-          if (this.rulerCursor) {
-            const contentContainer = document.querySelector('.timeline-content');
-            if (contentContainer) {
-              const contentRect = contentContainer.getBoundingClientRect();
-              const headerRect = headerCell.getBoundingClientRect();
-              this.rulerCursor.style.left = `${headerRect.left - contentRect.left}px`;
-              this.rulerCursor.style.width = `${headerRect.width}px`;
-            } else {
-              this.rulerCursor.style.left = `${headerCell.offsetLeft}px`;
-              this.rulerCursor.style.width = `${headerCell.offsetWidth}px`;
-            }
-            this.rulerCursor.classList.add('visible');
-          }
-          this.highlightColumn(col);
+      if (!cell || cell.dataset.col === undefined) return;
 
-          if (isMouseDown && this.pinnedCol !== col) {
-            this.pinnedCol = col;
-            this.renderRulerHighlights();
-          }
-          return;
-        }
-      }
+      isPointerDown = true;
+      isDraggingRange = false;
+      dragStartCol = parseInt(cell.dataset.col, 10);
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      capturedPointerId = e.pointerId;
 
-      this.hoveredCol = null;
       if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
-      this.highlightColumn(null);
+
+      // If clicked on hour header row, capture immediately for range scrub
+      if (e.target.closest('.hour-header-cell')) {
+        try { scrollContainer.setPointerCapture(e.pointerId); } catch (_) {}
+        e.preventDefault();
+      }
     });
 
-    // Pointerup on window so releasing outside container still ends mouse drag
-    window.addEventListener('pointerup', (e) => {
-      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-        if (isTouchDown) {
-          isTouchDown = false;
-          lastTouchEndTime = Date.now();
-          if (!hasTouchMoved) {
-            // Clean stationary tap on touchscreen
-            const targetEl = e.target || document.elementFromPoint(e.clientX, e.clientY);
-            const cell = targetEl ? (targetEl.closest('.time-cell') || targetEl.closest('.hour-header-cell')) : null;
-            if (cell && cell.dataset.col !== undefined) {
-              const col = parseInt(cell.dataset.col, 10);
-              this.pinnedCol = col;
-              this.renderRulerHighlights();
-              this.saveState();
-            }
+    scrollContainer.addEventListener('pointermove', (e) => {
+      if (!isPointerDown) {
+        if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
+          const cell = e.target.closest('.time-cell') || e.target.closest('.hour-header-cell');
+          if (cell && cell.dataset.col !== undefined) {
+            const col = parseInt(cell.dataset.col, 10);
+            this.updateHoverCursor(col);
+            return;
           }
-          if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
+          this.clearHoverCursor();
         }
         return;
       }
 
-      if (isMouseDown) {
-        isMouseDown = false;
-        this.saveState();
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+
+      if (!isDraggingRange) {
+        if (Math.abs(dx) > 8) {
+          if (Math.abs(dx) >= Math.abs(dy)) {
+            // Horizontal intent: begin drag selection
+            isDraggingRange = true;
+            try { scrollContainer.setPointerCapture(e.pointerId); } catch (_) {}
+          } else if (e.pointerType === 'touch') {
+            // Vertical intent on touch: abort selection, allow native vertical scroll
+            isPointerDown = false;
+            return;
+          }
+        }
+      }
+
+      if (isDraggingRange) {
+        const curCol = getColAtClientX(e.clientX);
+        if (curCol !== null && dragStartCol !== null) {
+          const minCol = Math.min(dragStartCol, curCol);
+          const maxCol = Math.max(dragStartCol, curCol);
+          const durMin = (maxCol - minCol + 1) * 60;
+
+          if (this.pinnedCol !== minCol || this.pinDurationMin !== durMin || this.pinStartMin !== 0) {
+            this.pinnedCol = minCol;
+            this.pinStartMin = 0;
+            this.pinDurationMin = durMin;
+            this.renderRulerHighlights();
+            this.updatePinControlsUI();
+          }
+        }
       }
     });
 
-    window.addEventListener('pointercancel', (e) => {
-      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-        isTouchDown = false;
-        hasTouchMoved = true;
-        if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
+    const onPointerEnd = (e) => {
+      if (!isPointerDown) return;
+      isPointerDown = false;
+
+      if (capturedPointerId !== null) {
+        try { scrollContainer.releasePointerCapture(capturedPointerId); } catch (_) {}
+        capturedPointerId = null;
       }
-      isMouseDown = false;
-    });
+
+      if (isDraggingRange) {
+        isDraggingRange = false;
+        this.saveState();
+      } else if (dragStartCol !== null) {
+        // Stationary tap selection
+        this.pinnedCol = dragStartCol;
+        this.renderRulerHighlights();
+        this.saveState();
+        lastTapTime = Date.now();
+      }
+      dragStartCol = null;
+    };
+
+    window.addEventListener('pointerup', onPointerEnd);
+    window.addEventListener('pointercancel', onPointerEnd);
 
     scrollContainer.addEventListener('mouseleave', () => {
-      this.hoveredCol = null;
-      if (this.rulerCursor) this.rulerCursor.classList.remove('visible');
-      this.highlightColumn(null);
+      if (!isPointerDown) {
+        this.clearHoverCursor();
+      }
     });
 
     // Fallback click handler for non-pointer devices, keyboard, or programmatic `.click()`
     scrollContainer.addEventListener('click', (e) => {
-      if (Date.now() - lastTouchEndTime < 400) return; // ignore synthetic click after touch tap
+      if (Date.now() - lastTapTime < 400) return;
+      if (e.target.closest('.ruler-handle, .ruler-body-drag, button, .zone-drag-handle, .sidebar-resizer')) return;
       const cell = e.target.closest('.time-cell') || e.target.closest('.hour-header-cell');
       if (cell && cell.dataset.col !== undefined) {
         const col = parseInt(cell.dataset.col, 10);
@@ -3371,6 +3595,17 @@ class WTBApp {
         this.rulerPinned.style.left = `${leftOffset}px`;
         this.rulerPinned.style.width = `${pinWidth}px`;
         this.rulerPinned.classList.add('visible');
+
+        if (this.rulerBadgeTime) {
+          const dMin = this.pinDurationMin || 60;
+          let label = `${dMin}m`;
+          if (dMin >= 60) {
+            const h = Math.floor(dMin / 60);
+            const m = dMin % 60;
+            label = m === 0 ? `${h}h` : `${h}h ${m}m`;
+          }
+          this.rulerBadgeTime.textContent = label;
+        }
       }
       const homeZone = this.getHomeZone();
       const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);

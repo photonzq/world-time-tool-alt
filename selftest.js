@@ -1197,6 +1197,54 @@ export async function runSelfTests() {
     assert('ISO Week Calendar Suite', false, e.message);
   }
 
+  // 51. Interactive Touch & Mouse Meeting Handles and Range Selection
+  try {
+    const app = window.app || window.wtbApp;
+    const ruler = document.getElementById('ruler-pinned');
+    const badge = document.getElementById('ruler-top-badge');
+    const badgeTime = document.getElementById('ruler-badge-time');
+    const handleStart = document.getElementById('ruler-handle-start');
+    const handleEnd = document.getElementById('ruler-handle-end');
+    const bodyDrag = document.getElementById('ruler-body-drag');
+
+    assert('Ruler pinned overlay exists in DOM', Boolean(ruler));
+    assert('Ruler top duration badge exists in DOM', Boolean(badge && badgeTime));
+    assert('Ruler left resize handle exists in DOM', Boolean(handleStart));
+    assert('Ruler right resize handle exists in DOM', Boolean(handleEnd));
+    assert('Ruler center drag body exists in DOM', Boolean(bodyDrag));
+
+    if (app && ruler && badgeTime) {
+      const origPin = app.pinnedCol;
+      const origDur = app.pinDurationMin;
+      const origStart = app.pinStartMin;
+
+      app.pinnedCol = 10;
+      app.pinStartMin = 0;
+      app.pinDurationMin = 90;
+      app.renderRulerHighlights();
+
+      assert('renderRulerHighlights updates badge text to "1h 30m"', badgeTime.textContent === '1h 30m', `Got: ${badgeTime.textContent}`);
+      assert('ruler-pinned has visible class', ruler.classList.contains('visible'));
+
+      // Test duration format helper if available
+      if (typeof window.formatDurationLabel === 'function') {
+        assert('formatDurationLabel(45) returns "45m"', window.formatDurationLabel(45) === '45m');
+        assert('formatDurationLabel(60) returns "1h"', window.formatDurationLabel(60) === '1h');
+        assert('formatDurationLabel(120) returns "2h"', window.formatDurationLabel(120) === '2h');
+        assert('formatDurationLabel(150) returns "2h 30m"', window.formatDurationLabel(150) === '2h 30m');
+      }
+
+      // Restore
+      app.pinnedCol = origPin;
+      app.pinDurationMin = origDur;
+      app.pinStartMin = origStart;
+      app.renderRulerHighlights();
+      app.saveState();
+    }
+  } catch (e) {
+    assert('Interactive Meeting Handles Suite', false, e.message);
+  }
+
   return results;
 }
 

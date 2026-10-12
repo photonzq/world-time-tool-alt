@@ -876,6 +876,7 @@ body.resizing-sidebar {
   flex: 1 1 auto;
   height: 48px;
   min-width: 0;
+  touch-action: none;
 }
 
 .hour-header-cell {
@@ -895,7 +896,7 @@ body.resizing-sidebar {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  touch-action: manipulation;
+  touch-action: none;
 }
 
 .hour-header-cell.active-col {
@@ -1264,7 +1265,7 @@ body.is-row-dragging {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  touch-action: manipulation;
+  touch-action: pan-y;
   transition: filter 0.1s ease;
   box-sizing: border-box;
 }
@@ -1367,18 +1368,109 @@ body.is-row-dragging {
   bottom: 0;
   height: auto;
   width: var(--cell-width);
-  border: 2px solid #0f172a;
+  border: 2px solid #2563eb;
   border-radius: 4px;
-  background-color: rgba(15, 23, 42, 0.08);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 2px 8px rgba(0, 0, 0, 0.25);
-  pointer-events: none;
+  background-color: rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7), 0 2px 10px rgba(37, 99, 235, 0.28);
+  pointer-events: auto;
   z-index: 36;
   display: none;
   box-sizing: border-box;
+  touch-action: none;
 }
 
 .ruler-pinned-column.visible {
   display: block;
+}
+
+/* Floating Duration Badge at top of Pinned Ruler */
+.ruler-top-badge {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e40af;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 40;
+  letter-spacing: 0.02em;
+}
+
+/* Handles on Left and Right edges */
+.ruler-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  cursor: ew-resize;
+  z-index: 38;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+
+/* Generous 34px hit target for fingers on Surface touchscreen */
+.ruler-handle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -10px;
+  right: -10px;
+}
+
+.ruler-handle-start {
+  left: -7px;
+}
+
+.ruler-handle-end {
+  right: -7px;
+}
+
+.ruler-handle-grip {
+  width: 5px;
+  height: 38px;
+  background: #ffffff;
+  border: 1.5px solid #2563eb;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+
+.ruler-handle:hover .ruler-handle-grip,
+.ruler-handle:active .ruler-handle-grip,
+.ruler-handle.is-dragging .ruler-handle-grip,
+.ruler-handle:focus-visible .ruler-handle-grip {
+  background: #2563eb;
+  border-color: #ffffff;
+  transform: scaleY(1.2);
+}
+
+/* Center Body for Dragging / Moving the Meeting */
+.ruler-body-drag {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 7px;
+  right: 7px;
+  cursor: grab;
+  touch-action: none;
+  z-index: 37;
+}
+
+.ruler-body-drag:active,
+.ruler-body-drag.is-dragging {
+  cursor: grabbing;
 }
 
 /* Real-Time "Now" Indicator Needle */
@@ -2048,6 +2140,7 @@ body.is-row-dragging {
     flex: 1 0 var(--cell-width);
     width: var(--cell-width);
     min-width: var(--cell-width);
+    touch-action: manipulation;
   }
 }
 
