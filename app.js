@@ -3116,8 +3116,7 @@ class WTBApp {
       if (window.getZoneHoliday) {
         const hol = window.getZoneHoliday(zone.iana, this.currentDate);
         if (hol) {
-          const badgeText = hol.name.length <= 10 ? hol.name : 'Holiday';
-          zoneHolidayNotice = `<span class="zone-holiday-badge" title="Public Holiday: ${hol.name}">🎉 ${badgeText}</span>`;
+          zoneHolidayNotice = `<span class="zone-holiday-badge" title="Public Holiday: ${hol.name}">🎉</span>`;
         }
       }
 

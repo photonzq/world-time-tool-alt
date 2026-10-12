@@ -1312,7 +1312,7 @@ export async function runSelfTests() {
       const berlinRow = Array.from(document.querySelectorAll('.zone-row')).find(r => r.textContent.includes('Berlin'));
       if (berlinRow) {
         const holBadge = berlinRow.querySelector('.zone-holiday-badge');
-        assert('Sidebar shows zone holiday badge on German Unity Day', Boolean(holBadge && (holBadge.title.includes('German Unity Day') || holBadge.textContent.includes('Holiday') || holBadge.textContent.includes('German Unity Day'))));
+        assert('Sidebar shows zone holiday icon on German Unity Day', Boolean(holBadge && (holBadge.title.includes('German Unity Day') || holBadge.textContent.includes('🎉') || holBadge.textContent.includes('Holiday'))));
 
         const holCells = berlinRow.querySelectorAll('.time-cell.cell-holiday');
         assert('Timeline row cells have cell-holiday class', holCells.length > 0);

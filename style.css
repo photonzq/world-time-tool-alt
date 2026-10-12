@@ -20,7 +20,7 @@
   --color-pinned-border: #2563eb;
 
   --cell-width: 36px;
-  --sidebar-width: 220px;
+  --sidebar-width: 235px;
 }
 
 * {
@@ -1006,7 +1006,7 @@ body.is-row-dragging {
   min-width: var(--sidebar-width);
   flex-shrink: 0;
   height: 56px;
-  padding: 4px 8px;
+  padding: 4px 6px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1023,7 +1023,7 @@ body.is-row-dragging {
 .zone-meta-left {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
   flex: 1;
   user-select: text;
@@ -1156,8 +1156,7 @@ body.is-row-dragging {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex-shrink: 0;
-  max-width: 85px;
+  min-width: 0;
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
@@ -1201,9 +1200,9 @@ body.is-row-dragging {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  min-width: 58px;
+  min-width: 52px;
   flex-shrink: 0;
-  margin-left: 4px;
+  margin-left: 2px;
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
@@ -1759,24 +1758,18 @@ body.is-row-dragging {
   line-height: 1.2;
 }
 
-/* Zone Public Holiday Badge on Sidebar */
-.zone-holiday-badge {
+/* Zone Public Holiday Icon on Sidebar */
+.zone-holiday-badge,
+.zone-holiday-icon {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 0.62rem;
-  font-weight: 700;
-  background: #eff6ff;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
-  padding: 0 4px;
-  border-radius: 3px;
-  line-height: 1.25;
-  white-space: nowrap;
-  max-width: 110px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  justify-content: center;
+  font-size: 0.82rem;
+  line-height: 1;
   flex-shrink: 0;
+  cursor: help;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Pinned Meeting Public Holiday Alerts */
