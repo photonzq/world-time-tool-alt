@@ -1142,7 +1142,8 @@ body.is-row-dragging {
 
 .zone-name-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  gap: 5px;
   min-width: 0;
   user-select: text;
   -webkit-user-select: text;
@@ -1155,6 +1156,8 @@ body.is-row-dragging {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
+  max-width: 85px;
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
@@ -1310,6 +1313,31 @@ body.is-row-dragging {
   );
   pointer-events: none;
   z-index: 1;
+}
+
+/* Public Holiday styling on time cells */
+.time-cell.cell-holiday::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3.5px;
+  background: #3b82f6;
+  z-index: 15;
+}
+
+.cell-holiday-dot {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 2px rgba(59, 130, 246, 0.9);
+  pointer-events: none;
+  z-index: 16;
 }
 
 .time-cell .cell-hour,
@@ -1731,6 +1759,59 @@ body.is-row-dragging {
   line-height: 1.2;
 }
 
+/* Zone Public Holiday Badge on Sidebar */
+.zone-holiday-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  padding: 0 4px;
+  border-radius: 3px;
+  line-height: 1.25;
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+/* Pinned Meeting Public Holiday Alerts */
+.pinned-holiday-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 4px 0 6px 0;
+}
+
+.holiday-alert-pill {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #1e40af;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 3px solid #3b82f6;
+  padding: 6px 10px;
+  border-radius: 4px;
+  line-height: 1.35;
+}
+
+.holiday-alert-pill .holiday-icon {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.holiday-alert-pill .holiday-body {
+  flex: 1;
+}
+
 /* Best Slot Recommendation Bar */
 .best-slot-bar {
   display: flex;
@@ -2008,6 +2089,25 @@ body.is-row-dragging {
   background-color: #f3e8ff;
   color: #7e22ce;
   border: 1px solid #d8b4fe;
+}
+
+/* 5. Public Holiday Status */
+.pinned-chip.status-holiday {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.pinned-status-dot.status-holiday {
+  background-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.pinned-status-badge.status-holiday {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #93c5fd;
+  font-weight: 700;
 }
 
 /* Self-test Modal */

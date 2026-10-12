@@ -1245,6 +1245,108 @@ export async function runSelfTests() {
     assert('Interactive Meeting Handles Suite', false, e.message);
   }
 
+  // 52. Public Holiday Lookup & Integration
+  try {
+    assert('window.IANA_HOLIDAY_GEO mapping exists', Boolean(window.IANA_HOLIDAY_GEO));
+    assert('IANA_HOLIDAY_GEO maps America/New_York to US', window.IANA_HOLIDAY_GEO['America/New_York']?.country === 'US');
+    assert('IANA_HOLIDAY_GEO maps Europe/London to GB', window.IANA_HOLIDAY_GEO['Europe/London']?.country === 'GB');
+    assert('IANA_HOLIDAY_GEO maps Europe/Berlin to DE', window.IANA_HOLIDAY_GEO['Europe/Berlin']?.country === 'DE');
+    assert('IANA_HOLIDAY_GEO maps Asia/Tokyo to JP', window.IANA_HOLIDAY_GEO['Asia/Tokyo']?.country === 'JP');
+    assert('IANA_HOLIDAY_GEO maps Asia/Shanghai to CN', window.IANA_HOLIDAY_GEO['Asia/Shanghai']?.country === 'CN');
+
+    assert('window.loadDateHolidaysCDN is a function', typeof window.loadDateHolidaysCDN === 'function');
+    assert('window.getZoneHoliday is a function', typeof window.getZoneHoliday === 'function');
+
+    // Test with simulated / mock Holidays engine if not yet fetched from CDN
+    const prevHolidays = window.Holidays;
+    const testHolidays = class {
+      constructor(country, state) {
+        this.country = country;
+        this.state = state;
+      }
+      isHoliday(date) {
+        const m = date.getMonth() + 1;
+        const d = date.getDate();
+        if (this.country === 'US' && m === 12 && d === 25) {
+          return [{ name: 'Christmas Day', type: 'public' }];
+        }
+        if (this.country === 'DE' && m === 10 && d === 3) {
+          return [{ name: 'German Unity Day', type: 'public' }];
+        }
+        return false;
+      }
+    };
+
+    if (!window.Holidays) {
+      window.Holidays = testHolidays;
+    }
+
+    const usXmas = window.getZoneHoliday('America/New_York', '2026-12-25');
+    assert('getZoneHoliday identifies US Christmas Day', Boolean(usXmas && usXmas.name === 'Christmas Day' && usXmas.type === 'public'));
+
+    const deUnity = window.getZoneHoliday('Europe/Berlin', '2026-10-03');
+    assert('getZoneHoliday identifies German Unity Day', Boolean(deUnity && deUnity.name === 'German Unity Day'));
+
+    const regularDay = window.getZoneHoliday('America/New_York', '2026-06-15');
+    assert('getZoneHoliday returns null for non-holiday', regularDay === null);
+
+    // Test UI integration in App
+    const app = window.app || window.wtbApp;
+    const holidayAlertsEl = document.getElementById('pinned-holiday-alerts');
+    assert('pinned-holiday-alerts element exists in DOM', Boolean(holidayAlertsEl));
+
+    if (app && holidayAlertsEl) {
+      const origDate = app.currentDate;
+      const origPin = app.pinnedCol;
+
+      // Render German Unity Day (2026-10-03)
+      app.currentDate = '2026-10-03';
+      app.render();
+
+      const berlinRow = Array.from(document.querySelectorAll('.zone-row')).find(r => r.textContent.includes('Berlin'));
+      if (berlinRow) {
+        const holBadge = berlinRow.querySelector('.zone-holiday-badge');
+        assert('Sidebar shows zone holiday badge on German Unity Day', Boolean(holBadge && (holBadge.title.includes('German Unity Day') || holBadge.textContent.includes('Holiday') || holBadge.textContent.includes('German Unity Day'))));
+
+        const holCells = berlinRow.querySelectorAll('.time-cell.cell-holiday');
+        assert('Timeline row cells have cell-holiday class', holCells.length > 0);
+
+        const holDot = berlinRow.querySelector('.cell-holiday-dot');
+        assert('Timeline row cell contains cell-holiday-dot', Boolean(holDot));
+      }
+
+      // Pin a time column and verify pinned holiday alert pill
+      app.pinnedCol = 10;
+      app.pinStartMin = 0;
+      app.pinDurationMin = 60;
+      app.renderRulerHighlights();
+
+      assert('pinned-holiday-alerts container is visible', holidayAlertsEl.style.display === 'flex');
+      const alertPill = holidayAlertsEl.querySelector('.holiday-alert-pill');
+      assert('holiday alert pill renders with holiday name', Boolean(alertPill && alertPill.textContent.includes('German Unity Day')));
+
+      const berlinChip = Array.from(document.querySelectorAll('.pinned-chip')).find(c => c.textContent.includes('Berlin'));
+      if (berlinChip) {
+        assert('Berlin pinned chip has status-holiday class', berlinChip.classList.contains('status-holiday'));
+        const badge = berlinChip.querySelector('.pinned-status-badge');
+        assert('Berlin pinned chip badge displays "Holiday"', Boolean(badge && badge.textContent.includes('Holiday')));
+      }
+
+      // Restore app state
+      app.currentDate = origDate;
+      app.pinnedCol = origPin;
+      app.render();
+      app.renderRulerHighlights();
+      app.saveState();
+    }
+
+    if (window.Holidays === testHolidays) {
+      window.Holidays = prevHolidays;
+    }
+  } catch (e) {
+    assert('Public Holiday Lookup Suite', false, e.message);
+  }
+
   return results;
 }
 

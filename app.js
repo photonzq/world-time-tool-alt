@@ -582,14 +582,223 @@ window.scanDstDrift = function(instant, trackedZones, daysWindow = 3, durationMi
   return alerts;
 };
 
+// ==========================================
+// Public Holiday Lookup via External date-holidays CDN
+// ==========================================
+window.IANA_HOLIDAY_GEO = {
+  // United States & Territories
+  'America/New_York': { country: 'US', state: 'ny' },
+  'America/Los_Angeles': { country: 'US', state: 'ca' },
+  'America/Chicago': { country: 'US', state: 'il' },
+  'America/Denver': { country: 'US', state: 'co' },
+  'America/Phoenix': { country: 'US', state: 'az' },
+  'America/Detroit': { country: 'US', state: 'mi' },
+  'America/Indianapolis': { country: 'US', state: 'in' },
+  'America/Anchorage': { country: 'US', state: 'ak' },
+  'Pacific/Honolulu': { country: 'US', state: 'hi' },
+  'America/Boise': { country: 'US', state: 'id' },
+  'America/Juneau': { country: 'US', state: 'ak' },
+
+  // United Kingdom
+  'Europe/London': { country: 'GB', state: 'eng' },
+  'Europe/Belfast': { country: 'GB', state: 'nir' },
+  'Europe/Edinburgh': { country: 'GB', state: 'sct' },
+
+  // Germany
+  'Europe/Berlin': { country: 'DE', state: 'be' },
+  'Europe/Busingen': { country: 'DE', state: 'bw' },
+
+  // France
+  'Europe/Paris': { country: 'FR' },
+
+  // China, Hong Kong, Taiwan
+  'Asia/Shanghai': { country: 'CN' },
+  'Asia/Urumqi': { country: 'CN' },
+  'Asia/Hong_Kong': { country: 'HK' },
+  'Asia/Macau': { country: 'MO' },
+  'Asia/Taipei': { country: 'TW' },
+
+  // Japan
+  'Asia/Tokyo': { country: 'JP' },
+
+  // India
+  'Asia/Calcutta': { country: 'IN' },
+  'Asia/Kolkata': { country: 'IN' },
+
+  // Canada
+  'America/Toronto': { country: 'CA', state: 'on' },
+  'America/Vancouver': { country: 'CA', state: 'bc' },
+  'America/Montreal': { country: 'CA', state: 'qc' },
+  'America/Edmonton': { country: 'CA', state: 'ab' },
+  'America/Winnipeg': { country: 'CA', state: 'mb' },
+  'America/Halifax': { country: 'CA', state: 'ns' },
+  'America/St_Johns': { country: 'CA', state: 'nl' },
+  'America/Regina': { country: 'CA', state: 'sk' },
+
+  // Australia
+  'Australia/Sydney': { country: 'AU', state: 'nsw' },
+  'Australia/Melbourne': { country: 'AU', state: 'vic' },
+  'Australia/Brisbane': { country: 'AU', state: 'qld' },
+  'Australia/Perth': { country: 'AU', state: 'wa' },
+  'Australia/Adelaide': { country: 'AU', state: 'sa' },
+  'Australia/Hobart': { country: 'AU', state: 'tas' },
+  'Australia/Darwin': { country: 'AU', state: 'nt' },
+
+  // Major European Hubs
+  'Europe/Zurich': { country: 'CH', state: 'zh' },
+  'Europe/Geneva': { country: 'CH', state: 'ge' },
+  'Europe/Rome': { country: 'IT' },
+  'Europe/Madrid': { country: 'ES', state: 'md' },
+  'Europe/Amsterdam': { country: 'NL' },
+  'Europe/Brussels': { country: 'BE' },
+  'Europe/Vienna': { country: 'AT' },
+  'Europe/Stockholm': { country: 'SE' },
+  'Europe/Oslo': { country: 'NO' },
+  'Europe/Copenhagen': { country: 'DK' },
+  'Europe/Helsinki': { country: 'FI' },
+  'Europe/Dublin': { country: 'IE' },
+  'Europe/Warsaw': { country: 'PL' },
+  'Europe/Prague': { country: 'CZ' },
+  'Europe/Budapest': { country: 'HU' },
+  'Europe/Bucharest': { country: 'RO' },
+  'Europe/Athens': { country: 'GR' },
+  'Europe/Lisbon': { country: 'PT' },
+  'Europe/Kiev': { country: 'UA' },
+  'Europe/Kyiv': { country: 'UA' },
+
+  // Asia / Pacific / Middle East
+  'Asia/Singapore': { country: 'SG' },
+  'Asia/Seoul': { country: 'KR' },
+  'Pacific/Auckland': { country: 'NZ' },
+  'Asia/Dubai': { country: 'AE' },
+  'Asia/Riyadh': { country: 'SA' },
+  'Asia/Jerusalem': { country: 'IL' },
+  'Asia/Bangkok': { country: 'TH' },
+  'Asia/Jakarta': { country: 'ID' },
+  'Asia/Manila': { country: 'PH' },
+  'Asia/Kuala_Lumpur': { country: 'MY' },
+  'Asia/Ho_Chi_Minh': { country: 'VN' },
+  'Asia/Saigon': { country: 'VN' },
+
+  // Americas & Africa
+  'America/Sao_Paulo': { country: 'BR' },
+  'America/Mexico_City': { country: 'MX' },
+  'America/Buenos_Aires': { country: 'AR' },
+  'America/Argentina/Buenos_Aires': { country: 'AR' },
+  'America/Santiago': { country: 'CL' },
+  'America/Bogota': { country: 'CO' },
+  'Africa/Johannesburg': { country: 'ZA' },
+  'Africa/Cairo': { country: 'EG' }
+};
+
+let holidaysScriptLoaded = false;
+let holidaysLoadingPromise = null;
+const holidaysInstanceCache = new Map();
+const holidayLookupCache = new Map();
+
+window.loadDateHolidaysCDN = function() {
+  if (holidaysScriptLoaded || (window.Holidays && (typeof window.Holidays.default === 'function' || typeof window.Holidays === 'function'))) {
+    holidaysScriptLoaded = true;
+    return Promise.resolve(window.Holidays.default || window.Holidays);
+  }
+  if (!holidaysLoadingPromise) {
+    holidaysLoadingPromise = new Promise((resolve) => {
+      if (typeof window !== 'undefined' && window.Holidays) {
+        holidaysScriptLoaded = true;
+        resolve(window.Holidays.default || window.Holidays);
+        return;
+      }
+      if (typeof document === 'undefined') {
+        resolve(null);
+        return;
+      }
+      const existing = document.querySelector('script[src*="date-holidays"]');
+      if (existing) {
+        const check = setInterval(() => {
+          if (window.Holidays) {
+            clearInterval(check);
+            holidaysScriptLoaded = true;
+            resolve(window.Holidays.default || window.Holidays);
+          }
+        }, 100);
+        setTimeout(() => { clearInterval(check); resolve(null); }, 6000);
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/date-holidays@3/dist/umd.min.js';
+      script.async = true;
+      script.onload = () => {
+        holidaysScriptLoaded = true;
+        const ctor = window.Holidays ? (window.Holidays.default || window.Holidays) : null;
+        resolve(ctor);
+      };
+      script.onerror = () => {
+        console.warn('date-holidays CDN could not be loaded; continuing without public holiday overlays.');
+        resolve(null);
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return holidaysLoadingPromise;
+};
+
+window.getZoneHoliday = function(iana, dateStr) {
+  if (!iana || !dateStr) return null;
+  const geo = window.IANA_HOLIDAY_GEO ? window.IANA_HOLIDAY_GEO[iana] : null;
+  if (!geo) return null;
+
+  const cacheKey = `${geo.country}:${geo.state || ''}:${dateStr}`;
+  if (holidayLookupCache.has(cacheKey)) {
+    return holidayLookupCache.get(cacheKey);
+  }
+
+  if (!window.Holidays) return null;
+  const HolidaysCtor = window.Holidays.default || window.Holidays;
+  if (typeof HolidaysCtor !== 'function') return null;
+
+  const instKey = `${geo.country}:${geo.state || ''}`;
+  let inst = holidaysInstanceCache.get(instKey);
+  if (!inst) {
+    try {
+      inst = geo.state ? new HolidaysCtor(geo.country, geo.state) : new HolidaysCtor(geo.country);
+      holidaysInstanceCache.set(instKey, inst);
+    } catch (_) {
+      holidayLookupCache.set(cacheKey, null);
+      return null;
+    }
+  }
+
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d, 12, 0, 0);
+    const results = inst.isHoliday(dateObj);
+    if (results && Array.isArray(results)) {
+      const publicHol = results.find(h => h.type === 'public' || h.type === 'bank');
+      if (publicHol) {
+        const info = { name: publicHol.name, type: publicHol.type };
+        holidayLookupCache.set(cacheKey, info);
+        return info;
+      }
+    }
+  } catch (_) {}
+
+  holidayLookupCache.set(cacheKey, null);
+  return null;
+};
+
 // "Least-Bad Hours" Optimizer / Slot Scorer
 window.computeLeastBadHours = function(columnInstants, trackedZones, durationMin = 60) {
   if (!columnInstants || columnInstants.length === 0 || !trackedZones || trackedZones.length === 0) return [];
   const homeZone = trackedZones[0];
 
-  const getDiscomfortScore = (zdt) => {
+  const getDiscomfortScore = (zdt, zoneIana) => {
     const isWeekend = zdt.dayOfWeek >= 6;
     if (isWeekend) return 15;
+    if (zoneIana && window.getZoneHoliday) {
+      const hol = window.getZoneHoliday(zoneIana, zdt.toPlainDate().toString());
+      if (hol) return 15;
+    }
     const fHour = zdt.hour + zdt.minute / 60;
     if (fHour >= 9 && fHour < 17) return 0; // standard work
     if (fHour >= 8 && fHour < 9) return 1;
@@ -607,8 +816,8 @@ window.computeLeastBadHours = function(columnInstants, trackedZones, durationMin
     trackedZones.forEach(zone => {
       const zdtStart = colInstant.toZonedDateTimeISO(zone.iana);
       const zdtEnd = endInstant.toZonedDateTimeISO(zone.iana);
-      const startScore = getDiscomfortScore(zdtStart);
-      const endScore = getDiscomfortScore(zdtEnd);
+      const startScore = getDiscomfortScore(zdtStart, zone.iana);
+      const endScore = getDiscomfortScore(zdtEnd, zone.iana);
       totalPenalty += Math.max(startScore, endScore);
     });
 
@@ -1046,6 +1255,16 @@ class WTBApp {
     setTimeout(() => {
       this.scrollToActiveTime('auto');
     }, 120);
+
+    // Asynchronously load public holidays via CDN without blocking initial UI
+    if (window.loadDateHolidaysCDN) {
+      window.loadDateHolidaysCDN().then(ctor => {
+        if (ctor) {
+          this.render();
+          this.renderRulerHighlights();
+        }
+      });
+    }
 
     // Check URL for self-test trigger or search query
     const params = new URLSearchParams(window.location.search);
@@ -1539,6 +1758,7 @@ class WTBApp {
     this.pinShiftNext = document.getElementById('pin-shift-next');
     this.addToCalendarBtn = document.getElementById('add-to-calendar-btn');
     this.pinnedDriftAlerts = document.getElementById('pinned-drift-alerts');
+    this.pinnedHolidayAlerts = document.getElementById('pinned-holiday-alerts');
     this.bestSlotBar = document.getElementById('best-slot-bar');
     this.bestSlotText = document.getElementById('best-slot-text');
     this.bestSlotButtons = document.getElementById('best-slot-buttons');
@@ -2741,9 +2961,14 @@ class WTBApp {
         }
         prevLocalDate = localDateStr;
 
-        // Classification: weekends are not work hours
+        // Public holiday detection
+        const hol = window.getZoneHoliday ? window.getZoneHoliday(zone.iana, localDateStr) : null;
+        const isHoliday = !!hol;
+        const holidayName = hol ? hol.name : '';
+
+        // Classification: weekends and public holidays are not work hours
         const isWeekend = zdt.dayOfWeek >= 6;
-        const isWork = !isWeekend && fractionalHour >= 9 && fractionalHour < 17;
+        const isWork = !isWeekend && !isHoliday && fractionalHour >= 9 && fractionalHour < 17;
 
         if (!isWork) {
           overlapCols.delete(colIdx);
@@ -2781,7 +3006,10 @@ class WTBApp {
 
         const cellAbbrev = this.getTimezoneAbbrev(zone.iana, instant);
         const cellOffsetStr = zdt.offset || '';
-        const cellTooltip = `${zone.label}: ${cellText}${cellSub ? ' ' + cellSub : ''} ${cellAbbrev}${cellOffsetStr ? ` (${cellOffsetStr})` : ''} • ${localDateStr}`;
+        let cellTooltip = `${zone.label}: ${cellText}${cellSub ? ' ' + cellSub : ''} ${cellAbbrev}${cellOffsetStr ? ` (${cellOffsetStr})` : ''} • ${localDateStr}`;
+        if (isHoliday) {
+          cellTooltip += ` 🎉 ${holidayName} (Public Holiday)`;
+        }
 
         cellsData.push({
           colIdx,
@@ -2790,6 +3018,8 @@ class WTBApp {
           cellTooltip,
           isWork,
           isWeekend,
+          isHoliday,
+          holidayName,
           isDateBreak,
           dateBreakLabel,
           cellBgGradient,
@@ -2820,6 +3050,7 @@ class WTBApp {
         let extraClasses = '';
         if (c.isWork) extraClasses += ' cell-work';
         if (c.isWeekend) extraClasses += ' cell-weekend';
+        if (c.isHoliday) extraClasses += ' cell-holiday';
         if (c.isDateBreak) extraClasses += ' date-break-cell';
 
         const dateBreakAttr = c.isDateBreak ? `data-date-label="${c.dateBreakLabel}"` : '';
@@ -2833,6 +3064,7 @@ class WTBApp {
                data-row="${rowIdx}">
             <span class="cell-hour">${c.cellText}</span>
             ${c.cellSub ? `<span class="cell-period" style="color: ${c.cellSubColor}">${c.cellSub}</span>` : ''}
+            ${c.isHoliday ? `<span class="cell-holiday-dot" title="🎉 ${c.holidayName}"></span>` : ''}
           </div>
         `;
       }).join('');
@@ -2848,6 +3080,16 @@ class WTBApp {
           zoneDstNotice = `<span class="zone-dst-shift-badge" title="DST transition today (${hours}h day)">DST ${hours}h</span>`;
         }
       } catch {}
+
+      // Check if zone has a public holiday on the displayed day
+      let zoneHolidayNotice = '';
+      if (window.getZoneHoliday) {
+        const hol = window.getZoneHoliday(zone.iana, this.currentDate);
+        if (hol) {
+          const badgeText = hol.name.length <= 10 ? hol.name : 'Holiday';
+          zoneHolidayNotice = `<span class="zone-holiday-badge" title="Public Holiday: ${hol.name}">🎉 ${badgeText}</span>`;
+        }
+      }
 
       rowsHtml += `
         <div class="zone-row" data-row="${rowIdx}">
@@ -2875,6 +3117,7 @@ class WTBApp {
               <div class="zone-info" title="${zone.label} (${zone.sub})">
                 <div class="zone-name-row">
                   <span class="zone-city" title="${zone.label}">${zone.label}</span>
+                  ${zoneHolidayNotice}
                 </div>
                 <div class="zone-sub-row">
                   <span class="zone-offset-badge ${isHomeClass}">${diffBadge}</span>
@@ -3808,6 +4051,7 @@ class WTBApp {
     const homeZone = this.getHomeZone();
 
     let workCount = 0;
+    const holidayAlerts = [];
 
     const chipsHtml = this.trackedZones.map(zone => {
       const zdtStart = startInstant.toZonedDateTimeISO(zone.iana);
@@ -3826,6 +4070,24 @@ class WTBApp {
       });
 
       const dateStr = zdtStart.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+      // Check for public holiday in this zone during meeting
+      const dateStartIso = zdtStart.toPlainDate().toString();
+      const holStart = window.getZoneHoliday ? window.getZoneHoliday(zone.iana, dateStartIso) : null;
+      const holEnd = !zdtStart.toPlainDate().equals(zdtEnd.toPlainDate()) && window.getZoneHoliday
+        ? window.getZoneHoliday(zone.iana, zdtEnd.toPlainDate().toString())
+        : null;
+      const hol = holStart || holEnd;
+
+      if (hol) {
+        if (!holidayAlerts.some(a => a.zoneLabel === zone.label && a.holidayName === hol.name)) {
+          holidayAlerts.push({
+            zoneLabel: zone.label,
+            holidayName: hol.name,
+            dateStr: holStart ? dateStr : zdtEnd.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+          });
+        }
+      }
 
       // Compare dates relative to home zone date for clear date badges
       const homePlainDate = startInstant.toZonedDateTimeISO(homeZone.iana).toPlainDate();
@@ -3850,7 +4112,14 @@ class WTBApp {
       const st2 = this.getPinnedHourStatus(zdtEnd);
 
       let effectiveStatus = st1;
-      if (st1.category === 'weekend' || st2.category === 'weekend') {
+      if (hol) {
+        effectiveStatus = {
+          category: 'holiday',
+          statusClass: 'status-holiday',
+          statusLabel: '🎉 Holiday',
+          tooltip: `Public Holiday: ${hol.name}`
+        };
+      } else if (st1.category === 'weekend' || st2.category === 'weekend') {
         effectiveStatus = { category: 'weekend', statusClass: 'status-weekend', statusLabel: 'Weekend', tooltip: 'Touches weekend' };
       } else if (st1.category === 'night' || st2.category === 'night') {
         effectiveStatus = { category: 'night', statusClass: 'status-night', statusLabel: 'Night', tooltip: 'Touches sleep / night hours' };
@@ -3908,6 +4177,23 @@ class WTBApp {
         this.pinnedDriftAlerts.style.display = 'flex';
       } else {
         this.pinnedDriftAlerts.style.display = 'none';
+      }
+    }
+
+    // Public Holiday Alerts
+    if (this.pinnedHolidayAlerts) {
+      if (holidayAlerts.length > 0) {
+        this.pinnedHolidayAlerts.innerHTML = holidayAlerts.map(a => `
+          <div class="holiday-alert-pill">
+            <span class="holiday-icon">🎉</span>
+            <div class="holiday-body">
+              <strong>Public Holiday:</strong> ${a.zoneLabel} observes <strong>${a.holidayName}</strong> on ${a.dateStr}
+            </div>
+          </div>
+        `).join('');
+        this.pinnedHolidayAlerts.style.display = 'flex';
+      } else {
+        this.pinnedHolidayAlerts.style.display = 'none';
       }
     }
 
