@@ -764,21 +764,51 @@ window.getZoneHoliday = function(iana, dateStr) {
       inst = geo.state ? new HolidaysCtor(geo.country, geo.state) : new HolidaysCtor(geo.country);
       holidaysInstanceCache.set(instKey, inst);
     } catch (_) {
-      holidayLookupCache.set(cacheKey, null);
-      return null;
+      inst = null;
+    }
+  }
+
+  let natInst = null;
+  if (geo.state) {
+    const natKey = `${geo.country}:`;
+    natInst = holidaysInstanceCache.get(natKey);
+    if (!natInst) {
+      try {
+        natInst = new HolidaysCtor(geo.country);
+        holidaysInstanceCache.set(natKey, natInst);
+      } catch (_) {
+        natInst = null;
+      }
     }
   }
 
   try {
     const [y, m, d] = dateStr.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d, 12, 0, 0);
-    const results = inst.isHoliday(dateObj);
-    if (results && Array.isArray(results)) {
-      const publicHol = results.find(h => h.type === 'public' || h.type === 'bank');
-      if (publicHol) {
-        const info = { name: publicHol.name, type: publicHol.type };
-        holidayLookupCache.set(cacheKey, info);
-        return info;
+
+    // 1. Check subdivision / state level first
+    if (inst) {
+      const results = inst.isHoliday(dateObj);
+      if (results && Array.isArray(results)) {
+        const publicHol = results.find(h => h.type === 'public' || h.type === 'bank');
+        if (publicHol) {
+          const info = { name: publicHol.name, type: publicHol.type };
+          holidayLookupCache.set(cacheKey, info);
+          return info;
+        }
+      }
+    }
+
+    // 2. Fall back to national / federal level if subdivision omitted a federal public holiday (e.g. Columbus Day in California)
+    if (natInst) {
+      const natResults = natInst.isHoliday(dateObj);
+      if (natResults && Array.isArray(natResults)) {
+        const publicNatHol = natResults.find(h => h.type === 'public' || h.type === 'bank');
+        if (publicNatHol) {
+          const info = { name: publicNatHol.name, type: publicNatHol.type };
+          holidayLookupCache.set(cacheKey, info);
+          return info;
+        }
       }
     }
   } catch (_) {}
@@ -4080,11 +4110,17 @@ class WTBApp {
       const hol = holStart || holEnd;
 
       if (hol) {
-        if (!holidayAlerts.some(a => a.zoneLabel === zone.label && a.holidayName === hol.name)) {
+        const dStr = holStart ? dateStr : zdtEnd.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const existing = holidayAlerts.find(a => a.holidayName === hol.name && a.dateStr === dStr);
+        if (existing) {
+          if (!existing.zoneLabels.includes(zone.label)) {
+            existing.zoneLabels.push(zone.label);
+          }
+        } else {
           holidayAlerts.push({
-            zoneLabel: zone.label,
+            zoneLabels: [zone.label],
             holidayName: hol.name,
-            dateStr: holStart ? dateStr : zdtEnd.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+            dateStr: dStr
           });
         }
       }
@@ -4183,14 +4219,18 @@ class WTBApp {
     // Public Holiday Alerts
     if (this.pinnedHolidayAlerts) {
       if (holidayAlerts.length > 0) {
-        this.pinnedHolidayAlerts.innerHTML = holidayAlerts.map(a => `
-          <div class="holiday-alert-pill">
-            <span class="holiday-icon">🎉</span>
-            <div class="holiday-body">
-              <strong>Public Holiday:</strong> ${a.zoneLabel} observes <strong>${a.holidayName}</strong> on ${a.dateStr}
+        this.pinnedHolidayAlerts.innerHTML = holidayAlerts.map(a => {
+          const zonesStr = a.zoneLabels.join(', ');
+          const verb = a.zoneLabels.length > 1 ? 'observe' : 'observes';
+          return `
+            <div class="holiday-alert-pill">
+              <span class="holiday-icon">🎉</span>
+              <div class="holiday-body">
+                <strong>Public Holiday:</strong> ${zonesStr} ${verb} <strong>${a.holidayName}</strong> on ${a.dateStr}
+              </div>
             </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
         this.pinnedHolidayAlerts.style.display = 'flex';
       } else {
         this.pinnedHolidayAlerts.style.display = 'none';

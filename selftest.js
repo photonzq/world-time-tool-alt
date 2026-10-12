@@ -1270,6 +1270,9 @@ export async function runSelfTests() {
         if (this.country === 'US' && m === 12 && d === 25) {
           return [{ name: 'Christmas Day', type: 'public' }];
         }
+        if (this.country === 'US' && !this.state && m === 10 && d === 12) {
+          return [{ name: 'Columbus Day', type: 'public' }];
+        }
         if (this.country === 'DE' && m === 10 && d === 3) {
           return [{ name: 'German Unity Day', type: 'public' }];
         }
@@ -1283,6 +1286,9 @@ export async function runSelfTests() {
 
     const usXmas = window.getZoneHoliday('America/New_York', '2026-12-25');
     assert('getZoneHoliday identifies US Christmas Day', Boolean(usXmas && usXmas.name === 'Christmas Day' && usXmas.type === 'public'));
+
+    const laColumbus = window.getZoneHoliday('America/Los_Angeles', '2026-10-12');
+    assert('getZoneHoliday identifies federal Columbus Day in Los Angeles (CA)', Boolean(laColumbus && laColumbus.name === 'Columbus Day'));
 
     const deUnity = window.getZoneHoliday('Europe/Berlin', '2026-10-03');
     assert('getZoneHoliday identifies German Unity Day', Boolean(deUnity && deUnity.name === 'German Unity Day'));
