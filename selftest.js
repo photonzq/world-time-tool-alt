@@ -1482,6 +1482,42 @@ export async function runSelfTests() {
     assert('Now Needle Sidebar Resize Suite', false, e.message);
   }
 
+  // 58. Seasonal Timezone Abbreviation Resolution Suite
+  try {
+    // A. Verify New York is EDT on Oct 29, 2026 (before Nov 1 transition)
+    const nyOct29 = window.getTimezoneAbbrev('America/New_York', new Date('2026-10-29T17:55:00Z'));
+    assert('New York is EDT on Oct 29, 2026 (before Nov 1 switch)', nyOct29 === 'EDT', `Got: ${nyOct29}`);
+
+    // B. Verify New York is EST after Nov 1, 2026
+    const nyNov5 = window.getTimezoneAbbrev('America/New_York', new Date('2026-11-05T12:00:00Z'));
+    assert('New York is EST on Nov 5, 2026 (after Nov 1 switch)', nyNov5 === 'EST', `Got: ${nyNov5}`);
+
+    // C. Verify London switches from BST to GMT on Oct 25, 2026
+    const lonOct24 = window.getTimezoneAbbrev('Europe/London', new Date('2026-10-24T12:00:00Z'));
+    assert('London is BST on Oct 24, 2026 (before Oct 25 switch)', lonOct24 === 'BST', `Got: ${lonOct24}`);
+
+    const lonOct29 = window.getTimezoneAbbrev('Europe/London', new Date('2026-10-29T12:00:00Z'));
+    assert('London is GMT on Oct 29, 2026 (after Oct 25 switch)', lonOct29 === 'GMT', `Got: ${lonOct29}`);
+
+    // D. Verify Southern Hemisphere: Sydney is AEDT in October and AEST in July
+    const sydOct29 = window.getTimezoneAbbrev('Australia/Sydney', new Date('2026-10-29T12:00:00Z'));
+    assert('Sydney is AEDT on Oct 29, 2026 (summer time in southern hemisphere)', sydOct29 === 'AEDT', `Got: ${sydOct29}`);
+
+    const sydJul15 = window.getTimezoneAbbrev('Australia/Sydney', new Date('2026-07-15T12:00:00Z'));
+    assert('Sydney is AEST on Jul 15, 2026 (winter time in southern hemisphere)', sydJul15 === 'AEST', `Got: ${sydJul15}`);
+
+    // E. Verify Top live clock renders EDT when home is New York
+    if (window.app) {
+      window.app.updateTopLiveClock();
+      const topTzEl = document.getElementById('top-clock-tz');
+      if (window.app.getHomeZone().iana === 'America/New_York') {
+        assert('Top live clock displays EDT for New York home zone', topTzEl && topTzEl.textContent === 'EDT', topTzEl ? topTzEl.textContent : '');
+      }
+    }
+  } catch (e) {
+    assert('Seasonal Timezone Abbreviation Resolution Suite', false, e.message);
+  }
+
   return results;
 }
 

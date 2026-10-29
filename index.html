@@ -5336,6 +5336,42 @@ async function runSelfTests() {
     assert('Now Needle Sidebar Resize Suite', false, e.message);
   }
 
+  // 58. Seasonal Timezone Abbreviation Resolution Suite
+  try {
+    // A. Verify New York is EDT on Oct 29, 2026 (before Nov 1 transition)
+    const nyOct29 = window.getTimezoneAbbrev('America/New_York', new Date('2026-10-29T17:55:00Z'));
+    assert('New York is EDT on Oct 29, 2026 (before Nov 1 switch)', nyOct29 === 'EDT', `Got: ${nyOct29}`);
+
+    // B. Verify New York is EST after Nov 1, 2026
+    const nyNov5 = window.getTimezoneAbbrev('America/New_York', new Date('2026-11-05T12:00:00Z'));
+    assert('New York is EST on Nov 5, 2026 (after Nov 1 switch)', nyNov5 === 'EST', `Got: ${nyNov5}`);
+
+    // C. Verify London switches from BST to GMT on Oct 25, 2026
+    const lonOct24 = window.getTimezoneAbbrev('Europe/London', new Date('2026-10-24T12:00:00Z'));
+    assert('London is BST on Oct 24, 2026 (before Oct 25 switch)', lonOct24 === 'BST', `Got: ${lonOct24}`);
+
+    const lonOct29 = window.getTimezoneAbbrev('Europe/London', new Date('2026-10-29T12:00:00Z'));
+    assert('London is GMT on Oct 29, 2026 (after Oct 25 switch)', lonOct29 === 'GMT', `Got: ${lonOct29}`);
+
+    // D. Verify Southern Hemisphere: Sydney is AEDT in October and AEST in July
+    const sydOct29 = window.getTimezoneAbbrev('Australia/Sydney', new Date('2026-10-29T12:00:00Z'));
+    assert('Sydney is AEDT on Oct 29, 2026 (summer time in southern hemisphere)', sydOct29 === 'AEDT', `Got: ${sydOct29}`);
+
+    const sydJul15 = window.getTimezoneAbbrev('Australia/Sydney', new Date('2026-07-15T12:00:00Z'));
+    assert('Sydney is AEST on Jul 15, 2026 (winter time in southern hemisphere)', sydJul15 === 'AEST', `Got: ${sydJul15}`);
+
+    // E. Verify Top live clock renders EDT when home is New York
+    if (window.app) {
+      window.app.updateTopLiveClock();
+      const topTzEl = document.getElementById('top-clock-tz');
+      if (window.app.getHomeZone().iana === 'America/New_York') {
+        assert('Top live clock displays EDT for New York home zone', topTzEl && topTzEl.textContent === 'EDT', topTzEl ? topTzEl.textContent : '');
+      }
+    }
+  } catch (e) {
+    assert('Seasonal Timezone Abbreviation Resolution Suite', false, e.message);
+  }
+
   return results;
 }
 
@@ -5525,9 +5561,14 @@ window.getTimezoneAbbrev = function(iana, instant) {
       : Date.now();
     const date = new Date(epochMs);
 
-    // Compute seasonal offset check
-    const getOffset = (d) => {
+    // Compute seasonal offset in integer minutes without seconds/millisecond skew
+    const getOffsetMinutes = (ms) => {
       try {
+        if (typeof Temporal !== 'undefined' && Temporal.Instant) {
+          const zdt = Temporal.Instant.fromEpochMilliseconds(ms).toZonedDateTimeISO(iana);
+          return Math.round(zdt.offsetNanoseconds / 60000000000);
+        }
+        const tMin = Math.floor(ms / 60000) * 60000;
         const p = new Intl.DateTimeFormat('en-US', {
           timeZone: iana,
           hourCycle: 'h23',
@@ -5536,17 +5577,17 @@ window.getTimezoneAbbrev = function(iana, instant) {
           day: '2-digit',
           hour: '2-digit',
           minute: '2-digit'
-        }).formatToParts(d);
+        }).formatToParts(new Date(tMin));
         const g = t => +p.find(x => x.type === t).value;
         const utcMs = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
-        return Math.round((utcMs - d.getTime()) / 60000) * 60000;
+        return Math.round((utcMs - tMin) / 60000);
       } catch { return 0; }
     };
 
     const y = date.getUTCFullYear();
-    const curOff = getOffset(date);
-    const janOff = getOffset(new Date(Date.UTC(y, 0, 15, 12, 0)));
-    const julOff = getOffset(new Date(Date.UTC(y, 6, 15, 12, 0)));
+    const curOff = getOffsetMinutes(epochMs);
+    const janOff = getOffsetMinutes(Date.UTC(y, 0, 15, 12, 0));
+    const julOff = getOffsetMinutes(Date.UTC(y, 6, 15, 12, 0));
     const hasDst = janOff !== julOff;
     const isDaylight = hasDst && curOff === Math.max(janOff, julOff);
 
@@ -5555,7 +5596,7 @@ window.getTimezoneAbbrev = function(iana, instant) {
 
     const isDaylightAbbrev = (s) => {
       if (s.endsWith('DT')) return true;
-      if (s === 'BST' || s === 'CEST' || s === 'EEST' || s === 'WEST' || s === 'CLST' || s === 'BRST' || s === 'FJST' || s === 'LHDT') return true;
+      if (['BST', 'CEST', 'EEST', 'WEST', 'CLST', 'BRST', 'PYST', 'UYST', 'FJST', 'LHDT'].includes(s)) return true;
       return false;
     };
 
@@ -5825,16 +5866,18 @@ window.getZoneDstTransition = function(iana, dateStr, windowDays = 5) {
 
       // 1. Check today (0 days)
       const hoursToday = getDayDuration(baseZdt);
-      if (hoursToday === 23 || hoursToday === 25) {
-        const isFall = hoursToday === 25;
+      if (hoursToday !== 24 && Math.abs(hoursToday - 24) >= 0.4) {
+        const isFall = hoursToday > 24;
+        const shiftDelta = Math.abs(hoursToday - 24);
+        const shiftStr = shiftDelta === 1 ? '1h' : (shiftDelta === 0.5 ? '30m' : `${shiftDelta}h`);
         return {
           type: 'today',
           days: 0,
           hours: hoursToday,
-          action: isFall ? 'fall back (-1h)' : 'spring forward (+1h)',
+          action: isFall ? `fall back (-${shiftStr})` : `spring forward (+${shiftStr})`,
           badgeText: `DST Today (${hoursToday}h)`,
-          bannerText: `clocks ${isFall ? 'fall back (-1h)' : 'spring forward (+1h)'} today (${hoursToday}h day)`,
-          tooltip: `DST clock change today: clocks ${isFall ? 'fall back' : 'spring forward'} 1 hour (${hoursToday}h day)`,
+          bannerText: `clocks ${isFall ? 'fall back (-' + shiftStr + ')' : 'spring forward (+' + shiftStr + ')'} today (${hoursToday}h day)`,
+          tooltip: `DST clock change today: clocks ${isFall ? 'fall back' : 'spring forward'} ${shiftStr} (${hoursToday}h day)`,
           dateStr
         };
       }
@@ -5843,8 +5886,10 @@ window.getZoneDstTransition = function(iana, dateStr, windowDays = 5) {
       for (let d = 1; d <= windowDays; d++) {
         const futureZdt = baseZdt.add({ days: d });
         const hours = getDayDuration(futureZdt);
-        if (hours === 23 || hours === 25) {
-          const isFall = hours === 25;
+        if (hours !== 24 && Math.abs(hours - 24) >= 0.4) {
+          const isFall = hours > 24;
+          const shiftDelta = Math.abs(hours - 24);
+          const shiftStr = shiftDelta === 1 ? '1h' : (shiftDelta === 0.5 ? '30m' : `${shiftDelta}h`);
           const when = d === 1 ? 'tomorrow' : `in ${d} days`;
           const dayName = formatDay(futureZdt);
           return {
@@ -5852,10 +5897,10 @@ window.getZoneDstTransition = function(iana, dateStr, windowDays = 5) {
             days: d,
             hours,
             dayName,
-            action: isFall ? 'fall back (-1h)' : 'spring forward (+1h)',
+            action: isFall ? `fall back (-${shiftStr})` : `spring forward (+${shiftStr})`,
             badgeText: d === 1 ? 'DST tomorrow' : `DST in ${d}d`,
-            bannerText: `clocks ${isFall ? 'fall back (-1h)' : 'spring forward (+1h)'} ${when}${dayName ? ` (${dayName})` : ''}`,
-            tooltip: `DST clock change ${when}${dayName ? ` (${dayName})` : ''}: clocks ${isFall ? 'fall back' : 'spring forward'} 1 hour (${hours}h day)`,
+            bannerText: `clocks ${isFall ? 'fall back (-' + shiftStr + ')' : 'spring forward (+' + shiftStr + ')'} ${when}${dayName ? ` (${dayName})` : ''}`,
+            tooltip: `DST clock change ${when}${dayName ? ` (${dayName})` : ''}: clocks ${isFall ? 'fall back' : 'spring forward'} ${shiftStr} (${hours}h day)`,
             dateStr: futureZdt.toPlainDate().toString()
           };
         }
@@ -5865,8 +5910,10 @@ window.getZoneDstTransition = function(iana, dateStr, windowDays = 5) {
       for (let d = 1; d <= windowDays; d++) {
         const pastZdt = baseZdt.subtract({ days: d });
         const hours = getDayDuration(pastZdt);
-        if (hours === 23 || hours === 25) {
-          const isFall = hours === 25;
+        if (hours !== 24 && Math.abs(hours - 24) >= 0.4) {
+          const isFall = hours > 24;
+          const shiftDelta = Math.abs(hours - 24);
+          const shiftStr = shiftDelta === 1 ? '1h' : (shiftDelta === 0.5 ? '30m' : `${shiftDelta}h`);
           const when = d === 1 ? 'yesterday' : `${d} days ago`;
           const dayName = formatDay(pastZdt);
           return {
@@ -5874,15 +5921,15 @@ window.getZoneDstTransition = function(iana, dateStr, windowDays = 5) {
             days: -d,
             hours,
             dayName,
-            action: isFall ? 'fell back (-1h)' : 'sprang forward (+1h)',
+            action: isFall ? `fell back (-${shiftStr})` : `sprang forward (+${shiftStr})`,
             badgeText: d === 1 ? 'DST yesterday' : `DST ${d}d ago`,
-            bannerText: `clocks ${isFall ? 'fell back (-1h)' : 'sprang forward (+1h)'} ${when}${dayName ? ` (${dayName})` : ''}`,
-            tooltip: `DST clock change ${when}${dayName ? ` (${dayName})` : ''}: clocks ${isFall ? 'fell back' : 'sprang forward'} 1 hour (${hours}h day)`,
+            bannerText: `clocks ${isFall ? 'fell back (-' + shiftStr + ')' : 'sprang forward (+' + shiftStr + ')'} ${when}${dayName ? ` (${dayName})` : ''}`,
+            tooltip: `DST clock change ${when}${dayName ? ` (${dayName})` : ''}: clocks ${isFall ? 'fell back' : 'spring forward'} ${shiftStr} (${hours}h day)`,
             dateStr: pastZdt.toPlainDate().toString()
           };
         }
       }
-    }
+      }
   } catch (err) {
     console.warn('getZoneDstTransition error:', err);
   }
@@ -5899,14 +5946,19 @@ window.scanDstDrift = function(instant, trackedZones, daysWindow = 5, durationMi
 
   const getTzOffsetMs = (t, tz) => {
     try {
+      if (typeof Temporal !== 'undefined' && Temporal.Instant) {
+        const zdt = Temporal.Instant.fromEpochMilliseconds(Math.floor(t)).toZonedDateTimeISO(tz);
+        return Math.round(zdt.offsetNanoseconds / 1000000);
+      }
+      const tMin = Math.floor(t / 60000) * 60000;
       const p = new Intl.DateTimeFormat('en-US', {
         timeZone: tz, hourCycle: 'h23',
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit'
-      }).formatToParts(new Date(t));
+      }).formatToParts(new Date(tMin));
       const g = type => +p.find(x => x.type === type).value;
       const wallUtc = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'));
-      return wallUtc - t;
+      return wallUtc - tMin;
     } catch {
       return 0;
     }
@@ -9612,7 +9664,7 @@ class WTBApp {
             second: '2-digit',
             hour12: !homeIs24
           }).format(new Date(nowMs));
-          this.rulerNow.title = `Current Time: ${homeTimeStr} (${homeZone.label})`;
+          this.rulerNow.title = `Current Time: ${homeTimeStr} ${this.getTimezoneAbbrev(homeZone.iana, nowMs)} (${homeZone.label})`;
         } catch {
           this.rulerNow.title = 'Current Time';
         }
