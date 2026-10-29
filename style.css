@@ -772,6 +772,52 @@ body {
   font-weight: 600;
 }
 
+/* Imminent DST Clock Change Alert Banner */
+.imminent-dst-banner {
+  display: flex;
+  align-items: center;
+  padding: 7px 16px;
+  font-size: 0.80rem;
+  background: #fffbeb;
+  border-bottom: 1px solid #fef3c7;
+  border-left: 4px solid #f59e0b;
+  color: #92400e;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.imminent-dst-banner .imminent-dst-content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.imminent-dst-banner .imminent-dst-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.imminent-dst-banner .imminent-dst-title {
+  font-weight: 700;
+  color: #b45309;
+}
+
+.imminent-dst-banner .imminent-dst-list {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.imminent-dst-banner .imminent-dst-sep {
+  color: #d97706;
+  opacity: 0.6;
+}
+
 /* Timeline Layout */
 .timeline-scroll-container {
   position: relative;
@@ -1190,6 +1236,29 @@ body.is-row-dragging {
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
+}
+
+.zone-dst-warn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.60rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+  cursor: help;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.zone-dst-warn-badge.today {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
 }
 
 .zone-country {
@@ -2546,6 +2615,15 @@ body.is-row-dragging {
     background: #f3f4f6;
     color: #6b7280;
     flex-shrink: 0;
+  }
+  .zone-dst-warn-badge {
+    font-size: 0.54rem;
+    padding: 0 2px;
+  }
+  .imminent-dst-banner {
+    padding: 6px 10px;
+    font-size: 0.74rem;
+    gap: 6px;
   }
   .zone-country {
     display: none;

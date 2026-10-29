@@ -1357,6 +1357,67 @@ export async function runSelfTests() {
     assert('Public Holiday Lookup Suite', false, e.message);
   }
 
+  // 56. Imminent DST Clock Change (±5 days) Suite
+  try {
+    // A. window.getZoneDstTransition unit assertions
+    const zurichToday = window.getZoneDstTransition('Europe/Zurich', '2026-10-25', 5);
+    assert('getZoneDstTransition detects Zurich DST transition today on 2026-10-25', Boolean(zurichToday && zurichToday.type === 'today' && zurichToday.hours === 25), JSON.stringify(zurichToday));
+
+    const zurichPast = window.getZoneDstTransition('Europe/Zurich', '2026-10-29', 5);
+    assert('getZoneDstTransition detects Zurich past DST shift 4d ago on 2026-10-29', Boolean(zurichPast && zurichPast.type === 'past' && zurichPast.days === -4), JSON.stringify(zurichPast));
+    assert('Zurich past transition badge is "DST 4d ago"', Boolean(zurichPast && zurichPast.badgeText === 'DST 4d ago'), zurichPast ? zurichPast.badgeText : '');
+
+    const nyFuture = window.getZoneDstTransition('America/New_York', '2026-10-29', 5);
+    assert('getZoneDstTransition detects New York future DST shift in 3d on 2026-10-29', Boolean(nyFuture && nyFuture.type === 'future' && nyFuture.days === 3), JSON.stringify(nyFuture));
+    assert('New York future transition badge is "DST in 3d"', Boolean(nyFuture && nyFuture.badgeText === 'DST in 3d'), nyFuture ? nyFuture.badgeText : '');
+
+    const shanghaiNone = window.getZoneDstTransition('Asia/Shanghai', '2026-10-29', 5);
+    assert('getZoneDstTransition returns null for non-DST zone Shanghai', shanghaiNone === null, JSON.stringify(shanghaiNone));
+
+    const zurichOutOfWindow = window.getZoneDstTransition('Europe/Zurich', '2026-10-31', 5);
+    assert('getZoneDstTransition returns null when shift is 6 days ago (> 5 days)', zurichOutOfWindow === null, JSON.stringify(zurichOutOfWindow));
+
+    // B. scanDstDrift with 5-day window detects both past and future
+    const oct29Instant = Temporal.Instant.from('2026-10-29T14:00:00Z');
+    const multiDstZones = [
+      { iana: 'America/New_York', label: 'New York', isHome: true },
+      { iana: 'Europe/Zurich', label: 'Zurich' }
+    ];
+    const drift5dAlerts = window.scanDstDrift(oct29Instant, multiDstZones, 5);
+    assert('scanDstDrift detects both New York future shift and Zurich past shift within ±5 days', drift5dAlerts.length >= 2, `Got ${drift5dAlerts.length}: ${JSON.stringify(drift5dAlerts)}`);
+    assert('scanDstDrift has future alert for New York (Home)', drift5dAlerts.some(a => a.type === 'future' && a.days === 3));
+    assert('scanDstDrift has past alert for Zurich', drift5dAlerts.some(a => a.type === 'past' && a.zoneLabel === 'Zurich'));
+
+    // C. DOM verification of imminent DST banner and sidebar badges
+    if (window.app) {
+      const origDate = window.app.currentDate;
+      const origZones = window.app.trackedZones;
+
+      window.app.currentDate = '2026-10-29';
+      window.app.trackedZones = [
+        { iana: 'America/New_York', label: 'New York', sub: 'United States', isHome: true },
+        { iana: 'Europe/Zurich', label: 'Zurich', sub: 'Switzerland', isHome: false }
+      ];
+      window.app.render();
+
+      const banner = document.getElementById('imminent-dst-banner');
+      assert('imminent-dst-banner is present in DOM', Boolean(banner));
+      assert('imminent-dst-banner is displayed for ±5 days DST shift', Boolean(banner && banner.style.display !== 'none'));
+      assert('imminent-dst-banner mentions Zurich', Boolean(banner && banner.textContent.includes('Zurich')));
+      assert('imminent-dst-banner mentions New York', Boolean(banner && banner.textContent.includes('New York')));
+
+      const badges = document.querySelectorAll('.zone-dst-warn-badge');
+      assert('zone cards render .zone-dst-warn-badge', badges.length >= 2, `Found ${badges.length} badges`);
+
+      // Restore app state
+      window.app.currentDate = origDate;
+      window.app.trackedZones = origZones;
+      window.app.render();
+    }
+  } catch (e) {
+    assert('Imminent DST Clock Change Suite', false, e.message);
+  }
+
   return results;
 }
 

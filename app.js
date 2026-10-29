@@ -442,8 +442,109 @@ window.downloadIcsFile = function(filename, icsContent) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-// DST Drift Scanner: Detects offset shifts within ±3 days and mid-meeting transitions
-window.scanDstDrift = function(instant, trackedZones, daysWindow = 3, durationMin = 60) {
+// ==========================================
+// Imminent DST Transition Detector (±5 days)
+// ==========================================
+window.getZoneDstTransition = function(iana, dateStr, windowDays = 5) {
+  if (!iana || !dateStr) return null;
+  const parts = dateStr.split('-').map(Number);
+  const year = parts[0], month = parts[1], day = parts[2];
+
+  const getDayDuration = (zdt) => {
+    try {
+      const next = zdt.add({ days: 1 });
+      return (next.epochMilliseconds - zdt.epochMilliseconds) / 3600000;
+    } catch {
+      return 24;
+    }
+  };
+
+  const formatDay = (zdt) => {
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: iana,
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      }).format(new Date(zdt.epochMilliseconds));
+    } catch {
+      return '';
+    }
+  };
+
+  try {
+    if (typeof Temporal !== 'undefined' && Temporal.ZonedDateTime) {
+      const baseZdt = Temporal.ZonedDateTime.from({ year, month, day, timeZone: iana });
+
+      // 1. Check today (0 days)
+      const hoursToday = getDayDuration(baseZdt);
+      if (hoursToday === 23 || hoursToday === 25) {
+        const isFall = hoursToday === 25;
+        return {
+          type: 'today',
+          days: 0,
+          hours: hoursToday,
+          action: isFall ? 'fall back (-1h)' : 'spring forward (+1h)',
+          badgeText: `DST Today (${hoursToday}h)`,
+          bannerText: `clocks ${isFall ? 'fall back (-1h)' : 'spring forward (+1h)'} today (${hoursToday}h day)`,
+          tooltip: `DST clock change today: clocks ${isFall ? 'fall back' : 'spring forward'} 1 hour (${hoursToday}h day)`,
+          dateStr
+        };
+      }
+
+      // 2. Check future days (1 to windowDays)
+      for (let d = 1; d <= windowDays; d++) {
+        const futureZdt = baseZdt.add({ days: d });
+        const hours = getDayDuration(futureZdt);
+        if (hours === 23 || hours === 25) {
+          const isFall = hours === 25;
+          const when = d === 1 ? 'tomorrow' : `in ${d} days`;
+          const dayName = formatDay(futureZdt);
+          return {
+            type: 'future',
+            days: d,
+            hours,
+            dayName,
+            action: isFall ? 'fall back (-1h)' : 'spring forward (+1h)',
+            badgeText: d === 1 ? 'DST tomorrow' : `DST in ${d}d`,
+            bannerText: `clocks ${isFall ? 'fall back (-1h)' : 'spring forward (+1h)'} ${when}${dayName ? ` (${dayName})` : ''}`,
+            tooltip: `DST clock change ${when}${dayName ? ` (${dayName})` : ''}: clocks ${isFall ? 'fall back' : 'spring forward'} 1 hour (${hours}h day)`,
+            dateStr: futureZdt.toPlainDate().toString()
+          };
+        }
+      }
+
+      // 3. Check past days (1 to windowDays)
+      for (let d = 1; d <= windowDays; d++) {
+        const pastZdt = baseZdt.subtract({ days: d });
+        const hours = getDayDuration(pastZdt);
+        if (hours === 23 || hours === 25) {
+          const isFall = hours === 25;
+          const when = d === 1 ? 'yesterday' : `${d} days ago`;
+          const dayName = formatDay(pastZdt);
+          return {
+            type: 'past',
+            days: -d,
+            hours,
+            dayName,
+            action: isFall ? 'fell back (-1h)' : 'sprang forward (+1h)',
+            badgeText: d === 1 ? 'DST yesterday' : `DST ${d}d ago`,
+            bannerText: `clocks ${isFall ? 'fell back (-1h)' : 'sprang forward (+1h)'} ${when}${dayName ? ` (${dayName})` : ''}`,
+            tooltip: `DST clock change ${when}${dayName ? ` (${dayName})` : ''}: clocks ${isFall ? 'fell back' : 'sprang forward'} 1 hour (${hours}h day)`,
+            dateStr: pastZdt.toPlainDate().toString()
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('getZoneDstTransition error:', err);
+  }
+
+  return null;
+};
+
+// DST Drift Scanner: Detects offset shifts within ±5 days and mid-meeting transitions
+window.scanDstDrift = function(instant, trackedZones, daysWindow = 5, durationMin = 60) {
   if (!instant || !trackedZones || trackedZones.length < 2) return [];
   const home = trackedZones[0];
   const ms = Number(instant.epochMilliseconds !== undefined ? instant.epochMilliseconds : (instant.epochNanoseconds ? instant.epochNanoseconds / 1000000n : instant));
@@ -505,10 +606,9 @@ window.scanDstDrift = function(instant, trackedZones, daysWindow = 3, durationMi
     }
   }
 
-  // 2. Check future and past days
+  // 2. Check future and past days (±daysWindow)
   otherZones.forEach(zone => {
     const baseDiff = getOffsetDiffHours(ms, zone.iana);
-    let driftFound = null;
 
     // Check future shift (+1..+daysWindow)
     for (let d = 1; d <= daysWindow; d++) {
@@ -526,56 +626,54 @@ window.scanDstDrift = function(instant, trackedZones, daysWindow = 3, durationMi
         let labelSubject = zone.label;
         if (homeShifted && !zoneShifted) {
           labelSubject = `${home.label} (Home)`;
+        } else if (homeShifted && zoneShifted) {
+          labelSubject = `${zone.label} & ${home.label}`;
         }
 
-        driftFound = {
+        alerts.push({
           type: 'future',
           critical: false,
           days: d,
           zoneLabel: zone.label,
-          message: `⚠️ ${zone.label} shifts DST in ${d} days (gap changes from ${diffBefore} to ${diffAfter}${dayStr ? ` on ${dayStr}` : ''})`,
+          message: `⚠️ ${labelSubject} shifts DST in ${d} days (gap changes from ${diffBefore} to ${diffAfter}${dayStr ? ` on ${dayStr}` : ''})`,
           title: `${labelSubject} clock change ${dayWord}`,
           details: `Time gap between ${home.label} and ${zone.label} changes from ${diffBefore} to ${diffAfter}${dayStr ? ` on ${dayStr}` : ''}.`
-        };
+        });
         break;
       }
     }
 
     // Check past shift (-daysWindow..-1)
-    if (!driftFound) {
-      for (let d = 1; d <= daysWindow; d++) {
-        const pastMs = ms - d * 86400000;
-        const pastDiff = getOffsetDiffHours(pastMs, zone.iana);
-        if (Math.abs(pastDiff - baseDiff) >= 0.25) {
-          const dayWord = d === 1 ? 'yesterday' : `${d} days ago`;
-          const diffBefore = pastDiff >= 0 ? `+${pastDiff}h` : `${pastDiff}h`;
-          const diffNow = baseDiff >= 0 ? `+${baseDiff}h` : `${baseDiff}h`;
-          const dayStr = formatDayName(pastMs, zone.iana);
+    for (let d = 1; d <= daysWindow; d++) {
+      const pastMs = ms - d * 86400000;
+      const pastDiff = getOffsetDiffHours(pastMs, zone.iana);
+      if (Math.abs(pastDiff - baseDiff) >= 0.25) {
+        const dayWord = d === 1 ? 'yesterday' : `${d} days ago`;
+        const diffBefore = pastDiff >= 0 ? `+${pastDiff}h` : `${pastDiff}h`;
+        const diffNow = baseDiff >= 0 ? `+${baseDiff}h` : `${baseDiff}h`;
+        const dayStr = formatDayName(pastMs, zone.iana);
 
-          const homeShifted = Math.abs(getTzOffsetMs(pastMs, home.iana) - getTzOffsetMs(ms, home.iana)) >= 900000;
-          const zoneShifted = Math.abs(getTzOffsetMs(pastMs, zone.iana) - getTzOffsetMs(ms, zone.iana)) >= 900000;
+        const homeShifted = Math.abs(getTzOffsetMs(pastMs, home.iana) - getTzOffsetMs(ms, home.iana)) >= 900000;
+        const zoneShifted = Math.abs(getTzOffsetMs(pastMs, zone.iana) - getTzOffsetMs(ms, zone.iana)) >= 900000;
 
-          let labelSubject = zone.label;
-          if (homeShifted && !zoneShifted) {
-            labelSubject = `${home.label} (Home)`;
-          }
-
-          driftFound = {
-            type: 'past',
-            critical: false,
-            days: -d,
-            zoneLabel: zone.label,
-            message: `⚠️ ${zone.label} shifted DST ${dayWord} (gap shifted from ${diffBefore} to ${diffNow}${dayStr ? ` on ${dayStr}` : ''})`,
-            title: `${labelSubject} clock change ${dayWord}`,
-            details: `Time gap between ${home.label} and ${zone.label} recently shifted from ${diffBefore} to ${diffNow}.`
-          };
-          break;
+        let labelSubject = zone.label;
+        if (homeShifted && !zoneShifted) {
+          labelSubject = `${home.label} (Home)`;
+        } else if (homeShifted && zoneShifted) {
+          labelSubject = `${zone.label} & ${home.label}`;
         }
-      }
-    }
 
-    if (driftFound) {
-      alerts.push(driftFound);
+        alerts.push({
+          type: 'past',
+          critical: false,
+          days: -d,
+          zoneLabel: zone.label,
+          message: `⚠️ ${labelSubject} shifted DST ${dayWord} (gap shifted from ${diffBefore} to ${diffNow}${dayStr ? ` on ${dayStr}` : ''})`,
+          title: `${labelSubject} clock change ${dayWord}`,
+          details: `Time gap between ${home.label} and ${zone.label} recently shifted from ${diffBefore} to ${diffNow}.`
+        });
+        break;
+      }
     }
   });
 
@@ -1754,6 +1852,7 @@ class WTBApp {
     this.timelineHeaderHours = document.getElementById('timeline-header-hours');
     this.timelineRowsContainer = document.getElementById('timeline-rows');
     this.overlapBanner = document.getElementById('overlap-banner');
+    this.imminentDstBanner = document.getElementById('imminent-dst-banner');
     this.pinnedSummary = document.getElementById('pinned-summary');
     this.pinnedChips = document.getElementById('pinned-chips');
     this.pinnedWorkCount = document.getElementById('pinned-work-count');
@@ -2903,6 +3002,7 @@ class WTBApp {
       `;
 
       if (this.overlapBanner) this.overlapBanner.style.display = 'none';
+      if (this.imminentDstBanner) this.imminentDstBanner.style.display = 'none';
       if (this.pinnedSummary) this.pinnedSummary.classList.remove('visible');
       if (this.rulerNow) this.rulerNow.classList.remove('visible');
       if (this.rulerPinned) this.rulerPinned.classList.remove('visible');
@@ -3101,17 +3201,24 @@ class WTBApp {
         `;
       }).join('');
 
-      // Check if zone has a DST transition on the displayed day
+      // Check if zone has an imminent DST transition (±5 days)
       let zoneDstNotice = '';
-      try {
-        const parts = this.currentDate.split('-').map(Number);
-        const zdt1 = Temporal.ZonedDateTime.from({ year: parts[0], month: parts[1], day: parts[2], timeZone: zone.iana });
-        const zdt2 = zdt1.add({ days: 1 });
-        const hours = (zdt2.epochMilliseconds - zdt1.epochMilliseconds) / 3600000;
-        if (hours === 23 || hours === 25) {
-          zoneDstNotice = `<span class="zone-dst-shift-badge" title="DST transition today (${hours}h day)">DST ${hours}h</span>`;
+      if (window.getZoneDstTransition) {
+        const trans = window.getZoneDstTransition(zone.iana, this.currentDate, 5);
+        if (trans) {
+          zoneDstNotice = `<span class="zone-dst-warn-badge ${trans.type}" title="${trans.tooltip}">⚠️ ${trans.badgeText}</span>`;
         }
-      } catch {}
+      } else {
+        try {
+          const parts = this.currentDate.split('-').map(Number);
+          const zdt1 = Temporal.ZonedDateTime.from({ year: parts[0], month: parts[1], day: parts[2], timeZone: zone.iana });
+          const zdt2 = zdt1.add({ days: 1 });
+          const hours = (zdt2.epochMilliseconds - zdt1.epochMilliseconds) / 3600000;
+          if (hours === 23 || hours === 25) {
+            zoneDstNotice = `<span class="zone-dst-shift-badge" title="DST transition today (${hours}h day)">DST ${hours}h</span>`;
+          }
+        } catch {}
+      }
 
       // Check if zone has a public holiday on the displayed day
       let zoneHolidayNotice = '';
@@ -3252,12 +3359,63 @@ class WTBApp {
     this.updateTopLiveClock();
     this.renderRulerHighlights();
     this.updateNowMarker();
+    this.updateImminentDstBanner();
 
     if (this.isFirstRender) {
       this.isFirstRender = false;
       requestAnimationFrame(() => this.scrollToActiveTime('auto'));
       setTimeout(() => this.scrollToActiveTime('auto'), 50);
     }
+  }
+
+  updateImminentDstBanner() {
+    if (!this.imminentDstBanner) return;
+    if (!window.getZoneDstTransition || !this.trackedZones || this.trackedZones.length === 0) {
+      this.imminentDstBanner.style.display = 'none';
+      return;
+    }
+
+    const transitions = [];
+    const seen = new Set();
+
+    for (const zone of this.trackedZones) {
+      const trans = window.getZoneDstTransition(zone.iana, this.currentDate, 5);
+      if (trans) {
+        const key = `${zone.iana}_${trans.type}_${trans.days}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          transitions.push({
+            zoneLabel: zone.label,
+            ...trans
+          });
+        }
+      }
+    }
+
+    if (transitions.length === 0) {
+      this.imminentDstBanner.style.display = 'none';
+      this.imminentDstBanner.innerHTML = '';
+      return;
+    }
+
+    // Sort: 'today' first, then upcoming (days > 0 ascending), then past (days < 0 descending)
+    transitions.sort((a, b) => {
+      const score = (t) => t.type === 'today' ? 0 : (t.days > 0 ? t.days : 100 - t.days);
+      return score(a) - score(b);
+    });
+
+    const itemsHtml = transitions.map(t => {
+      return `<span class="imminent-dst-item" title="${t.tooltip}"><strong>${t.zoneLabel}</strong>: ${t.bannerText}</span>`;
+    }).join('<span class="imminent-dst-sep">•</span>');
+
+    this.imminentDstBanner.style.display = 'flex';
+    this.imminentDstBanner.innerHTML = `
+      <span class="imminent-dst-icon">⚠️</span>
+      <div class="imminent-dst-content">
+        <span class="imminent-dst-title">Imminent DST Clock Change (±5 days):</span>
+        <span class="imminent-dst-list">${itemsHtml}</span>
+      </div>
+    `;
   }
 
   getTimezoneAbbrev(iana, instant) {
@@ -4212,7 +4370,7 @@ class WTBApp {
 
     // DST Drift Alerts
     if (this.pinnedDriftAlerts) {
-      const alerts = window.scanDstDrift ? window.scanDstDrift(startInstant, this.trackedZones, 3, this.pinDurationMin || 60) : [];
+      const alerts = window.scanDstDrift ? window.scanDstDrift(startInstant, this.trackedZones, 5, this.pinDurationMin || 60) : [];
       if (alerts.length > 0) {
         this.pinnedDriftAlerts.innerHTML = alerts.map(a => `
           <div class="drift-alert-pill ${a.critical ? 'alert-critical' : ''}">
