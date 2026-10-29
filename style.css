@@ -524,6 +524,8 @@ body {
   display: flex;
   align-items: center;
   position: relative;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-week-cal {
@@ -540,6 +542,8 @@ body {
   border: 1px solid var(--border-color);
   color: var(--text-main);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
@@ -1816,6 +1820,9 @@ body.is-row-dragging {
   font-size: 0.78rem;
   color: #1e40af;
   flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .slot-bar-icon {
@@ -2208,7 +2215,9 @@ body.is-row-dragging {
     display: none;
   }
   .date-bar {
+    display: flex;
     flex-wrap: wrap;
+    justify-content: space-between;
     gap: 8px;
   }
 

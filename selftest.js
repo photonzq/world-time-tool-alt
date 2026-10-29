@@ -1291,7 +1291,7 @@ export async function runSelfTests() {
     assert('getZoneHoliday identifies federal Columbus Day in Los Angeles (CA)', Boolean(laColumbus && laColumbus.name === 'Columbus Day'));
 
     const deUnity = window.getZoneHoliday('Europe/Berlin', '2026-10-03');
-    assert('getZoneHoliday identifies German Unity Day', Boolean(deUnity && deUnity.name === 'German Unity Day'));
+    assert('getZoneHoliday identifies German Unity Day', Boolean(deUnity && (deUnity.name === 'German Unity Day' || deUnity.name === 'Tag der Deutschen Einheit')));
 
     const regularDay = window.getZoneHoliday('America/New_York', '2026-06-15');
     assert('getZoneHoliday returns null for non-holiday', regularDay === null);
@@ -1329,7 +1329,7 @@ export async function runSelfTests() {
 
       assert('pinned-holiday-alerts container is visible', holidayAlertsEl.style.display === 'flex');
       const alertPill = holidayAlertsEl.querySelector('.holiday-alert-pill');
-      assert('holiday alert pill renders with holiday name', Boolean(alertPill && alertPill.textContent.includes('German Unity Day')));
+      assert('holiday alert pill renders with holiday name', Boolean(alertPill && (alertPill.textContent.includes('German Unity Day') || alertPill.textContent.includes('Tag der Deutschen Einheit'))));
 
       const berlinChip = Array.from(document.querySelectorAll('.pinned-chip')).find(c => c.textContent.includes('Berlin'));
       if (berlinChip) {

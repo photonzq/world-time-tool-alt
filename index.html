@@ -540,6 +540,8 @@ body {
   display: flex;
   align-items: center;
   position: relative;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-week-cal {
@@ -556,6 +558,8 @@ body {
   border: 1px solid var(--border-color);
   color: var(--text-main);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
@@ -1832,6 +1836,9 @@ body.is-row-dragging {
   font-size: 0.78rem;
   color: #1e40af;
   flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .slot-bar-icon {
@@ -2224,7 +2231,9 @@ body.is-row-dragging {
     display: none;
   }
   .date-bar {
+    display: flex;
     flex-wrap: wrap;
+    justify-content: space-between;
     gap: 8px;
   }
 
@@ -2897,12 +2906,13 @@ body.is-row-dragging {
         <!-- Time Rows -->
         <div id="timeline-rows" class="timeline-rows-container"></div>
       </div>
-      <!-- Best Slot Recommendation Bar -->
-      <div id="best-slot-bar" class="best-slot-bar" style="display:none;">
-        <span class="slot-bar-icon">★</span>
-        <span id="best-slot-text" class="slot-bar-text"></span>
-        <div id="best-slot-buttons" class="slot-bar-chips"></div>
-      </div>
+    </div>
+
+    <!-- Best Slot Recommendation Bar -->
+    <div id="best-slot-bar" class="best-slot-bar" style="display:none;">
+      <span class="slot-bar-icon">★</span>
+      <span id="best-slot-text" class="slot-bar-text"></span>
+      <div id="best-slot-buttons" class="slot-bar-chips"></div>
     </div>
 
     <!-- Pinned Time Comparison Bar -->
@@ -5011,7 +5021,7 @@ async function runSelfTests() {
     assert('getZoneHoliday identifies federal Columbus Day in Los Angeles (CA)', Boolean(laColumbus && laColumbus.name === 'Columbus Day'));
 
     const deUnity = window.getZoneHoliday('Europe/Berlin', '2026-10-03');
-    assert('getZoneHoliday identifies German Unity Day', Boolean(deUnity && deUnity.name === 'German Unity Day'));
+    assert('getZoneHoliday identifies German Unity Day', Boolean(deUnity && (deUnity.name === 'German Unity Day' || deUnity.name === 'Tag der Deutschen Einheit')));
 
     const regularDay = window.getZoneHoliday('America/New_York', '2026-06-15');
     assert('getZoneHoliday returns null for non-holiday', regularDay === null);
@@ -5049,7 +5059,7 @@ async function runSelfTests() {
 
       assert('pinned-holiday-alerts container is visible', holidayAlertsEl.style.display === 'flex');
       const alertPill = holidayAlertsEl.querySelector('.holiday-alert-pill');
-      assert('holiday alert pill renders with holiday name', Boolean(alertPill && alertPill.textContent.includes('German Unity Day')));
+      assert('holiday alert pill renders with holiday name', Boolean(alertPill && (alertPill.textContent.includes('German Unity Day') || alertPill.textContent.includes('Tag der Deutschen Einheit'))));
 
       const berlinChip = Array.from(document.querySelectorAll('.pinned-chip')).find(c => c.textContent.includes('Berlin'));
       if (berlinChip) {
