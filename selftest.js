@@ -1405,6 +1405,28 @@ export async function runSelfTests() {
       assert('imminent-dst-banner is displayed for ±5 days DST shift', Boolean(banner && banner.style.display !== 'none'));
       assert('imminent-dst-banner mentions Zurich', Boolean(banner && banner.textContent.includes('Zurich')));
       assert('imminent-dst-banner mentions New York', Boolean(banner && banner.textContent.includes('New York')));
+      assert('banner has dynamic title for mixed past & future shifts', Boolean(banner && banner.textContent.includes('Recent & Upcoming DST Clock Changes')));
+
+      // Test dynamic title: only upcoming (New York only on 2026-10-29)
+      window.app.trackedZones = [
+        { iana: 'America/New_York', label: 'New York', sub: 'United States', isHome: true }
+      ];
+      window.app.render();
+      assert('banner has dynamic title for upcoming-only shifts', Boolean(banner && banner.textContent.includes('Upcoming DST Clock Change')));
+
+      // Test dynamic title: only recent past (Zurich only on 2026-10-29)
+      window.app.trackedZones = [
+        { iana: 'Europe/Zurich', label: 'Zurich', sub: 'Switzerland', isHome: true }
+      ];
+      window.app.render();
+      assert('banner has dynamic title for recent-only shifts', Boolean(banner && banner.textContent.includes('Recent DST Clock Change')));
+
+      // Re-render multi zones to check badges
+      window.app.trackedZones = [
+        { iana: 'America/New_York', label: 'New York', sub: 'United States', isHome: true },
+        { iana: 'Europe/Zurich', label: 'Zurich', sub: 'Switzerland', isHome: false }
+      ];
+      window.app.render();
 
       const badges = document.querySelectorAll('.zone-dst-warn-badge');
       assert('zone cards render .zone-dst-warn-badge', badges.length >= 2, `Found ${badges.length} badges`);

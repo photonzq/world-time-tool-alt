@@ -3408,11 +3408,26 @@ class WTBApp {
       return `<span class="imminent-dst-item" title="${t.tooltip}"><strong>${t.zoneLabel}</strong>: ${t.bannerText}</span>`;
     }).join('<span class="imminent-dst-sep">•</span>');
 
+    const hasPast = transitions.some(t => t.type === 'past');
+    const hasFuture = transitions.some(t => t.type === 'future');
+    const hasToday = transitions.some(t => t.type === 'today');
+
+    let dynamicTitle = 'Recent & Upcoming DST Clock Changes (±5 days):';
+    if (hasToday && !hasPast && !hasFuture) {
+      dynamicTitle = transitions.length > 1 ? 'DST Clock Changes Today:' : 'DST Clock Change Today:';
+    } else if (hasFuture && !hasPast) {
+      dynamicTitle = transitions.length > 1 ? 'Upcoming DST Clock Changes (next 5 days):' : 'Upcoming DST Clock Change (next 5 days):';
+    } else if (hasPast && !hasFuture) {
+      dynamicTitle = transitions.length > 1 ? 'Recent DST Clock Changes (past 5 days):' : 'Recent DST Clock Change (past 5 days):';
+    } else {
+      dynamicTitle = 'Recent & Upcoming DST Clock Changes (±5 days):';
+    }
+
     this.imminentDstBanner.style.display = 'flex';
     this.imminentDstBanner.innerHTML = `
       <span class="imminent-dst-icon">⚠️</span>
       <div class="imminent-dst-content">
-        <span class="imminent-dst-title">Imminent DST Clock Change (±5 days):</span>
+        <span class="imminent-dst-title">${dynamicTitle}</span>
         <span class="imminent-dst-list">${itemsHtml}</span>
       </div>
     `;
