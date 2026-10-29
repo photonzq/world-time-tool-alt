@@ -1440,6 +1440,48 @@ export async function runSelfTests() {
     assert('Imminent DST Clock Change Suite', false, e.message);
   }
 
+  // 57. Now Needle Sidebar Resize Invariance Suite
+  try {
+    if (window.app) {
+      const origDate = window.app.currentDate;
+      const todayStr = window.app.getTodayDateString(window.app.getHomeZone().iana);
+      window.app.currentDate = todayStr;
+      window.app.render();
+      window.app.updateNowMarker();
+
+      const contentContainer = document.querySelector('.timeline-content');
+      const currentCell = window.app.timelineHeaderHours.querySelector('.hour-header-cell.is-current-hour');
+
+      if (currentCell && contentContainer && window.app.rulerNow) {
+        for (const testWidth of [180, 240, 320]) {
+          document.documentElement.style.setProperty('--sidebar-custom-width', `${testWidth}px`);
+          document.documentElement.style.setProperty('--sidebar-width', `${testWidth}px`);
+          window.app.updateNowMarker();
+          window.app.renderRulerHighlights();
+
+          const headerRect = currentCell.getBoundingClientRect();
+          const contentRect = contentContainer.getBoundingClientRect();
+          const cellStartInContent = headerRect.left - contentRect.left;
+          const actualLeft = parseFloat(window.app.rulerNow.style.left);
+
+          assert(`Now needle is within current hour cell bounds at sidebar width ${testWidth}px`,
+            Boolean(actualLeft >= cellStartInContent - 0.5 && actualLeft <= cellStartInContent + headerRect.width + 0.5),
+            `actual: ${actualLeft}, cellStart: ${cellStartInContent}, width: ${headerRect.width}`);
+        }
+
+        // Cleanup
+        document.documentElement.style.removeProperty('--sidebar-custom-width');
+        document.documentElement.style.removeProperty('--sidebar-width');
+      }
+
+      window.app.currentDate = origDate;
+      window.app.render();
+      window.app.updateNowMarker();
+    }
+  } catch (e) {
+    assert('Now Needle Sidebar Resize Suite', false, e.message);
+  }
+
   return results;
 }
 

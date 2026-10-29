@@ -1941,6 +1941,7 @@ class WTBApp {
       const dx = e.clientX - startX;
       const newWidth = Math.min(420, Math.max(160, Math.round(startWidth + dx)));
       document.documentElement.style.setProperty('--sidebar-custom-width', `${newWidth}px`);
+      document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
       this.updateNowMarker();
       this.renderRulerHighlights();
     };
@@ -1954,14 +1955,13 @@ class WTBApp {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
 
-      const finalWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-custom-width').trim() || `${newWidth}px`;
+      const finalWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-custom-width').trim() || `${startWidth}px`;
       try {
         localStorage.setItem('wtb_sidebar_width', finalWidthStr);
       } catch (e) {}
 
       this.updateNowMarker();
       this.renderRulerHighlights();
-      this.scrollToActiveTime('auto');
     };
 
     resizer.addEventListener('mousedown', onMouseDown);
@@ -1977,7 +1977,6 @@ class WTBApp {
       } catch (e) {}
       this.updateNowMarker();
       this.renderRulerHighlights();
-      this.scrollToActiveTime('auto');
     });
   }
 
@@ -2011,6 +2010,15 @@ class WTBApp {
       this.topLiveClock.addEventListener('click', () => {
         this.jumpToNow();
       });
+    }
+
+    // Timeline Scroll -> Keep Live Now Needle pill & Pinned Ruler docked smoothly
+    const scrollContainerEl = document.querySelector('.timeline-scroll-container');
+    if (scrollContainerEl) {
+      scrollContainerEl.addEventListener('scroll', () => {
+        this.updateNowMarker();
+        this.renderRulerHighlights();
+      }, { passive: true });
     }
 
     // Window Resize -> Recalculate Live Now Needle, Pinned Ruler & Re-center NOW if scrollable
@@ -4084,6 +4092,10 @@ class WTBApp {
       return;
     }
 
+    const contentContainer = document.querySelector('.timeline-content');
+    if (!contentContainer) return;
+    const contentRect = contentContainer.getBoundingClientRect();
+
     const sidebarEl = document.querySelector('.timeline-header-left');
     const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 220;
     const availableWidth = scrollContainer.clientWidth - sidebarWidth;
@@ -4094,7 +4106,8 @@ class WTBApp {
     if (this.pinnedCol !== null) {
       const pinnedCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${this.pinnedCol}"]`);
       if (pinnedCell) {
-        targetX = pinnedCell.offsetLeft + (pinnedCell.offsetWidth / 2);
+        const headerRect = pinnedCell.getBoundingClientRect();
+        targetX = (headerRect.left - contentRect.left) + (headerRect.width / 2);
       }
     }
 
@@ -4121,8 +4134,9 @@ class WTBApp {
         if (nowMs >= colStartMs && nowMs < nextStartMs) {
           const headerCell = this.timelineHeaderHours.querySelector(`.hour-header-cell[data-col="${k}"]`);
           if (headerCell) {
+            const headerRect = headerCell.getBoundingClientRect();
             const frac = Math.max(0, Math.min(1, (nowMs - colStartMs) / (nextStartMs - colStartMs)));
-            targetX = headerCell.offsetLeft + frac * headerCell.offsetWidth;
+            targetX = (headerRect.left - contentRect.left) + frac * headerRect.width;
           }
           break;
         }
@@ -4134,14 +4148,19 @@ class WTBApp {
       const defaultCell = this.timelineHeaderHours.querySelector('.hour-header-cell[data-col="9"]')
         || this.timelineHeaderHours.querySelector('.hour-header-cell');
       if (defaultCell) {
-        targetX = defaultCell.offsetLeft + (defaultCell.offsetWidth / 2);
+        const headerRect = defaultCell.getBoundingClientRect();
+        targetX = (headerRect.left - contentRect.left) + (headerRect.width / 2);
       }
     }
 
     if (targetX !== null && availableWidth > 0) {
       const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
       const targetScrollLeft = Math.max(0, Math.min(maxScroll, Math.round(targetX - sidebarWidth - (availableWidth / 2))));
-      scrollContainer.scrollLeft = targetScrollLeft;
+      if (behavior === 'smooth' && 'scrollTo' in scrollContainer) {
+        scrollContainer.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+      } else {
+        scrollContainer.scrollLeft = targetScrollLeft;
+      }
     }
   }
 
@@ -4207,7 +4226,8 @@ class WTBApp {
 
       if (headerCell && contentContainer) {
         const contentRect = contentContainer.getBoundingClientRect();
-        const xPos = headerCell.offsetLeft + fraction * headerCell.offsetWidth;
+        const headerRect = headerCell.getBoundingClientRect();
+        const xPos = (headerRect.left - contentRect.left) + fraction * headerRect.width;
 
         this.rulerNow.style.left = `${xPos}px`;
         this.rulerNow.classList.add('visible');
@@ -4216,11 +4236,15 @@ class WTBApp {
         if (pill) {
           const sidebarEl = document.querySelector('.timeline-header-left');
           const sidebarWidth = sidebarEl ? sidebarEl.offsetWidth : 168;
+          const scrollContainer = document.querySelector('.timeline-scroll-container');
+          const scrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
+          const distFromSidebar = (xPos - scrollLeft) - sidebarWidth;
+
           if (xPos + 25 > contentRect.width) {
             pill.style.left = 'auto';
             pill.style.right = '0px';
             pill.style.transform = 'none';
-          } else if (xPos - sidebarWidth < 18) {
+          } else if (distFromSidebar < 18) {
             pill.style.left = '0px';
             pill.style.right = 'auto';
             pill.style.transform = 'none';
