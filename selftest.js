@@ -471,7 +471,11 @@ export async function runSelfTests() {
 
     const rootStyles = getComputedStyle(document.documentElement);
     const sidebarWidthStr = rootStyles.getPropertyValue('--sidebar-width').trim();
-    const sidebarNum = parseInt(sidebarWidthStr, 10);
+    let sidebarNum = parseInt(sidebarWidthStr, 10);
+    if (isNaN(sidebarNum)) {
+      const match = sidebarWidthStr.match(/\d+/);
+      if (match) sidebarNum = parseInt(match[0], 10);
+    }
     assert('CSS variable --sidebar-width is compact (<= 250px)', sidebarNum > 0 && sidebarNum <= 250, sidebarWidthStr);
   } catch (e) {
     assert('Shrinkable sidebar test', false, e.message);

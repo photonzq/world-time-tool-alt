@@ -20,7 +20,8 @@
   --color-pinned-border: #2563eb;
 
   --cell-width: 36px;
-  --sidebar-width: 235px;
+  --sidebar-default-width: 235px;
+  --sidebar-width: var(--sidebar-custom-width, var(--sidebar-default-width));
 }
 
 * {
@@ -798,7 +799,7 @@ body {
   border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
-  z-index: 34;
+  z-index: 25;
 }
 
 .timeline-header-left {
@@ -817,7 +818,7 @@ body {
   background: #f8fafc;
   position: sticky;
   left: 0;
-  z-index: 45;
+  z-index: 50;
   box-sizing: border-box;
 }
 
@@ -881,6 +882,8 @@ body.resizing-sidebar {
   height: 48px;
   min-width: 0;
   touch-action: none;
+  position: relative;
+  z-index: 20;
 }
 
 .hour-header-cell {
@@ -1018,7 +1021,7 @@ body.is-row-dragging {
   background: #ffffff;
   position: sticky;
   left: 0;
-  z-index: 44;
+  z-index: 48;
   user-select: text;
   -webkit-user-select: text;
   box-sizing: border-box;
@@ -1255,6 +1258,8 @@ body.is-row-dragging {
   flex: 1 1 auto;
   height: 56px;
   min-width: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .time-cell {
@@ -2209,7 +2214,7 @@ body.is-row-dragging {
 /* Responsive Media Queries */
 @media (max-width: 860px) {
   :root {
-    --sidebar-width: 175px;
+    --sidebar-width: 160px !important;
   }
   .zone-country {
     display: none;
@@ -2248,7 +2253,7 @@ body.is-row-dragging {
 
 @media (max-width: 640px) {
   :root {
-    --sidebar-width: 168px;
+    --sidebar-width: 130px !important;
   }
   body {
     padding: 0;
@@ -2440,14 +2445,14 @@ body.is-row-dragging {
     width: var(--sidebar-width);
     min-width: var(--sidebar-width);
     height: 56px;
-    padding: 4px 6px 4px 6px;
+    padding: 4px 4px;
     display: grid;
     grid-template-columns: 1fr auto;
     grid-template-rows: 24px 22px;
     align-items: center;
     position: sticky;
     left: 0;
-    z-index: 44;
+    z-index: 48;
     background: #ffffff;
     border-right: 2px solid var(--border-color);
     box-sizing: border-box;
@@ -2457,20 +2462,20 @@ body.is-row-dragging {
     grid-row: 1 / 3;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     min-width: 0;
   }
   .zone-reorder {
     display: flex;
     align-items: center;
-    margin-right: 2px;
+    margin-right: 1px;
     flex-shrink: 0;
   }
   .zone-reorder-buttons {
     display: none;
   }
   .zone-drag-handle {
-    width: 18px;
+    width: 14px;
     height: 36px;
     color: #64748b;
     display: flex;
@@ -2478,14 +2483,16 @@ body.is-row-dragging {
     justify-content: center;
   }
   .zone-home-btn {
-    min-width: 28px;
-    min-height: 28px;
+    min-width: 20px;
+    width: 20px;
+    height: 20px;
+    min-height: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.95rem;
+    font-size: 0.82rem;
     padding: 0;
-    margin-right: 2px;
+    margin-right: 1px;
     flex-shrink: 0;
     touch-action: manipulation;
   }
@@ -2503,13 +2510,13 @@ body.is-row-dragging {
     min-width: 0;
   }
   .zone-city {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--text-main);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 104px;
+    max-width: 68px;
     line-height: 1.2;
   }
   .zone-sub-row {
@@ -2546,12 +2553,14 @@ body.is-row-dragging {
   .zone-remove-btn {
     grid-column: 2 / 3;
     grid-row: 1 / 2;
-    min-width: 28px;
-    min-height: 28px;
+    min-width: 20px;
+    width: 20px;
+    height: 20px;
+    min-height: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.15rem;
+    font-size: 1rem;
     color: #94a3b8;
     padding: 0;
     margin: 0;
@@ -2570,7 +2579,7 @@ body.is-row-dragging {
     justify-self: end;
   }
   .zone-time-digits {
-    font-size: 0.74rem;
+    font-size: 0.70rem;
     font-weight: 700;
     font-feature-settings: "tnum";
     color: #334155;
@@ -2761,5 +2770,39 @@ body.is-row-dragging {
     color: #1e293b;
     user-select: text;
     -webkit-user-select: text;
+  }
+}
+
+@media (max-width: 440px) {
+  :root {
+    --sidebar-width: 116px !important;
+  }
+  .timeline-header-left {
+    padding: 0 4px;
+    font-size: 0.68rem;
+  }
+  .timeline-header-left::after {
+    font-size: 0.54rem;
+  }
+  .zone-city {
+    max-width: 52px;
+    font-size: 0.74rem;
+  }
+  .zone-offset-badge {
+    font-size: 0.56rem;
+    padding: 0 2px;
+  }
+  .zone-dst-badge {
+    font-size: 0.56rem;
+    padding: 0 2px;
+  }
+  .zone-time-digits {
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 360px) {
+  :root {
+    --sidebar-width: 108px !important;
   }
 }

@@ -1807,7 +1807,7 @@ class WTBApp {
       if (savedWidth) {
         const num = parseInt(savedWidth, 10);
         if (!isNaN(num) && num >= 150 && num <= 450) {
-          document.documentElement.style.setProperty('--sidebar-width', `${num}px`);
+          document.documentElement.style.setProperty('--sidebar-custom-width', `${num}px`);
         }
       }
     } catch (e) {
@@ -1826,7 +1826,8 @@ class WTBApp {
       e.stopPropagation();
       isResizing = true;
       startX = e.clientX;
-      const currentWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width').trim();
+      const currentWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-custom-width').trim()
+        || getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width').trim();
       startWidth = parseInt(currentWidthStr, 10) || 220;
 
       document.body.classList.add('resizing-sidebar');
@@ -1840,7 +1841,7 @@ class WTBApp {
       if (!isResizing) return;
       const dx = e.clientX - startX;
       const newWidth = Math.min(420, Math.max(160, Math.round(startWidth + dx)));
-      document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+      document.documentElement.style.setProperty('--sidebar-custom-width', `${newWidth}px`);
       this.updateNowMarker();
       this.renderRulerHighlights();
     };
@@ -1854,7 +1855,7 @@ class WTBApp {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
 
-      const finalWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width').trim();
+      const finalWidthStr = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-custom-width').trim() || `${newWidth}px`;
       try {
         localStorage.setItem('wtb_sidebar_width', finalWidthStr);
       } catch (e) {}
@@ -1870,7 +1871,8 @@ class WTBApp {
     resizer.addEventListener('dblclick', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      document.documentElement.style.setProperty('--sidebar-width', '220px');
+      document.documentElement.style.removeProperty('--sidebar-custom-width');
+      document.documentElement.style.removeProperty('--sidebar-width');
       try {
         localStorage.removeItem('wtb_sidebar_width');
       } catch (e) {}
@@ -3878,6 +3880,16 @@ class WTBApp {
           }
           this.rulerBadgeTime.textContent = label;
         }
+
+        if (this.rulerTopBadge) {
+          const sidebarEl = document.querySelector('.timeline-header-left');
+          const sidebarWidth = sidebarEl ? sidebarEl.offsetWidth : 168;
+          if (leftOffset - sidebarWidth < 14) {
+            this.rulerTopBadge.style.left = `${Math.max(14, pinWidth / 2)}px`;
+          } else {
+            this.rulerTopBadge.style.left = '50%';
+          }
+        }
       }
       const homeZone = this.getHomeZone();
       const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
@@ -4029,11 +4041,13 @@ class WTBApp {
 
         const pill = this.rulerNow.querySelector('.now-pill');
         if (pill) {
-          if (xPos + 50 > contentRect.width) {
+          const sidebarEl = document.querySelector('.timeline-header-left');
+          const sidebarWidth = sidebarEl ? sidebarEl.offsetWidth : 168;
+          if (xPos + 25 > contentRect.width) {
             pill.style.left = 'auto';
             pill.style.right = '0px';
             pill.style.transform = 'none';
-          } else if (xPos < 25) {
+          } else if (xPos - sidebarWidth < 18) {
             pill.style.left = '0px';
             pill.style.right = 'auto';
             pill.style.transform = 'none';
