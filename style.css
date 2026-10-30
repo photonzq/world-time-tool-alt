@@ -2505,6 +2505,23 @@ body.is-row-dragging {
   font-family: inherit;
 }
 
+.deadline-date-input,
+.deadline-time-input {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.deadline-tz-select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23475569' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
 .deadline-text-input:focus,
 .deadline-date-input:focus,
 .deadline-time-input:focus,
@@ -2545,6 +2562,14 @@ body.is-row-dragging {
   background: #e2e8f0;
   color: #0f172a;
   border-color: #cbd5e1;
+}
+
+.btn-ddl-preset-date.active,
+.btn-ddl-preset-time.active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #1d4ed8 !important;
+  font-weight: 700;
 }
 
 .deadline-bar-footer {
@@ -2598,6 +2623,7 @@ body.is-row-dragging {
   border-radius: 4px;
   font-size: 0.72rem;
   color: #334155;
+  white-space: nowrap;
 }
 
 .ddl-chip.is-home {
@@ -2771,6 +2797,9 @@ body.is-row-dragging {
   }
   .deadline-sync-controls {
     justify-content: space-between;
+  }
+  .ddl-chip {
+    white-space: normal;
   }
   :root {
     --sidebar-width: 145px !important;

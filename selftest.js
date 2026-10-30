@@ -1648,6 +1648,35 @@ export async function runSelfTests() {
       assert('Ruler pinned removes .is-deadline-active class', Boolean(rulerPinned && !rulerPinned.classList.contains('is-deadline-active')));
       assert('Deadline pinned banner is hidden', Boolean(pinnedBanner && pinnedBanner.style.display === 'none'));
 
+      // 60.7 DST Spring-Forward column alignment (23 columns)
+      window.app.deadline.date = '2026-03-08';
+      window.app.deadline.time = '23:00';
+      window.app.deadline.tz = 'America/New_York';
+      window.app.showDeadlineInSelector(false);
+      assert('Spring-forward 23:00 maps to column 22 on 23-column day', window.app.pinnedCol === 22, `Got ${window.app.pinnedCol}`);
+
+      // 60.8 DST Fall-Back column alignment (25 columns)
+      window.app.deadline.date = '2026-11-01';
+      window.app.deadline.time = '23:00';
+      window.app.deadline.tz = 'America/New_York';
+      window.app.showDeadlineInSelector(false);
+      assert('Fall-back 23:00 maps to column 24 on 25-column day', window.app.pinnedCol === 24, `Got ${window.app.pinnedCol}`);
+
+      // 60.9 Selecting regular timeline cell exits deadline view when Live sync is off
+      window.app.deadline.isLiveSync = false;
+      const hourCell10 = document.querySelector('.hour-header-cell[data-col="10"]');
+      if (hourCell10) {
+        hourCell10.click();
+        assert('Clicking cell 10 exits deadline view when live sync is off', window.app.isDeadlineActive === false);
+        assert('Timeline is pinned at column 10 in meeting mode', window.app.pinnedCol === 10);
+      }
+
+      // 60.10 Presets active highlighting
+      window.app.deadline.time = '23:59';
+      window.app.updateDeadlinePresetActiveStates();
+      const chip2359 = document.querySelector('.btn-ddl-preset-time[data-time="23:59"]');
+      assert('Active preset chip has .active class for 23:59', Boolean(chip2359 && chip2359.classList.contains('active')));
+
       // Restore state
       window.app.currentDate = origDate;
       window.app.trackedZones = origZones;

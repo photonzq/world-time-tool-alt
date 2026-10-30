@@ -2198,8 +2198,9 @@ class WTBApp {
     // Clear Pin
     this.clearPinBtn.addEventListener('click', () => {
       this.pinnedCol = null;
-      this.isDeadlineActive = false;
-      this.updateDeadlineSyncButton();
+      if (this.isDeadlineActive) {
+        this.exitDeadlineSelectorView();
+      }
       this.rulerPinned.classList.remove('visible');
       this.pinnedSummary.classList.remove('visible');
       this.saveState();
@@ -2301,10 +2302,11 @@ class WTBApp {
           this.copySentenceToClipboard();
         }
       } else if (e.key === 'Escape') {
+        if (this.isDeadlineActive) {
+          this.exitDeadlineSelectorView();
+        }
         if (this.pinnedCol !== null) {
           this.pinnedCol = null;
-          this.isDeadlineActive = false;
-          this.updateDeadlineSyncButton();
           this.saveState();
           this.renderRulerHighlights();
         }
@@ -2575,6 +2577,9 @@ class WTBApp {
   }
 
   selectCalendarDate(dateStr) {
+    if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+      this.exitDeadlineSelectorView();
+    }
     this.currentDate = dateStr;
     if (this.datePickerLabel) { const parts = this.parseDateString(dateStr); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
     this.closeWeekCalendar(true);
@@ -2754,11 +2759,13 @@ class WTBApp {
 
     const startInstant = window.addMinutesToInstant(baseInstant, this.pinStartMin);
     const endInstant = window.addMinutesToInstant(startInstant, this.pinDurationMin);
-    const title = `Sync: ${this.trackedZones.map(z => z.label).slice(0, 3).join(' / ')}`;
+    const isDdl = Boolean(this.isDeadlineActive);
+    const title = isDdl ? `Deadline: ${this.deadline.time} in ${this.getDeadlineTzLabel()}` : `Sync: ${this.trackedZones.map(z => z.label).slice(0, 3).join(' / ')}`;
     const url = this.getShareUrl();
 
     const ics = window.generateIcsContent(startInstant, endInstant, this.trackedZones, title, url);
-    window.downloadIcsFile('world-time-meeting.ics', ics);
+    const filename = isDdl ? 'deadline.ics' : 'world-time-meeting.ics';
+    window.downloadIcsFile(filename, ics);
 
     if (this.addToCalendarBtn) {
       const origText = this.addToCalendarBtn.innerHTML;
@@ -2794,6 +2801,9 @@ class WTBApp {
       this.dateTabsContainer.innerHTML = tabs.join('');
       this.dateTabsContainer.querySelectorAll('.date-tab').forEach(btn => {
         btn.addEventListener('click', () => {
+          if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+            this.exitDeadlineSelectorView();
+          }
           this.currentDate = btn.dataset.date;
           if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
           this.saveState();
@@ -3381,6 +3391,9 @@ class WTBApp {
           `).join('');
           this.bestSlotButtons.querySelectorAll('.slot-chip-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+              if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+                this.exitDeadlineSelectorView();
+              }
               const col = parseInt(btn.dataset.col, 10);
               this.pinnedCol = col;
               this.saveState();
@@ -3401,6 +3414,7 @@ class WTBApp {
     this.renderRulerHighlights();
     this.updateNowMarker();
     this.updateImminentDstBanner();
+    if (this.updateDeadlineCountdown) this.updateDeadlineCountdown();
 
     if (this.isFirstRender) {
       this.isFirstRender = false;
@@ -3994,6 +4008,9 @@ class WTBApp {
       }
 
       if (isDraggingRange) {
+        if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+          this.exitDeadlineSelectorView();
+        }
         const curCol = getColAtClientX(e.clientX);
         if (curCol !== null && dragStartCol !== null) {
           const minCol = Math.min(dragStartCol, curCol);
@@ -4025,6 +4042,9 @@ class WTBApp {
         this.saveState();
       } else if (dragStartCol !== null) {
         // Stationary tap selection
+        if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+          this.exitDeadlineSelectorView();
+        }
         this.pinnedCol = dragStartCol;
         this.renderRulerHighlights();
         this.saveState();
@@ -4048,6 +4068,9 @@ class WTBApp {
       if (e.target.closest('.ruler-handle, .ruler-body-drag, button, .zone-drag-handle, .sidebar-resizer')) return;
       const cell = e.target.closest('.time-cell') || e.target.closest('.hour-header-cell');
       if (cell && cell.dataset.col !== undefined) {
+        if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+          this.exitDeadlineSelectorView();
+        }
         const col = parseInt(cell.dataset.col, 10);
         this.pinnedCol = col;
         this.renderRulerHighlights();
@@ -4211,6 +4234,9 @@ class WTBApp {
   }
 
   jumpToNow() {
+    if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+      this.exitDeadlineSelectorView();
+    }
     const homeZone = this.getHomeZone();
     this.currentDate = this.getTodayDateString(homeZone.iana);
     if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
@@ -4675,7 +4701,12 @@ class WTBApp {
 
     try {
       const [y, m, d] = dateStr.split('-').map(Number);
-      const [h, min] = timeStr.split(':').map(Number);
+      let h = 23, min = 59;
+      if (timeStr && timeStr.includes(':')) {
+        const parts = timeStr.split(':').map(Number);
+        if (!isNaN(parts[0])) h = parts[0];
+        if (!isNaN(parts[1])) min = parts[1];
+      }
       if (typeof Temporal !== 'undefined' && Temporal.ZonedDateTime) {
         const zdt = Temporal.ZonedDateTime.from({
           year: y, month: m, day: d,
@@ -4691,7 +4722,7 @@ class WTBApp {
     // Fallback using Date
     try {
       const dt = new Date(`${dateStr}T${timeStr}:00Z`);
-      return { epochMilliseconds: dt.getTime() };
+      return { epochMilliseconds: isNaN(dt.getTime()) ? Date.now() : dt.getTime() };
     } catch {
       return { epochMilliseconds: Date.now() };
     }
@@ -4857,13 +4888,15 @@ class WTBApp {
       let text = '';
       if (days > 0) text = `⏰ Passed ${days}d ${hours}h ago`;
       else if (hours > 0) text = `⏰ Passed ${hours}h ${mins}m ago`;
-      else text = `⏰ Passed ${mins}m ago`;
+      else if (mins > 0) text = `⏰ Passed ${mins}m ago`;
+      else text = `⏰ Passed just now`;
 
       this.deadlineCountdownBadge.classList.add('badge-passed');
       this.deadlineCountdownBadge.textContent = text;
     }
 
     this.updateDeadlineConversionsPreview(instant);
+    this.updateDeadlinePresetActiveStates();
   }
 
   updateDeadlineConversionsPreview(instant) {
@@ -4897,6 +4930,25 @@ class WTBApp {
     this.deadlineConversionsPreview.innerHTML = chips.join('');
   }
 
+  updateDeadlinePresetActiveStates() {
+    const curDate = this.deadline.date;
+    const curTime = this.deadline.time;
+    const homeZone = this.getHomeZone();
+
+    try {
+      const todayZdt = Temporal.Now.zonedDateTimeISO(homeZone.iana);
+      document.querySelectorAll('.btn-ddl-preset-date').forEach(btn => {
+        const days = parseInt(btn.dataset.days, 10);
+        const targetDate = todayZdt.add({ days }).toPlainDate().toString();
+        btn.classList.toggle('active', curDate === targetDate);
+      });
+    } catch (_) {}
+
+    document.querySelectorAll('.btn-ddl-preset-time').forEach(btn => {
+      btn.classList.toggle('active', curTime === btn.dataset.time);
+    });
+  }
+
   showDeadlineInSelector(scrollIntoView = true) {
     const instant = this.getDeadlineInstant();
     const homeZone = this.getHomeZone();
@@ -4904,8 +4956,6 @@ class WTBApp {
     try {
       const homeZdt = Temporal.Instant.fromEpochMilliseconds(instant.epochMilliseconds).toZonedDateTimeISO(homeZone.iana);
       const targetDateStr = homeZdt.toPlainDate().toString();
-      const targetHour = homeZdt.hour;
-      const targetMin = homeZdt.minute;
 
       this.currentDate = targetDateStr;
       if (this.datePickerLabel) {
@@ -4915,8 +4965,21 @@ class WTBApp {
 
       this.render();
 
-      this.pinnedCol = targetHour;
-      this.pinStartMin = [0, 15, 30, 45].reduce((prev, curr) => Math.abs(curr - targetMin) < Math.abs(prev - targetMin) ? curr : prev);
+      const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+      const targetMs = instant.epochMilliseconds;
+
+      let bestColIdx = 0;
+      for (let i = 0; i < columnInstants.length; i++) {
+        if (targetMs >= columnInstants[i].epochMilliseconds) {
+          bestColIdx = i;
+        }
+      }
+
+      const colStartMs = columnInstants[bestColIdx].epochMilliseconds;
+      const offsetMin = Math.max(0, Math.min(59, Math.round((targetMs - colStartMs) / 60000)));
+
+      this.pinnedCol = bestColIdx;
+      this.pinStartMin = [0, 15, 30, 45].reduce((prev, curr) => Math.abs(curr - offsetMin) < Math.abs(prev - offsetMin) ? curr : prev);
       this.pinDurationMin = 60;
       this.isDeadlineActive = true;
 
