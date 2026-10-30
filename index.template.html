@@ -153,6 +153,13 @@
 
     <!-- Pinned Time Comparison Bar -->
     <div id="pinned-summary" class="pinned-summary-bar">
+      <!-- Active Deadline Indicator Banner in Selector -->
+      <div id="deadline-pinned-banner" class="deadline-pinned-banner" style="display:none;">
+        <div class="ddl-pin-badge">🎯 DEADLINE IN SELECTOR</div>
+        <span id="ddl-pin-text" class="ddl-pin-text"></span>
+        <button type="button" id="ddl-pin-dismiss-btn" class="btn-ddl-dismiss" title="Exit deadline selector view">Exit Deadline View</button>
+      </div>
+
       <!-- Meeting Duration & Shift Controls -->
       <div class="pinned-controls-row">
         <div class="pinned-ctrl-group">
@@ -237,6 +244,92 @@
         </button>
       </div>
     </div>
+
+    <!-- Deadline Countdown & Timezone Calculator -->
+    <section id="deadline-section" class="deadline-section" aria-label="Deadline Countdown & Timezone Calculator">
+      <div class="deadline-header">
+        <div class="deadline-title-group">
+          <span class="deadline-icon">⏱️</span>
+          <div class="deadline-title-col">
+            <div class="deadline-title-row">
+              <h3 class="deadline-title">Deadline Countdown</h3>
+              <span class="deadline-preview-badge">Preview</span>
+            </div>
+            <span class="deadline-subtitle">Compute time till deadline in any timezone with two-way timeline sync</span>
+          </div>
+        </div>
+        <div class="deadline-header-actions">
+          <div id="deadline-countdown-badge" class="deadline-countdown-badge badge-normal">--</div>
+          <button type="button" id="deadline-sync-toggle-btn" class="btn btn-sm btn-deadline-sync" title="Show and highlight this deadline in the timeline selector above">
+            <span class="sync-icon">📍</span>
+            <span id="deadline-sync-btn-text">Show in Selector</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="deadline-card-body">
+        <div class="deadline-inputs-grid">
+          <!-- Title / Note -->
+          <div class="deadline-field">
+            <label for="deadline-title-input" class="deadline-field-label">Deadline Name</label>
+            <input type="text" id="deadline-title-input" class="deadline-text-input" placeholder="e.g. Paper Submission, Sprint Cutoff" value="Paper Submission" />
+          </div>
+
+          <!-- Date -->
+          <div class="deadline-field">
+            <label for="deadline-date-input" class="deadline-field-label">Target Date</label>
+            <div class="deadline-input-combo">
+              <input type="date" id="deadline-date-input" class="deadline-date-input" />
+              <div class="deadline-chip-buttons">
+                <button type="button" class="btn-ddl-preset-date" data-days="0" title="Today">Today</button>
+                <button type="button" class="btn-ddl-preset-date" data-days="1" title="Tomorrow">+1d</button>
+                <button type="button" class="btn-ddl-preset-date" data-days="3" title="+3 Days">+3d</button>
+                <button type="button" class="btn-ddl-preset-date" data-days="7" title="+1 Week">+7d</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Time -->
+          <div class="deadline-field">
+            <label for="deadline-time-input" class="deadline-field-label">Target Time</label>
+            <div class="deadline-input-combo">
+              <input type="time" id="deadline-time-input" class="deadline-time-input" value="23:59" />
+              <div class="deadline-chip-buttons">
+                <button type="button" class="btn-ddl-preset-time" data-time="23:59" title="End of Day (23:59)">23:59</button>
+                <button type="button" class="btn-ddl-preset-time" data-time="17:00" title="End of Business (17:00)">17:00</button>
+                <button type="button" class="btn-ddl-preset-time" data-time="12:00" title="Noon (12:00)">12:00</button>
+                <button type="button" class="btn-ddl-preset-time" data-time="09:00" title="Morning (09:00)">09:00</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timezone -->
+          <div class="deadline-field">
+            <label for="deadline-tz-select" class="deadline-field-label">Target Timezone</label>
+            <select id="deadline-tz-select" class="deadline-tz-select"></select>
+          </div>
+        </div>
+
+        <!-- Two-Way Interaction Bar & Converted Times Preview -->
+        <div class="deadline-bar-footer">
+          <div class="deadline-sync-controls">
+            <button type="button" id="deadline-set-from-pin-btn" class="btn btn-sm btn-outline-secondary" title="Update deadline date & time from the currently selected time column in the timeline above">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v13m0 0l-4-4m4 4l4-4M4 21h16"></path>
+              </svg>
+              <span>Set from Selected Column</span>
+            </button>
+            <label class="deadline-live-sync-toggle" title="When checked, moving or dragging the timeline selector updates this deadline in real time">
+              <input type="checkbox" id="deadline-live-sync-checkbox" />
+              <span>Live sync with selector</span>
+            </label>
+          </div>
+
+          <!-- Multi-zone conversion preview chips -->
+          <div id="deadline-conversions-preview" class="deadline-conversions-list"></div>
+        </div>
+      </div>
+    </section>
 
     <!-- App Footer / Attribution -->
     <footer class="app-footer">

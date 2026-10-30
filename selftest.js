@@ -1578,6 +1578,81 @@ export async function runSelfTests() {
     assert('UI Layout Integrity Suite', false, e.message);
   }
 
+  // 60. Deadline Countdown & Two-Way Timeline Sync Suite
+  try {
+    if (window.app) {
+      const origDate = window.app.currentDate;
+      const origZones = window.app.trackedZones;
+      const origDeadline = JSON.parse(JSON.stringify(window.app.deadline || {}));
+      const origIsActive = window.app.isDeadlineActive;
+
+      // 60.1 DOM Elements Presence
+      const ddlSec = document.getElementById('deadline-section');
+      const badge = document.getElementById('deadline-countdown-badge');
+      const syncBtn = document.getElementById('deadline-sync-toggle-btn');
+      assert('Deadline section container exists in DOM', Boolean(ddlSec));
+      assert('Countdown badge exists in DOM', Boolean(badge));
+      assert('Sync button exists in DOM', Boolean(syncBtn));
+
+      // 60.2 Anywhere on Earth (AoE / UTC-12) calculation accuracy
+      window.app.deadline.date = '2026-11-15';
+      window.app.deadline.time = '23:59';
+      window.app.deadline.tz = 'Etc/GMT+12';
+      const aoeInstant = window.app.getDeadlineInstant();
+      assert('AoE 23:59 on Nov 15 corresponds to 11:59:00Z on Nov 16',
+        Boolean(aoeInstant && new Date(aoeInstant.epochMilliseconds).toISOString() === '2026-11-16T11:59:00.000Z'),
+        aoeInstant ? new Date(aoeInstant.epochMilliseconds).toISOString() : 'null');
+
+      // 60.3 Countdown formatting logic
+      window.app.updateDeadlineCountdown();
+      assert('Countdown badge displays live remaining time or passed status',
+        Boolean(badge && (badge.textContent.includes('remaining') || badge.textContent.includes('Passed'))),
+        badge ? badge.textContent : '');
+
+      // 60.4 Two-Way Link 1: Deadline -> Selector Sync
+      window.app.deadline.title = 'Test Paper Submission';
+      window.app.showDeadlineInSelector(false);
+
+      const rulerPinned = document.getElementById('ruler-pinned');
+      const topBadge = document.getElementById('ruler-top-badge');
+      const pinnedBanner = document.getElementById('deadline-pinned-banner');
+
+      assert('Deadline is active after showDeadlineInSelector', window.app.isDeadlineActive === true);
+      assert('Ruler pinned has .is-deadline-active class', Boolean(rulerPinned && rulerPinned.classList.contains('is-deadline-active')));
+      assert('Ruler top badge displays DDL target tag', Boolean(topBadge && topBadge.textContent.includes('DDL')), topBadge ? topBadge.textContent : '');
+      assert('Deadline pinned banner is visible in selector', Boolean(pinnedBanner && pinnedBanner.style.display !== 'none'));
+      assert('Deadline sync toggle button shows active state', Boolean(syncBtn && syncBtn.classList.contains('is-active')));
+
+      // 60.5 Two-Way Link 2: Selector -> Deadline Reverse Sync
+      // Set pinned column 14 (2 PM) on 2026-10-29 in New York (EDT, UTC-4) -> converts to 19:00 in Zurich (CET, UTC+1)
+      window.app.currentDate = '2026-10-29';
+      window.app.pinnedCol = 14;
+      window.app.pinStartMin = 0;
+      window.app.deadline.tz = 'Europe/Zurich';
+      window.app.setDeadlineFromSelector();
+
+      assert('Reverse sync updates deadline time to 19:00 CET for 14:00 EDT pin', window.app.deadline.time === '19:00', `Got ${window.app.deadline.time}`);
+      assert('Reverse sync updates deadline date to 2026-10-29', window.app.deadline.date === '2026-10-29', `Got ${window.app.deadline.date}`);
+
+      // 60.6 Exit Deadline View cleanly
+      window.app.exitDeadlineSelectorView();
+      assert('Exiting deadline view resets isDeadlineActive to false', window.app.isDeadlineActive === false);
+      assert('Ruler pinned removes .is-deadline-active class', Boolean(rulerPinned && !rulerPinned.classList.contains('is-deadline-active')));
+      assert('Deadline pinned banner is hidden', Boolean(pinnedBanner && pinnedBanner.style.display === 'none'));
+
+      // Restore state
+      window.app.currentDate = origDate;
+      window.app.trackedZones = origZones;
+      window.app.deadline = origDeadline;
+      window.app.isDeadlineActive = origIsActive;
+      window.app.render();
+      window.app.updateDeadlineCountdown();
+      window.app.updateDeadlineSyncButton();
+    }
+  } catch (e) {
+    assert('Deadline Countdown & Two-Way Sync Suite', false, e.message);
+  }
+
   return results;
 }
 

@@ -2326,6 +2326,377 @@ body.is-row-dragging {
   color: #b91c1c;
 }
 
+/* ==========================================================================
+   Deadline Countdown & Timezone Calculator
+   ========================================================================== */
+.deadline-section {
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.deadline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.deadline-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.deadline-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.deadline-title-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.deadline-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deadline-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.deadline-preview-badge {
+  font-size: 0.60rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.deadline-subtitle {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.deadline-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.deadline-countdown-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.deadline-countdown-badge.badge-normal {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.deadline-countdown-badge.badge-urgent {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+.deadline-countdown-badge.badge-critical {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  animation: pulse-critical 2s infinite;
+}
+
+@keyframes pulse-critical {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.deadline-countdown-badge.badge-passed {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.btn-deadline-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.btn-deadline-sync:hover {
+  background: #1d4ed8;
+}
+
+.btn-deadline-sync.is-active {
+  background: #059669 !important;
+  border-color: #047857 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+}
+
+.deadline-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deadline-inputs-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1.3fr 1.3fr 1.4fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.deadline-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.deadline-field-label {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.deadline-text-input,
+.deadline-date-input,
+.deadline-time-input,
+.deadline-tz-select {
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 0.82rem;
+  background: #ffffff;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.deadline-text-input:focus,
+.deadline-date-input:focus,
+.deadline-time-input:focus,
+.deadline-tz-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.deadline-input-combo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deadline-chip-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.btn-ddl-preset-date,
+.btn-ddl-preset-time {
+  background: #f1f5f9;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #475569;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.btn-ddl-preset-date:hover,
+.btn-ddl-preset-time:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.deadline-bar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+.deadline-sync-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.deadline-live-sync-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.deadline-live-sync-toggle input[type="checkbox"] {
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.deadline-conversions-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ddl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  color: #334155;
+}
+
+.ddl-chip.is-home {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.ddl-chip-tz {
+  font-weight: 600;
+}
+
+.ddl-chip-time {
+  font-weight: 700;
+  font-feature-settings: "tnum";
+}
+
+/* Selector Banner when Deadline is Active */
+.deadline-pinned-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-left: 4px solid #e11d48;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.80rem;
+  color: #9f1239;
+  margin-bottom: 8px;
+}
+
+.ddl-pin-badge {
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.ddl-pin-text {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.btn-ddl-dismiss {
+  background: #ffffff;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.70rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.btn-ddl-dismiss:hover {
+  background: #fee2e2;
+}
+
+/* Timeline Pinned Column when Deadline is Active */
+.ruler-pinned-column.is-deadline-active {
+  border-color: #e11d48 !important;
+  background: rgba(225, 29, 72, 0.14) !important;
+}
+
+.ruler-pinned-column.is-deadline-active .ruler-top-badge {
+  background: #e11d48 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.35) !important;
+}
+
+.ruler-pinned-column.is-deadline-active .ruler-handle-grip {
+  background: #e11d48 !important;
+}
+
 /* App Footer / Attribution */
 .app-footer {
   padding: 8px 16px;
@@ -2356,6 +2727,9 @@ body.is-row-dragging {
 
 /* Responsive Media Queries */
 @media (max-width: 860px) {
+  .deadline-inputs-grid {
+    grid-template-columns: 1fr 1fr;
+  }
   :root {
     --sidebar-width: var(--sidebar-custom-width, 210px) !important;
   }
@@ -2395,6 +2769,19 @@ body.is-row-dragging {
 }
 
 @media (max-width: 640px) {
+  .deadline-section {
+    padding: 12px 14px;
+  }
+  .deadline-inputs-grid {
+    grid-template-columns: 1fr;
+  }
+  .deadline-bar-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .deadline-sync-controls {
+    justify-content: space-between;
+  }
   :root {
     --sidebar-width: 145px !important;
   }
@@ -3118,6 +3505,13 @@ body.is-row-dragging {
 
     <!-- Pinned Time Comparison Bar -->
     <div id="pinned-summary" class="pinned-summary-bar">
+      <!-- Active Deadline Indicator Banner in Selector -->
+      <div id="deadline-pinned-banner" class="deadline-pinned-banner" style="display:none;">
+        <div class="ddl-pin-badge">🎯 DEADLINE IN SELECTOR</div>
+        <span id="ddl-pin-text" class="ddl-pin-text"></span>
+        <button type="button" id="ddl-pin-dismiss-btn" class="btn-ddl-dismiss" title="Exit deadline selector view">Exit Deadline View</button>
+      </div>
+
       <!-- Meeting Duration & Shift Controls -->
       <div class="pinned-controls-row">
         <div class="pinned-ctrl-group">
@@ -3202,6 +3596,92 @@ body.is-row-dragging {
         </button>
       </div>
     </div>
+
+    <!-- Deadline Countdown & Timezone Calculator -->
+    <section id="deadline-section" class="deadline-section" aria-label="Deadline Countdown & Timezone Calculator">
+      <div class="deadline-header">
+        <div class="deadline-title-group">
+          <span class="deadline-icon">⏱️</span>
+          <div class="deadline-title-col">
+            <div class="deadline-title-row">
+              <h3 class="deadline-title">Deadline Countdown</h3>
+              <span class="deadline-preview-badge">Preview</span>
+            </div>
+            <span class="deadline-subtitle">Compute time till deadline in any timezone with two-way timeline sync</span>
+          </div>
+        </div>
+        <div class="deadline-header-actions">
+          <div id="deadline-countdown-badge" class="deadline-countdown-badge badge-normal">--</div>
+          <button type="button" id="deadline-sync-toggle-btn" class="btn btn-sm btn-deadline-sync" title="Show and highlight this deadline in the timeline selector above">
+            <span class="sync-icon">📍</span>
+            <span id="deadline-sync-btn-text">Show in Selector</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="deadline-card-body">
+        <div class="deadline-inputs-grid">
+          <!-- Title / Note -->
+          <div class="deadline-field">
+            <label for="deadline-title-input" class="deadline-field-label">Deadline Name</label>
+            <input type="text" id="deadline-title-input" class="deadline-text-input" placeholder="e.g. Paper Submission, Sprint Cutoff" value="Paper Submission" />
+          </div>
+
+          <!-- Date -->
+          <div class="deadline-field">
+            <label for="deadline-date-input" class="deadline-field-label">Target Date</label>
+            <div class="deadline-input-combo">
+              <input type="date" id="deadline-date-input" class="deadline-date-input" />
+              <div class="deadline-chip-buttons">
+                <button type="button" class="btn-ddl-preset-date" data-days="0" title="Today">Today</button>
+                <button type="button" class="btn-ddl-preset-date" data-days="1" title="Tomorrow">+1d</button>
+                <button type="button" class="btn-ddl-preset-date" data-days="3" title="+3 Days">+3d</button>
+                <button type="button" class="btn-ddl-preset-date" data-days="7" title="+1 Week">+7d</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Time -->
+          <div class="deadline-field">
+            <label for="deadline-time-input" class="deadline-field-label">Target Time</label>
+            <div class="deadline-input-combo">
+              <input type="time" id="deadline-time-input" class="deadline-time-input" value="23:59" />
+              <div class="deadline-chip-buttons">
+                <button type="button" class="btn-ddl-preset-time" data-time="23:59" title="End of Day (23:59)">23:59</button>
+                <button type="button" class="btn-ddl-preset-time" data-time="17:00" title="End of Business (17:00)">17:00</button>
+                <button type="button" class="btn-ddl-preset-time" data-time="12:00" title="Noon (12:00)">12:00</button>
+                <button type="button" class="btn-ddl-preset-time" data-time="09:00" title="Morning (09:00)">09:00</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timezone -->
+          <div class="deadline-field">
+            <label for="deadline-tz-select" class="deadline-field-label">Target Timezone</label>
+            <select id="deadline-tz-select" class="deadline-tz-select"></select>
+          </div>
+        </div>
+
+        <!-- Two-Way Interaction Bar & Converted Times Preview -->
+        <div class="deadline-bar-footer">
+          <div class="deadline-sync-controls">
+            <button type="button" id="deadline-set-from-pin-btn" class="btn btn-sm btn-outline-secondary" title="Update deadline date & time from the currently selected time column in the timeline above">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v13m0 0l-4-4m4 4l4-4M4 21h16"></path>
+              </svg>
+              <span>Set from Selected Column</span>
+            </button>
+            <label class="deadline-live-sync-toggle" title="When checked, moving or dragging the timeline selector updates this deadline in real time">
+              <input type="checkbox" id="deadline-live-sync-checkbox" />
+              <span>Live sync with selector</span>
+            </label>
+          </div>
+
+          <!-- Multi-zone conversion preview chips -->
+          <div id="deadline-conversions-preview" class="deadline-conversions-list"></div>
+        </div>
+      </div>
+    </section>
 
     <!-- App Footer / Attribution -->
     <footer class="app-footer">
@@ -5509,6 +5989,81 @@ async function runSelfTests() {
     assert('UI Layout Integrity Suite', false, e.message);
   }
 
+  // 60. Deadline Countdown & Two-Way Timeline Sync Suite
+  try {
+    if (window.app) {
+      const origDate = window.app.currentDate;
+      const origZones = window.app.trackedZones;
+      const origDeadline = JSON.parse(JSON.stringify(window.app.deadline || {}));
+      const origIsActive = window.app.isDeadlineActive;
+
+      // 60.1 DOM Elements Presence
+      const ddlSec = document.getElementById('deadline-section');
+      const badge = document.getElementById('deadline-countdown-badge');
+      const syncBtn = document.getElementById('deadline-sync-toggle-btn');
+      assert('Deadline section container exists in DOM', Boolean(ddlSec));
+      assert('Countdown badge exists in DOM', Boolean(badge));
+      assert('Sync button exists in DOM', Boolean(syncBtn));
+
+      // 60.2 Anywhere on Earth (AoE / UTC-12) calculation accuracy
+      window.app.deadline.date = '2026-11-15';
+      window.app.deadline.time = '23:59';
+      window.app.deadline.tz = 'Etc/GMT+12';
+      const aoeInstant = window.app.getDeadlineInstant();
+      assert('AoE 23:59 on Nov 15 corresponds to 11:59:00Z on Nov 16',
+        Boolean(aoeInstant && new Date(aoeInstant.epochMilliseconds).toISOString() === '2026-11-16T11:59:00.000Z'),
+        aoeInstant ? new Date(aoeInstant.epochMilliseconds).toISOString() : 'null');
+
+      // 60.3 Countdown formatting logic
+      window.app.updateDeadlineCountdown();
+      assert('Countdown badge displays live remaining time or passed status',
+        Boolean(badge && (badge.textContent.includes('remaining') || badge.textContent.includes('Passed'))),
+        badge ? badge.textContent : '');
+
+      // 60.4 Two-Way Link 1: Deadline -> Selector Sync
+      window.app.deadline.title = 'Test Paper Submission';
+      window.app.showDeadlineInSelector(false);
+
+      const rulerPinned = document.getElementById('ruler-pinned');
+      const topBadge = document.getElementById('ruler-top-badge');
+      const pinnedBanner = document.getElementById('deadline-pinned-banner');
+
+      assert('Deadline is active after showDeadlineInSelector', window.app.isDeadlineActive === true);
+      assert('Ruler pinned has .is-deadline-active class', Boolean(rulerPinned && rulerPinned.classList.contains('is-deadline-active')));
+      assert('Ruler top badge displays DDL target tag', Boolean(topBadge && topBadge.textContent.includes('DDL')), topBadge ? topBadge.textContent : '');
+      assert('Deadline pinned banner is visible in selector', Boolean(pinnedBanner && pinnedBanner.style.display !== 'none'));
+      assert('Deadline sync toggle button shows active state', Boolean(syncBtn && syncBtn.classList.contains('is-active')));
+
+      // 60.5 Two-Way Link 2: Selector -> Deadline Reverse Sync
+      // Set pinned column 14 (2 PM) on 2026-10-29 in New York (EDT, UTC-4) -> converts to 19:00 in Zurich (CET, UTC+1)
+      window.app.currentDate = '2026-10-29';
+      window.app.pinnedCol = 14;
+      window.app.pinStartMin = 0;
+      window.app.deadline.tz = 'Europe/Zurich';
+      window.app.setDeadlineFromSelector();
+
+      assert('Reverse sync updates deadline time to 19:00 CET for 14:00 EDT pin', window.app.deadline.time === '19:00', `Got ${window.app.deadline.time}`);
+      assert('Reverse sync updates deadline date to 2026-10-29', window.app.deadline.date === '2026-10-29', `Got ${window.app.deadline.date}`);
+
+      // 60.6 Exit Deadline View cleanly
+      window.app.exitDeadlineSelectorView();
+      assert('Exiting deadline view resets isDeadlineActive to false', window.app.isDeadlineActive === false);
+      assert('Ruler pinned removes .is-deadline-active class', Boolean(rulerPinned && !rulerPinned.classList.contains('is-deadline-active')));
+      assert('Deadline pinned banner is hidden', Boolean(pinnedBanner && pinnedBanner.style.display === 'none'));
+
+      // Restore state
+      window.app.currentDate = origDate;
+      window.app.trackedZones = origZones;
+      window.app.deadline = origDeadline;
+      window.app.isDeadlineActive = origIsActive;
+      window.app.render();
+      window.app.updateDeadlineCountdown();
+      window.app.updateDeadlineSyncButton();
+    }
+  } catch (e) {
+    assert('Deadline Countdown & Two-Way Sync Suite', false, e.message);
+  }
+
   return results;
 }
 
@@ -6892,6 +7447,14 @@ class WTBApp {
     this.pinStartMin = 0;
     this.pinDurationMin = 60;
     this.isFirstRender = true;
+    this.isDeadlineActive = false;
+    this.deadline = {
+      title: 'Paper Submission',
+      date: '',
+      time: '23:59',
+      tz: 'Etc/GMT+12',
+      isLiveSync: false
+    };
 
     // Week Calendar state
     this.isWeekCalendarOpen = false;
@@ -6913,6 +7476,7 @@ class WTBApp {
       try { this.updateLiveClocks(); } catch (e) { console.warn('Ticker error (updateLiveClocks):', e); }
       try { this.updateTopLiveClock(); } catch (e) { console.warn('Ticker error (updateTopLiveClock):', e); }
       try { this.updateNowMarker(); } catch (e) { console.warn('Ticker error (updateNowMarker):', e); }
+      try { this.updateDeadlineCountdown(); } catch (e) { console.warn('Ticker error (updateDeadlineCountdown):', e); }
     }, 1000);
 
     // Auto-scroll timeline so current hour or pinned hour is centered
@@ -7433,6 +7997,7 @@ class WTBApp {
     this.updatePinControlsUI();
     this.initSidebarResizer();
     this.initRulerHandles();
+    this.initDeadlineFeature();
   }
 
   initSidebarResizer() {
@@ -7708,6 +8273,8 @@ class WTBApp {
     // Clear Pin
     this.clearPinBtn.addEventListener('click', () => {
       this.pinnedCol = null;
+      this.isDeadlineActive = false;
+      this.updateDeadlineSyncButton();
       this.rulerPinned.classList.remove('visible');
       this.pinnedSummary.classList.remove('visible');
       this.saveState();
@@ -7811,6 +8378,8 @@ class WTBApp {
       } else if (e.key === 'Escape') {
         if (this.pinnedCol !== null) {
           this.pinnedCol = null;
+          this.isDeadlineActive = false;
+          this.updateDeadlineSyncButton();
           this.saveState();
           this.renderRulerHighlights();
         }
@@ -9587,15 +10156,27 @@ class WTBApp {
         this.rulerPinned.style.width = `${pinWidth}px`;
         this.rulerPinned.classList.add('visible');
 
+        this.rulerPinned.classList.toggle('is-deadline-active', Boolean(this.isDeadlineActive));
+
         if (this.rulerBadgeTime) {
-          const dMin = this.pinDurationMin || 60;
-          let label = `${dMin}m`;
-          if (dMin >= 60) {
-            const h = Math.floor(dMin / 60);
-            const m = dMin % 60;
-            label = m === 0 ? `${h}h` : `${h}h ${m}m`;
+          if (this.isDeadlineActive) {
+            this.rulerBadgeTime.textContent = '🎯 DDL';
+            if (this.rulerTopBadge) {
+              this.rulerTopBadge.title = `Deadline: ${this.deadline.title} (${this.deadline.time} in ${this.getDeadlineTzLabel()})`;
+            }
+          } else {
+            const dMin = this.pinDurationMin || 60;
+            let label = `${dMin}m`;
+            if (dMin >= 60) {
+              const h = Math.floor(dMin / 60);
+              const m = dMin % 60;
+              label = m === 0 ? `${h}h` : `${h}h ${m}m`;
+            }
+            this.rulerBadgeTime.textContent = label;
+            if (this.rulerTopBadge) {
+              this.rulerTopBadge.title = 'Meeting duration';
+            }
           }
-          this.rulerBadgeTime.textContent = label;
         }
 
         if (this.rulerTopBadge) {
@@ -9987,6 +10568,21 @@ class WTBApp {
       this.pinnedSentenceText.textContent = this.generatePinnedSentence(startInstant, endInstant);
     }
 
+    if (this.deadlinePinnedBanner) {
+      if (this.isDeadlineActive) {
+        this.deadlinePinnedBanner.style.display = 'flex';
+        if (this.ddlPinText) {
+          this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.escapeDeadlineHtml(this.deadline.title)}</strong> (${this.deadline.time} in ${this.getDeadlineTzLabel()})`;
+        }
+      } else {
+        this.deadlinePinnedBanner.style.display = 'none';
+      }
+    }
+
+    if (this.isDeadlineActive && this.deadline.isLiveSync) {
+      this.syncDeadlineFromCurrentPin();
+    }
+
     this.updatePinControlsUI();
     this.pinnedSummary.classList.add('visible');
   }
@@ -9994,6 +10590,501 @@ class WTBApp {
   generatePinnedSentence(instant, endInstant = null) {
     return window.generatePinnedSentence(instant, this.trackedZones, this.format, this.getHomeZone(), endInstant);
   }
+
+  // ==========================================================================
+  // Deadline Countdown & Timezone Calculator Implementation
+  // ==========================================================================
+
+  escapeDeadlineHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[m]);
+  }
+
+  initDeadlineFeature() {
+    this.deadlineSection = document.getElementById('deadline-section');
+    this.deadlineTitleInput = document.getElementById('deadline-title-input');
+    this.deadlineDateInput = document.getElementById('deadline-date-input');
+    this.deadlineTimeInput = document.getElementById('deadline-time-input');
+    this.deadlineTzSelect = document.getElementById('deadline-tz-select');
+    this.deadlineCountdownBadge = document.getElementById('deadline-countdown-badge');
+    this.deadlineSyncToggleBtn = document.getElementById('deadline-sync-toggle-btn');
+    this.deadlineSyncBtnText = document.getElementById('deadline-sync-btn-text');
+    this.deadlineSetFromPinBtn = document.getElementById('deadline-set-from-pin-btn');
+    this.deadlineLiveSyncCheckbox = document.getElementById('deadline-live-sync-checkbox');
+    this.deadlineConversionsPreview = document.getElementById('deadline-conversions-preview');
+    this.deadlinePinnedBanner = document.getElementById('deadline-pinned-banner');
+    this.ddlPinText = document.getElementById('ddl-pin-text');
+    this.ddlPinDismissBtn = document.getElementById('ddl-pin-dismiss-btn');
+
+    this.loadDeadlineState();
+    this.populateDeadlineTzSelect();
+    this.bindDeadlineEvents();
+    this.updateDeadlineCountdown();
+    this.updateDeadlineSyncButton();
+  }
+
+  loadDeadlineState() {
+    try {
+      const saved = localStorage.getItem('wtb_deadline_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          this.deadline = { ...this.deadline, ...parsed };
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load deadline state:', e);
+    }
+
+    // Default target date: 7 days from now if empty or invalid
+    if (!this.deadline.date) {
+      try {
+        const homeZone = this.getHomeZone();
+        const todayZdt = Temporal.Now.zonedDateTimeISO(homeZone.iana);
+        this.deadline.date = todayZdt.add({ days: 7 }).toPlainDate().toString();
+      } catch {
+        const d = new Date();
+        d.setDate(d.getDate() + 7);
+        this.deadline.date = d.toISOString().split('T')[0];
+      }
+    }
+
+    if (this.deadlineTitleInput) this.deadlineTitleInput.value = this.deadline.title || 'Paper Submission';
+    if (this.deadlineDateInput) this.deadlineDateInput.value = this.deadline.date;
+    if (this.deadlineTimeInput) this.deadlineTimeInput.value = this.deadline.time || '23:59';
+    if (this.deadlineLiveSyncCheckbox) this.deadlineLiveSyncCheckbox.checked = Boolean(this.deadline.isLiveSync);
+  }
+
+  saveDeadlineState() {
+    try {
+      localStorage.setItem('wtb_deadline_v1', JSON.stringify(this.deadline));
+    } catch (e) {
+      console.warn('Could not save deadline state:', e);
+    }
+  }
+
+  populateDeadlineTzSelect() {
+    if (!this.deadlineTzSelect) return;
+    const homeZone = this.getHomeZone();
+    const curVal = this.deadline.tz || 'Etc/GMT+12';
+
+    const groups = [
+      {
+        label: 'Special & Active',
+        options: [
+          { value: 'Etc/GMT+12', label: 'Anywhere on Earth (AoE, UTC-12)' },
+          { value: homeZone.iana, label: `Home: ${homeZone.label} (${homeZone.iana})` },
+          { value: 'UTC', label: 'UTC / GMT (Coordinated Universal Time)' }
+        ]
+      }
+    ];
+
+    // Add other tracked zones if not already present
+    const trackedOptions = [];
+    if (this.trackedZones) {
+      this.trackedZones.forEach(z => {
+        if (z.iana !== homeZone.iana && z.iana !== 'Etc/GMT+12' && z.iana !== 'UTC') {
+          trackedOptions.push({ value: z.iana, label: `Tracked: ${z.label} (${z.iana})` });
+        }
+      });
+    }
+    if (trackedOptions.length > 0) {
+      groups.push({ label: 'Tracked Team Zones', options: trackedOptions });
+    }
+
+    // Common Global Hubs
+    groups.push({
+      label: 'Global Regions',
+      options: [
+        { value: 'America/Los_Angeles', label: 'US Pacific (Los Angeles / PT)' },
+        { value: 'America/Denver', label: 'US Mountain (Denver / MT)' },
+        { value: 'America/Chicago', label: 'US Central (Chicago / CT)' },
+        { value: 'America/New_York', label: 'US Eastern (New York / ET)' },
+        { value: 'Europe/London', label: 'UK (London / GMT/BST)' },
+        { value: 'Europe/Berlin', label: 'Central Europe (Berlin, Zurich / CET)' },
+        { value: 'Asia/Kolkata', label: 'India (Kolkata / IST)' },
+        { value: 'Asia/Shanghai', label: 'China / Singapore (Beijing / CST)' },
+        { value: 'Asia/Tokyo', label: 'Japan (Tokyo / JST)' },
+        { value: 'Australia/Sydney', label: 'Australia (Sydney / AEST)' }
+      ]
+    });
+
+    let html = '';
+    for (const g of groups) {
+      html += `<optgroup label="${g.label}">`;
+      for (const opt of g.options) {
+        const sel = opt.value === curVal ? 'selected' : '';
+        html += `<option value="${opt.value}" ${sel}>${opt.label}</option>`;
+      }
+      html += `</optgroup>`;
+    }
+    this.deadlineTzSelect.innerHTML = html;
+  }
+
+  getDeadlineTzLabel(tz = null) {
+    const targetTz = tz || this.deadline.tz;
+    if (targetTz === 'Etc/GMT+12') return 'AoE (UTC-12)';
+    if (targetTz === 'UTC') return 'UTC';
+    const match = this.trackedZones?.find(z => z.iana === targetTz);
+    if (match) return match.label;
+    const parts = targetTz.split('/');
+    return parts[parts.length - 1].replace(/_/g, ' ');
+  }
+
+  getDeadlineInstant() {
+    const dateStr = this.deadline.date || this.currentDate;
+    const timeStr = this.deadline.time || '23:59';
+    const tz = this.deadline.tz || 'Etc/GMT+12';
+
+    try {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const [h, min] = timeStr.split(':').map(Number);
+      if (typeof Temporal !== 'undefined' && Temporal.ZonedDateTime) {
+        const zdt = Temporal.ZonedDateTime.from({
+          year: y, month: m, day: d,
+          hour: h, minute: min, second: 0,
+          timeZone: tz
+        });
+        return zdt.toInstant();
+      }
+    } catch (e) {
+      console.warn('Temporal parse error in getDeadlineInstant:', e);
+    }
+
+    // Fallback using Date
+    try {
+      const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+      return { epochMilliseconds: dt.getTime() };
+    } catch {
+      return { epochMilliseconds: Date.now() };
+    }
+  }
+
+  bindDeadlineEvents() {
+    if (this.deadlineTitleInput) {
+      this.deadlineTitleInput.addEventListener('input', (e) => {
+        this.deadline.title = e.target.value.trim() || 'Deadline';
+        this.saveDeadlineState();
+        this.updateDeadlineCountdown();
+        if (this.isDeadlineActive) {
+          this.renderRulerHighlights();
+          if (this.ddlPinText) {
+            this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.escapeDeadlineHtml(this.deadline.title)}</strong> (${this.deadline.time} in ${this.getDeadlineTzLabel()})`;
+          }
+        }
+      });
+    }
+
+    if (this.deadlineDateInput) {
+      this.deadlineDateInput.addEventListener('change', (e) => {
+        if (e.target.value) {
+          this.deadline.date = e.target.value;
+          this.saveDeadlineState();
+          this.updateDeadlineCountdown();
+          if (this.isDeadlineActive) {
+            this.showDeadlineInSelector(false);
+          }
+        }
+      });
+    }
+
+    if (this.deadlineTimeInput) {
+      this.deadlineTimeInput.addEventListener('change', (e) => {
+        if (e.target.value) {
+          this.deadline.time = e.target.value;
+          this.saveDeadlineState();
+          this.updateDeadlineCountdown();
+          if (this.isDeadlineActive) {
+            this.showDeadlineInSelector(false);
+          }
+        }
+      });
+    }
+
+    if (this.deadlineTzSelect) {
+      this.deadlineTzSelect.addEventListener('change', (e) => {
+        this.deadline.tz = e.target.value;
+        this.saveDeadlineState();
+        this.updateDeadlineCountdown();
+        if (this.isDeadlineActive) {
+          this.showDeadlineInSelector(false);
+        }
+      });
+    }
+
+    // Quick Date Presets
+    document.querySelectorAll('.btn-ddl-preset-date').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const days = parseInt(btn.dataset.days, 10);
+        try {
+          const homeZone = this.getHomeZone();
+          const todayZdt = Temporal.Now.zonedDateTimeISO(homeZone.iana);
+          const targetDate = todayZdt.add({ days }).toPlainDate().toString();
+          this.deadline.date = targetDate;
+          if (this.deadlineDateInput) this.deadlineDateInput.value = targetDate;
+          this.saveDeadlineState();
+          this.updateDeadlineCountdown();
+          if (this.isDeadlineActive) this.showDeadlineInSelector(true);
+        } catch (e) {
+          console.warn('Preset date error:', e);
+        }
+      });
+    });
+
+    // Quick Time Presets
+    document.querySelectorAll('.btn-ddl-preset-time').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const time = btn.dataset.time;
+        this.deadline.time = time;
+        if (this.deadlineTimeInput) this.deadlineTimeInput.value = time;
+        this.saveDeadlineState();
+        this.updateDeadlineCountdown();
+        if (this.isDeadlineActive) this.showDeadlineInSelector(false);
+      });
+    });
+
+    // Toggle Deadline in Selector
+    if (this.deadlineSyncToggleBtn) {
+      this.deadlineSyncToggleBtn.addEventListener('click', () => {
+        if (this.isDeadlineActive) {
+          this.exitDeadlineSelectorView();
+        } else {
+          this.showDeadlineInSelector(true);
+        }
+      });
+    }
+
+    // Set Deadline from Current Selection
+    if (this.deadlineSetFromPinBtn) {
+      this.deadlineSetFromPinBtn.addEventListener('click', () => {
+        this.setDeadlineFromSelector();
+      });
+    }
+
+    // Live Sync Checkbox
+    if (this.deadlineLiveSyncCheckbox) {
+      this.deadlineLiveSyncCheckbox.addEventListener('change', (e) => {
+        this.deadline.isLiveSync = e.target.checked;
+        this.saveDeadlineState();
+        if (this.deadline.isLiveSync && !this.isDeadlineActive) {
+          this.showDeadlineInSelector(true);
+        }
+      });
+    }
+
+    // Dismiss button on pinned banner
+    if (this.ddlPinDismissBtn) {
+      this.ddlPinDismissBtn.addEventListener('click', () => {
+        this.exitDeadlineSelectorView();
+      });
+    }
+  }
+
+  updateDeadlineCountdown() {
+    if (!this.deadlineCountdownBadge) return;
+    const instant = this.getDeadlineInstant();
+    const nowMs = Date.now();
+    const targetMs = instant.epochMilliseconds;
+    const diffMs = targetMs - nowMs;
+
+    this.deadlineCountdownBadge.className = 'deadline-countdown-badge';
+
+    if (diffMs > 0) {
+      const days = Math.floor(diffMs / 86400000);
+      const hours = Math.floor((diffMs % 86400000) / 3600000);
+      const mins = Math.floor((diffMs % 3600000) / 60000);
+      const secs = Math.floor((diffMs % 60000) / 1000);
+
+      let text = '';
+      if (days > 1) {
+        text = `⏳ ${days}d ${hours}h remaining`;
+        this.deadlineCountdownBadge.classList.add('badge-normal');
+      } else if (days === 1) {
+        text = `⏳ 1d ${hours}h ${mins}m remaining`;
+        this.deadlineCountdownBadge.classList.add('badge-normal');
+      } else if (hours >= 2) {
+        text = `⚠️ ${hours}h ${mins}m ${secs}s remaining`;
+        this.deadlineCountdownBadge.classList.add('badge-urgent');
+      } else {
+        text = `🚨 ${hours}h ${mins}m ${secs}s remaining`;
+        this.deadlineCountdownBadge.classList.add('badge-critical');
+      }
+      this.deadlineCountdownBadge.textContent = text;
+    } else {
+      const pastMs = Math.abs(diffMs);
+      const days = Math.floor(pastMs / 86400000);
+      const hours = Math.floor((pastMs % 86400000) / 3600000);
+      const mins = Math.floor((pastMs % 3600000) / 60000);
+
+      let text = '';
+      if (days > 0) text = `⏰ Passed ${days}d ${hours}h ago`;
+      else if (hours > 0) text = `⏰ Passed ${hours}h ${mins}m ago`;
+      else text = `⏰ Passed ${mins}m ago`;
+
+      this.deadlineCountdownBadge.classList.add('badge-passed');
+      this.deadlineCountdownBadge.textContent = text;
+    }
+
+    this.updateDeadlineConversionsPreview(instant);
+  }
+
+  updateDeadlineConversionsPreview(instant) {
+    if (!this.deadlineConversionsPreview) return;
+    const homeZone = this.getHomeZone();
+    const zonesToShow = [homeZone, ...(this.trackedZones || []).filter(z => z.iana !== homeZone.iana).slice(0, 3)];
+
+    const formatTimeInZone = (tz) => {
+      try {
+        const zdt = Temporal.Instant.fromEpochMilliseconds(instant.epochMilliseconds).toZonedDateTimeISO(tz);
+        const dayStr = zdt.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const timeStr = zdt.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: this.format === '12' });
+        const abbrev = window.getTimezoneAbbrev ? window.getTimezoneAbbrev(tz, instant) : '';
+        return `${dayStr} · ${timeStr}${abbrev ? ' ' + abbrev : ''}`;
+      } catch {
+        return new Date(instant.epochMilliseconds).toLocaleString();
+      }
+    };
+
+    const chips = zonesToShow.map(z => {
+      const isHome = z.iana === homeZone.iana;
+      const formatted = formatTimeInZone(z.iana);
+      return `
+        <div class="ddl-chip ${isHome ? 'is-home' : ''}">
+          <span class="ddl-chip-tz">${z.label}${isHome ? ' (Home)' : ''}:</span>
+          <strong class="ddl-chip-time">${formatted}</strong>
+        </div>
+      `;
+    });
+
+    this.deadlineConversionsPreview.innerHTML = chips.join('');
+  }
+
+  showDeadlineInSelector(scrollIntoView = true) {
+    const instant = this.getDeadlineInstant();
+    const homeZone = this.getHomeZone();
+
+    try {
+      const homeZdt = Temporal.Instant.fromEpochMilliseconds(instant.epochMilliseconds).toZonedDateTimeISO(homeZone.iana);
+      const targetDateStr = homeZdt.toPlainDate().toString();
+      const targetHour = homeZdt.hour;
+      const targetMin = homeZdt.minute;
+
+      this.currentDate = targetDateStr;
+      if (this.datePickerLabel) {
+        const parts = this.parseDateString(targetDateStr);
+        this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`;
+      }
+
+      this.render();
+
+      this.pinnedCol = targetHour;
+      this.pinStartMin = [0, 15, 30, 45].reduce((prev, curr) => Math.abs(curr - targetMin) < Math.abs(prev - targetMin) ? curr : prev);
+      this.pinDurationMin = 60;
+      this.isDeadlineActive = true;
+
+      this.saveState();
+      this.renderRulerHighlights();
+      this.updateDeadlineSyncButton();
+
+      if (scrollIntoView) {
+        this.scrollToActiveTime('smooth');
+      }
+    } catch (e) {
+      console.warn('Error in showDeadlineInSelector:', e);
+    }
+  }
+
+  exitDeadlineSelectorView() {
+    this.isDeadlineActive = false;
+    this.updateDeadlineSyncButton();
+    if (this.deadlinePinnedBanner) {
+      this.deadlinePinnedBanner.style.display = 'none';
+    }
+    this.renderRulerHighlights();
+  }
+
+  updateDeadlineSyncButton() {
+    if (!this.deadlineSyncToggleBtn) return;
+    if (this.isDeadlineActive) {
+      this.deadlineSyncToggleBtn.classList.add('is-active');
+      if (this.deadlineSyncBtnText) this.deadlineSyncBtnText.textContent = '✓ Active in Selector';
+      this.deadlineSyncToggleBtn.title = 'Click to exit deadline selector view';
+    } else {
+      this.deadlineSyncToggleBtn.classList.remove('is-active');
+      if (this.deadlineSyncBtnText) this.deadlineSyncBtnText.textContent = 'Show in Selector';
+      this.deadlineSyncToggleBtn.title = 'Show and highlight this deadline in the timeline selector above';
+    }
+  }
+
+  syncDeadlineFromCurrentPin() {
+    if (this.pinnedCol === null) return;
+    const homeZone = this.getHomeZone();
+    const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+    const baseInstant = columnInstants[this.pinnedCol];
+    if (!baseInstant) return;
+
+    const currentInstant = window.addMinutesToInstant(baseInstant, this.pinStartMin || 0);
+
+    try {
+      const ddlZdt = Temporal.Instant.fromEpochMilliseconds(currentInstant.epochMilliseconds).toZonedDateTimeISO(this.deadline.tz);
+      const newDate = ddlZdt.toPlainDate().toString();
+      const newTime = `${String(ddlZdt.hour).padStart(2, '0')}:${String(ddlZdt.minute).padStart(2, '0')}`;
+
+      if (this.deadline.date !== newDate || this.deadline.time !== newTime) {
+        this.deadline.date = newDate;
+        this.deadline.time = newTime;
+        if (this.deadlineDateInput) this.deadlineDateInput.value = newDate;
+        if (this.deadlineTimeInput) this.deadlineTimeInput.value = newTime;
+        this.saveDeadlineState();
+        this.updateDeadlineCountdown();
+      }
+    } catch (e) {
+      console.warn('syncDeadlineFromCurrentPin error:', e);
+    }
+  }
+
+  setDeadlineFromSelector() {
+    const homeZone = this.getHomeZone();
+    let currentInstant = null;
+
+    if (this.pinnedCol !== null) {
+      const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+      const baseInstant = columnInstants[this.pinnedCol];
+      if (baseInstant) {
+        currentInstant = window.addMinutesToInstant(baseInstant, this.pinStartMin || 0);
+      }
+    }
+
+    if (!currentInstant) {
+      currentInstant = { epochMilliseconds: Date.now() };
+    }
+
+    try {
+      const ddlZdt = Temporal.Instant.fromEpochMilliseconds(currentInstant.epochMilliseconds).toZonedDateTimeISO(this.deadline.tz);
+      const newDate = ddlZdt.toPlainDate().toString();
+      const newTime = `${String(ddlZdt.hour).padStart(2, '0')}:${String(ddlZdt.minute).padStart(2, '0')}`;
+
+      this.deadline.date = newDate;
+      this.deadline.time = newTime;
+      if (this.deadlineDateInput) this.deadlineDateInput.value = newDate;
+      if (this.deadlineTimeInput) this.deadlineTimeInput.value = newTime;
+
+      this.saveDeadlineState();
+      this.updateDeadlineCountdown();
+
+      if (this.deadlineSetFromPinBtn) {
+        const origText = this.deadlineSetFromPinBtn.innerHTML;
+        this.deadlineSetFromPinBtn.innerHTML = `<span>✓ Set to ${newDate} ${newTime}</span>`;
+        setTimeout(() => {
+          this.deadlineSetFromPinBtn.innerHTML = origText;
+        }, 1800);
+      }
+    } catch (e) {
+      console.warn('setDeadlineFromSelector error:', e);
+    }
+  }
+
 
   copySentenceToClipboard() {
     if (!this.pinnedSentenceText) return;

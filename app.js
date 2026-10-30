@@ -1372,6 +1372,14 @@ class WTBApp {
     this.pinStartMin = 0;
     this.pinDurationMin = 60;
     this.isFirstRender = true;
+    this.isDeadlineActive = false;
+    this.deadline = {
+      title: 'Paper Submission',
+      date: '',
+      time: '23:59',
+      tz: 'Etc/GMT+12',
+      isLiveSync: false
+    };
 
     // Week Calendar state
     this.isWeekCalendarOpen = false;
@@ -1393,6 +1401,7 @@ class WTBApp {
       try { this.updateLiveClocks(); } catch (e) { console.warn('Ticker error (updateLiveClocks):', e); }
       try { this.updateTopLiveClock(); } catch (e) { console.warn('Ticker error (updateTopLiveClock):', e); }
       try { this.updateNowMarker(); } catch (e) { console.warn('Ticker error (updateNowMarker):', e); }
+      try { this.updateDeadlineCountdown(); } catch (e) { console.warn('Ticker error (updateDeadlineCountdown):', e); }
     }, 1000);
 
     // Auto-scroll timeline so current hour or pinned hour is centered
@@ -1913,6 +1922,7 @@ class WTBApp {
     this.updatePinControlsUI();
     this.initSidebarResizer();
     this.initRulerHandles();
+    this.initDeadlineFeature();
   }
 
   initSidebarResizer() {
@@ -2188,6 +2198,8 @@ class WTBApp {
     // Clear Pin
     this.clearPinBtn.addEventListener('click', () => {
       this.pinnedCol = null;
+      this.isDeadlineActive = false;
+      this.updateDeadlineSyncButton();
       this.rulerPinned.classList.remove('visible');
       this.pinnedSummary.classList.remove('visible');
       this.saveState();
@@ -2291,6 +2303,8 @@ class WTBApp {
       } else if (e.key === 'Escape') {
         if (this.pinnedCol !== null) {
           this.pinnedCol = null;
+          this.isDeadlineActive = false;
+          this.updateDeadlineSyncButton();
           this.saveState();
           this.renderRulerHighlights();
         }
@@ -4067,15 +4081,27 @@ class WTBApp {
         this.rulerPinned.style.width = `${pinWidth}px`;
         this.rulerPinned.classList.add('visible');
 
+        this.rulerPinned.classList.toggle('is-deadline-active', Boolean(this.isDeadlineActive));
+
         if (this.rulerBadgeTime) {
-          const dMin = this.pinDurationMin || 60;
-          let label = `${dMin}m`;
-          if (dMin >= 60) {
-            const h = Math.floor(dMin / 60);
-            const m = dMin % 60;
-            label = m === 0 ? `${h}h` : `${h}h ${m}m`;
+          if (this.isDeadlineActive) {
+            this.rulerBadgeTime.textContent = '🎯 DDL';
+            if (this.rulerTopBadge) {
+              this.rulerTopBadge.title = `Deadline: ${this.deadline.title} (${this.deadline.time} in ${this.getDeadlineTzLabel()})`;
+            }
+          } else {
+            const dMin = this.pinDurationMin || 60;
+            let label = `${dMin}m`;
+            if (dMin >= 60) {
+              const h = Math.floor(dMin / 60);
+              const m = dMin % 60;
+              label = m === 0 ? `${h}h` : `${h}h ${m}m`;
+            }
+            this.rulerBadgeTime.textContent = label;
+            if (this.rulerTopBadge) {
+              this.rulerTopBadge.title = 'Meeting duration';
+            }
           }
-          this.rulerBadgeTime.textContent = label;
         }
 
         if (this.rulerTopBadge) {
@@ -4467,6 +4493,21 @@ class WTBApp {
       this.pinnedSentenceText.textContent = this.generatePinnedSentence(startInstant, endInstant);
     }
 
+    if (this.deadlinePinnedBanner) {
+      if (this.isDeadlineActive) {
+        this.deadlinePinnedBanner.style.display = 'flex';
+        if (this.ddlPinText) {
+          this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.escapeDeadlineHtml(this.deadline.title)}</strong> (${this.deadline.time} in ${this.getDeadlineTzLabel()})`;
+        }
+      } else {
+        this.deadlinePinnedBanner.style.display = 'none';
+      }
+    }
+
+    if (this.isDeadlineActive && this.deadline.isLiveSync) {
+      this.syncDeadlineFromCurrentPin();
+    }
+
     this.updatePinControlsUI();
     this.pinnedSummary.classList.add('visible');
   }
@@ -4474,6 +4515,501 @@ class WTBApp {
   generatePinnedSentence(instant, endInstant = null) {
     return window.generatePinnedSentence(instant, this.trackedZones, this.format, this.getHomeZone(), endInstant);
   }
+
+  // ==========================================================================
+  // Deadline Countdown & Timezone Calculator Implementation
+  // ==========================================================================
+
+  escapeDeadlineHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[m]);
+  }
+
+  initDeadlineFeature() {
+    this.deadlineSection = document.getElementById('deadline-section');
+    this.deadlineTitleInput = document.getElementById('deadline-title-input');
+    this.deadlineDateInput = document.getElementById('deadline-date-input');
+    this.deadlineTimeInput = document.getElementById('deadline-time-input');
+    this.deadlineTzSelect = document.getElementById('deadline-tz-select');
+    this.deadlineCountdownBadge = document.getElementById('deadline-countdown-badge');
+    this.deadlineSyncToggleBtn = document.getElementById('deadline-sync-toggle-btn');
+    this.deadlineSyncBtnText = document.getElementById('deadline-sync-btn-text');
+    this.deadlineSetFromPinBtn = document.getElementById('deadline-set-from-pin-btn');
+    this.deadlineLiveSyncCheckbox = document.getElementById('deadline-live-sync-checkbox');
+    this.deadlineConversionsPreview = document.getElementById('deadline-conversions-preview');
+    this.deadlinePinnedBanner = document.getElementById('deadline-pinned-banner');
+    this.ddlPinText = document.getElementById('ddl-pin-text');
+    this.ddlPinDismissBtn = document.getElementById('ddl-pin-dismiss-btn');
+
+    this.loadDeadlineState();
+    this.populateDeadlineTzSelect();
+    this.bindDeadlineEvents();
+    this.updateDeadlineCountdown();
+    this.updateDeadlineSyncButton();
+  }
+
+  loadDeadlineState() {
+    try {
+      const saved = localStorage.getItem('wtb_deadline_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          this.deadline = { ...this.deadline, ...parsed };
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load deadline state:', e);
+    }
+
+    // Default target date: 7 days from now if empty or invalid
+    if (!this.deadline.date) {
+      try {
+        const homeZone = this.getHomeZone();
+        const todayZdt = Temporal.Now.zonedDateTimeISO(homeZone.iana);
+        this.deadline.date = todayZdt.add({ days: 7 }).toPlainDate().toString();
+      } catch {
+        const d = new Date();
+        d.setDate(d.getDate() + 7);
+        this.deadline.date = d.toISOString().split('T')[0];
+      }
+    }
+
+    if (this.deadlineTitleInput) this.deadlineTitleInput.value = this.deadline.title || 'Paper Submission';
+    if (this.deadlineDateInput) this.deadlineDateInput.value = this.deadline.date;
+    if (this.deadlineTimeInput) this.deadlineTimeInput.value = this.deadline.time || '23:59';
+    if (this.deadlineLiveSyncCheckbox) this.deadlineLiveSyncCheckbox.checked = Boolean(this.deadline.isLiveSync);
+  }
+
+  saveDeadlineState() {
+    try {
+      localStorage.setItem('wtb_deadline_v1', JSON.stringify(this.deadline));
+    } catch (e) {
+      console.warn('Could not save deadline state:', e);
+    }
+  }
+
+  populateDeadlineTzSelect() {
+    if (!this.deadlineTzSelect) return;
+    const homeZone = this.getHomeZone();
+    const curVal = this.deadline.tz || 'Etc/GMT+12';
+
+    const groups = [
+      {
+        label: 'Special & Active',
+        options: [
+          { value: 'Etc/GMT+12', label: 'Anywhere on Earth (AoE, UTC-12)' },
+          { value: homeZone.iana, label: `Home: ${homeZone.label} (${homeZone.iana})` },
+          { value: 'UTC', label: 'UTC / GMT (Coordinated Universal Time)' }
+        ]
+      }
+    ];
+
+    // Add other tracked zones if not already present
+    const trackedOptions = [];
+    if (this.trackedZones) {
+      this.trackedZones.forEach(z => {
+        if (z.iana !== homeZone.iana && z.iana !== 'Etc/GMT+12' && z.iana !== 'UTC') {
+          trackedOptions.push({ value: z.iana, label: `Tracked: ${z.label} (${z.iana})` });
+        }
+      });
+    }
+    if (trackedOptions.length > 0) {
+      groups.push({ label: 'Tracked Team Zones', options: trackedOptions });
+    }
+
+    // Common Global Hubs
+    groups.push({
+      label: 'Global Regions',
+      options: [
+        { value: 'America/Los_Angeles', label: 'US Pacific (Los Angeles / PT)' },
+        { value: 'America/Denver', label: 'US Mountain (Denver / MT)' },
+        { value: 'America/Chicago', label: 'US Central (Chicago / CT)' },
+        { value: 'America/New_York', label: 'US Eastern (New York / ET)' },
+        { value: 'Europe/London', label: 'UK (London / GMT/BST)' },
+        { value: 'Europe/Berlin', label: 'Central Europe (Berlin, Zurich / CET)' },
+        { value: 'Asia/Kolkata', label: 'India (Kolkata / IST)' },
+        { value: 'Asia/Shanghai', label: 'China / Singapore (Beijing / CST)' },
+        { value: 'Asia/Tokyo', label: 'Japan (Tokyo / JST)' },
+        { value: 'Australia/Sydney', label: 'Australia (Sydney / AEST)' }
+      ]
+    });
+
+    let html = '';
+    for (const g of groups) {
+      html += `<optgroup label="${g.label}">`;
+      for (const opt of g.options) {
+        const sel = opt.value === curVal ? 'selected' : '';
+        html += `<option value="${opt.value}" ${sel}>${opt.label}</option>`;
+      }
+      html += `</optgroup>`;
+    }
+    this.deadlineTzSelect.innerHTML = html;
+  }
+
+  getDeadlineTzLabel(tz = null) {
+    const targetTz = tz || this.deadline.tz;
+    if (targetTz === 'Etc/GMT+12') return 'AoE (UTC-12)';
+    if (targetTz === 'UTC') return 'UTC';
+    const match = this.trackedZones?.find(z => z.iana === targetTz);
+    if (match) return match.label;
+    const parts = targetTz.split('/');
+    return parts[parts.length - 1].replace(/_/g, ' ');
+  }
+
+  getDeadlineInstant() {
+    const dateStr = this.deadline.date || this.currentDate;
+    const timeStr = this.deadline.time || '23:59';
+    const tz = this.deadline.tz || 'Etc/GMT+12';
+
+    try {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const [h, min] = timeStr.split(':').map(Number);
+      if (typeof Temporal !== 'undefined' && Temporal.ZonedDateTime) {
+        const zdt = Temporal.ZonedDateTime.from({
+          year: y, month: m, day: d,
+          hour: h, minute: min, second: 0,
+          timeZone: tz
+        });
+        return zdt.toInstant();
+      }
+    } catch (e) {
+      console.warn('Temporal parse error in getDeadlineInstant:', e);
+    }
+
+    // Fallback using Date
+    try {
+      const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+      return { epochMilliseconds: dt.getTime() };
+    } catch {
+      return { epochMilliseconds: Date.now() };
+    }
+  }
+
+  bindDeadlineEvents() {
+    if (this.deadlineTitleInput) {
+      this.deadlineTitleInput.addEventListener('input', (e) => {
+        this.deadline.title = e.target.value.trim() || 'Deadline';
+        this.saveDeadlineState();
+        this.updateDeadlineCountdown();
+        if (this.isDeadlineActive) {
+          this.renderRulerHighlights();
+          if (this.ddlPinText) {
+            this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.escapeDeadlineHtml(this.deadline.title)}</strong> (${this.deadline.time} in ${this.getDeadlineTzLabel()})`;
+          }
+        }
+      });
+    }
+
+    if (this.deadlineDateInput) {
+      this.deadlineDateInput.addEventListener('change', (e) => {
+        if (e.target.value) {
+          this.deadline.date = e.target.value;
+          this.saveDeadlineState();
+          this.updateDeadlineCountdown();
+          if (this.isDeadlineActive) {
+            this.showDeadlineInSelector(false);
+          }
+        }
+      });
+    }
+
+    if (this.deadlineTimeInput) {
+      this.deadlineTimeInput.addEventListener('change', (e) => {
+        if (e.target.value) {
+          this.deadline.time = e.target.value;
+          this.saveDeadlineState();
+          this.updateDeadlineCountdown();
+          if (this.isDeadlineActive) {
+            this.showDeadlineInSelector(false);
+          }
+        }
+      });
+    }
+
+    if (this.deadlineTzSelect) {
+      this.deadlineTzSelect.addEventListener('change', (e) => {
+        this.deadline.tz = e.target.value;
+        this.saveDeadlineState();
+        this.updateDeadlineCountdown();
+        if (this.isDeadlineActive) {
+          this.showDeadlineInSelector(false);
+        }
+      });
+    }
+
+    // Quick Date Presets
+    document.querySelectorAll('.btn-ddl-preset-date').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const days = parseInt(btn.dataset.days, 10);
+        try {
+          const homeZone = this.getHomeZone();
+          const todayZdt = Temporal.Now.zonedDateTimeISO(homeZone.iana);
+          const targetDate = todayZdt.add({ days }).toPlainDate().toString();
+          this.deadline.date = targetDate;
+          if (this.deadlineDateInput) this.deadlineDateInput.value = targetDate;
+          this.saveDeadlineState();
+          this.updateDeadlineCountdown();
+          if (this.isDeadlineActive) this.showDeadlineInSelector(true);
+        } catch (e) {
+          console.warn('Preset date error:', e);
+        }
+      });
+    });
+
+    // Quick Time Presets
+    document.querySelectorAll('.btn-ddl-preset-time').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const time = btn.dataset.time;
+        this.deadline.time = time;
+        if (this.deadlineTimeInput) this.deadlineTimeInput.value = time;
+        this.saveDeadlineState();
+        this.updateDeadlineCountdown();
+        if (this.isDeadlineActive) this.showDeadlineInSelector(false);
+      });
+    });
+
+    // Toggle Deadline in Selector
+    if (this.deadlineSyncToggleBtn) {
+      this.deadlineSyncToggleBtn.addEventListener('click', () => {
+        if (this.isDeadlineActive) {
+          this.exitDeadlineSelectorView();
+        } else {
+          this.showDeadlineInSelector(true);
+        }
+      });
+    }
+
+    // Set Deadline from Current Selection
+    if (this.deadlineSetFromPinBtn) {
+      this.deadlineSetFromPinBtn.addEventListener('click', () => {
+        this.setDeadlineFromSelector();
+      });
+    }
+
+    // Live Sync Checkbox
+    if (this.deadlineLiveSyncCheckbox) {
+      this.deadlineLiveSyncCheckbox.addEventListener('change', (e) => {
+        this.deadline.isLiveSync = e.target.checked;
+        this.saveDeadlineState();
+        if (this.deadline.isLiveSync && !this.isDeadlineActive) {
+          this.showDeadlineInSelector(true);
+        }
+      });
+    }
+
+    // Dismiss button on pinned banner
+    if (this.ddlPinDismissBtn) {
+      this.ddlPinDismissBtn.addEventListener('click', () => {
+        this.exitDeadlineSelectorView();
+      });
+    }
+  }
+
+  updateDeadlineCountdown() {
+    if (!this.deadlineCountdownBadge) return;
+    const instant = this.getDeadlineInstant();
+    const nowMs = Date.now();
+    const targetMs = instant.epochMilliseconds;
+    const diffMs = targetMs - nowMs;
+
+    this.deadlineCountdownBadge.className = 'deadline-countdown-badge';
+
+    if (diffMs > 0) {
+      const days = Math.floor(diffMs / 86400000);
+      const hours = Math.floor((diffMs % 86400000) / 3600000);
+      const mins = Math.floor((diffMs % 3600000) / 60000);
+      const secs = Math.floor((diffMs % 60000) / 1000);
+
+      let text = '';
+      if (days > 1) {
+        text = `⏳ ${days}d ${hours}h remaining`;
+        this.deadlineCountdownBadge.classList.add('badge-normal');
+      } else if (days === 1) {
+        text = `⏳ 1d ${hours}h ${mins}m remaining`;
+        this.deadlineCountdownBadge.classList.add('badge-normal');
+      } else if (hours >= 2) {
+        text = `⚠️ ${hours}h ${mins}m ${secs}s remaining`;
+        this.deadlineCountdownBadge.classList.add('badge-urgent');
+      } else {
+        text = `🚨 ${hours}h ${mins}m ${secs}s remaining`;
+        this.deadlineCountdownBadge.classList.add('badge-critical');
+      }
+      this.deadlineCountdownBadge.textContent = text;
+    } else {
+      const pastMs = Math.abs(diffMs);
+      const days = Math.floor(pastMs / 86400000);
+      const hours = Math.floor((pastMs % 86400000) / 3600000);
+      const mins = Math.floor((pastMs % 3600000) / 60000);
+
+      let text = '';
+      if (days > 0) text = `⏰ Passed ${days}d ${hours}h ago`;
+      else if (hours > 0) text = `⏰ Passed ${hours}h ${mins}m ago`;
+      else text = `⏰ Passed ${mins}m ago`;
+
+      this.deadlineCountdownBadge.classList.add('badge-passed');
+      this.deadlineCountdownBadge.textContent = text;
+    }
+
+    this.updateDeadlineConversionsPreview(instant);
+  }
+
+  updateDeadlineConversionsPreview(instant) {
+    if (!this.deadlineConversionsPreview) return;
+    const homeZone = this.getHomeZone();
+    const zonesToShow = [homeZone, ...(this.trackedZones || []).filter(z => z.iana !== homeZone.iana).slice(0, 3)];
+
+    const formatTimeInZone = (tz) => {
+      try {
+        const zdt = Temporal.Instant.fromEpochMilliseconds(instant.epochMilliseconds).toZonedDateTimeISO(tz);
+        const dayStr = zdt.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const timeStr = zdt.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: this.format === '12' });
+        const abbrev = window.getTimezoneAbbrev ? window.getTimezoneAbbrev(tz, instant) : '';
+        return `${dayStr} · ${timeStr}${abbrev ? ' ' + abbrev : ''}`;
+      } catch {
+        return new Date(instant.epochMilliseconds).toLocaleString();
+      }
+    };
+
+    const chips = zonesToShow.map(z => {
+      const isHome = z.iana === homeZone.iana;
+      const formatted = formatTimeInZone(z.iana);
+      return `
+        <div class="ddl-chip ${isHome ? 'is-home' : ''}">
+          <span class="ddl-chip-tz">${z.label}${isHome ? ' (Home)' : ''}:</span>
+          <strong class="ddl-chip-time">${formatted}</strong>
+        </div>
+      `;
+    });
+
+    this.deadlineConversionsPreview.innerHTML = chips.join('');
+  }
+
+  showDeadlineInSelector(scrollIntoView = true) {
+    const instant = this.getDeadlineInstant();
+    const homeZone = this.getHomeZone();
+
+    try {
+      const homeZdt = Temporal.Instant.fromEpochMilliseconds(instant.epochMilliseconds).toZonedDateTimeISO(homeZone.iana);
+      const targetDateStr = homeZdt.toPlainDate().toString();
+      const targetHour = homeZdt.hour;
+      const targetMin = homeZdt.minute;
+
+      this.currentDate = targetDateStr;
+      if (this.datePickerLabel) {
+        const parts = this.parseDateString(targetDateStr);
+        this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`;
+      }
+
+      this.render();
+
+      this.pinnedCol = targetHour;
+      this.pinStartMin = [0, 15, 30, 45].reduce((prev, curr) => Math.abs(curr - targetMin) < Math.abs(prev - targetMin) ? curr : prev);
+      this.pinDurationMin = 60;
+      this.isDeadlineActive = true;
+
+      this.saveState();
+      this.renderRulerHighlights();
+      this.updateDeadlineSyncButton();
+
+      if (scrollIntoView) {
+        this.scrollToActiveTime('smooth');
+      }
+    } catch (e) {
+      console.warn('Error in showDeadlineInSelector:', e);
+    }
+  }
+
+  exitDeadlineSelectorView() {
+    this.isDeadlineActive = false;
+    this.updateDeadlineSyncButton();
+    if (this.deadlinePinnedBanner) {
+      this.deadlinePinnedBanner.style.display = 'none';
+    }
+    this.renderRulerHighlights();
+  }
+
+  updateDeadlineSyncButton() {
+    if (!this.deadlineSyncToggleBtn) return;
+    if (this.isDeadlineActive) {
+      this.deadlineSyncToggleBtn.classList.add('is-active');
+      if (this.deadlineSyncBtnText) this.deadlineSyncBtnText.textContent = '✓ Active in Selector';
+      this.deadlineSyncToggleBtn.title = 'Click to exit deadline selector view';
+    } else {
+      this.deadlineSyncToggleBtn.classList.remove('is-active');
+      if (this.deadlineSyncBtnText) this.deadlineSyncBtnText.textContent = 'Show in Selector';
+      this.deadlineSyncToggleBtn.title = 'Show and highlight this deadline in the timeline selector above';
+    }
+  }
+
+  syncDeadlineFromCurrentPin() {
+    if (this.pinnedCol === null) return;
+    const homeZone = this.getHomeZone();
+    const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+    const baseInstant = columnInstants[this.pinnedCol];
+    if (!baseInstant) return;
+
+    const currentInstant = window.addMinutesToInstant(baseInstant, this.pinStartMin || 0);
+
+    try {
+      const ddlZdt = Temporal.Instant.fromEpochMilliseconds(currentInstant.epochMilliseconds).toZonedDateTimeISO(this.deadline.tz);
+      const newDate = ddlZdt.toPlainDate().toString();
+      const newTime = `${String(ddlZdt.hour).padStart(2, '0')}:${String(ddlZdt.minute).padStart(2, '0')}`;
+
+      if (this.deadline.date !== newDate || this.deadline.time !== newTime) {
+        this.deadline.date = newDate;
+        this.deadline.time = newTime;
+        if (this.deadlineDateInput) this.deadlineDateInput.value = newDate;
+        if (this.deadlineTimeInput) this.deadlineTimeInput.value = newTime;
+        this.saveDeadlineState();
+        this.updateDeadlineCountdown();
+      }
+    } catch (e) {
+      console.warn('syncDeadlineFromCurrentPin error:', e);
+    }
+  }
+
+  setDeadlineFromSelector() {
+    const homeZone = this.getHomeZone();
+    let currentInstant = null;
+
+    if (this.pinnedCol !== null) {
+      const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
+      const baseInstant = columnInstants[this.pinnedCol];
+      if (baseInstant) {
+        currentInstant = window.addMinutesToInstant(baseInstant, this.pinStartMin || 0);
+      }
+    }
+
+    if (!currentInstant) {
+      currentInstant = { epochMilliseconds: Date.now() };
+    }
+
+    try {
+      const ddlZdt = Temporal.Instant.fromEpochMilliseconds(currentInstant.epochMilliseconds).toZonedDateTimeISO(this.deadline.tz);
+      const newDate = ddlZdt.toPlainDate().toString();
+      const newTime = `${String(ddlZdt.hour).padStart(2, '0')}:${String(ddlZdt.minute).padStart(2, '0')}`;
+
+      this.deadline.date = newDate;
+      this.deadline.time = newTime;
+      if (this.deadlineDateInput) this.deadlineDateInput.value = newDate;
+      if (this.deadlineTimeInput) this.deadlineTimeInput.value = newTime;
+
+      this.saveDeadlineState();
+      this.updateDeadlineCountdown();
+
+      if (this.deadlineSetFromPinBtn) {
+        const origText = this.deadlineSetFromPinBtn.innerHTML;
+        this.deadlineSetFromPinBtn.innerHTML = `<span>✓ Set to ${newDate} ${newTime}</span>`;
+        setTimeout(() => {
+          this.deadlineSetFromPinBtn.innerHTML = origText;
+        }, 1800);
+      }
+    } catch (e) {
+      console.warn('setDeadlineFromSelector error:', e);
+    }
+  }
+
 
   copySentenceToClipboard() {
     if (!this.pinnedSentenceText) return;
