@@ -155,9 +155,9 @@
     <div id="pinned-summary" class="pinned-summary-bar">
       <!-- Active Deadline Indicator Banner in Selector -->
       <div id="deadline-pinned-banner" class="deadline-pinned-banner" style="display:none;">
-        <div class="ddl-pin-badge">🎯 DEADLINE IN SELECTOR</div>
+        <div class="ddl-pin-badge">🎯 Deadline</div>
         <span id="ddl-pin-text" class="ddl-pin-text"></span>
-        <button type="button" id="ddl-pin-dismiss-btn" class="btn-ddl-dismiss" title="Exit deadline selector view">Exit Deadline View</button>
+        <button type="button" id="ddl-pin-dismiss-btn" class="btn-ddl-dismiss" title="Exit deadline selector view">Exit View</button>
       </div>
 
       <!-- Meeting Duration & Shift Controls -->
@@ -240,7 +240,7 @@
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-          <span id="copy-sentence-label">Copy Description</span>
+          <span id="copy-sentence-label">Copy Summary</span>
         </button>
       </div>
     </div>
@@ -253,14 +253,13 @@
           <div class="deadline-title-col">
             <div class="deadline-title-row">
               <h3 class="deadline-title">Deadline Countdown</h3>
-              <span class="deadline-preview-badge">Preview</span>
             </div>
-            <span class="deadline-subtitle">Compute time till deadline in any timezone with two-way timeline sync</span>
+            <span class="deadline-subtitle">Countdown synced with timeline</span>
           </div>
         </div>
         <div class="deadline-header-actions">
           <div id="deadline-countdown-badge" class="deadline-countdown-badge badge-normal">--</div>
-          <button type="button" id="deadline-sync-toggle-btn" class="btn btn-sm btn-deadline-sync" title="Show and highlight this deadline in the timeline selector above">
+          <button type="button" id="deadline-sync-toggle-btn" class="btn btn-sm btn-deadline-sync" title="View deadline in timeline selector">
             <span class="sync-icon">📍</span>
             <span id="deadline-sync-btn-text">Show in Selector</span>
           </button>
@@ -307,15 +306,15 @@
         <!-- Two-Way Interaction Bar & Converted Times Preview -->
         <div class="deadline-bar-footer">
           <div class="deadline-sync-controls">
-            <button type="button" id="deadline-set-from-pin-btn" class="btn btn-sm btn-outline-secondary" title="Update deadline date & time from the currently selected time column in the timeline above">
+            <button type="button" id="deadline-set-from-pin-btn" class="btn btn-sm btn-outline-secondary" title="Set deadline from selected timeline column">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 3v13m0 0l-4-4m4 4l4-4M4 21h16"></path>
               </svg>
-              <span>Set from Selected Column</span>
+              <span>Set from Selection</span>
             </button>
-            <label class="deadline-live-sync-toggle" title="When checked, moving or dragging the timeline selector updates this deadline in real time">
+            <label class="deadline-live-sync-toggle" title="Automatically update deadline when moving selection">
               <input type="checkbox" id="deadline-live-sync-checkbox" />
-              <span>Live sync with selector</span>
+              <span>Live sync</span>
             </label>
           </div>
 

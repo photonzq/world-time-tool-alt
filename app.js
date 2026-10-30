@@ -3361,7 +3361,7 @@ class WTBApp {
       });
       this.overlapBanner.style.display = 'flex';
       this.overlapBanner.innerHTML = `
-        <span>★ <strong>Mutual Business Hours Available:</strong> ${overlapHours.join(', ')} (${homeZone.label} time)</span>
+        <span>★ <strong>Mutual business hours:</strong> ${overlapHours.join(', ')} (${homeZone.label})</span>
       `;
       if (this.bestSlotBar) this.bestSlotBar.style.display = 'none';
     } else {
@@ -3371,12 +3371,12 @@ class WTBApp {
       if (this.bestSlotBar && topSlots.length > 0 && this.trackedZones.length > 1) {
         this.bestSlotBar.style.display = 'flex';
         if (this.bestSlotText) {
-          this.bestSlotText.textContent = 'No mutual 9–5 hours found across all zones. Least-disruptive slots:';
+          this.bestSlotText.textContent = 'No mutual 9–5 overlap. Best slots:';
         }
         if (this.bestSlotButtons) {
           this.bestSlotButtons.innerHTML = topSlots.map(s => `
-            <button type="button" class="slot-chip-btn" data-col="${s.colIdx}" title="Jump to ${s.hourLabel} (Score ${s.score})">
-              ★ ${s.hourLabel} <span style="font-size:0.7rem; opacity:0.8; font-weight:normal;">(cost ${s.score})</span>
+            <button type="button" class="slot-chip-btn" data-col="${s.colIdx}" title="Jump to ${s.hourLabel} (score ${s.score})">
+              ★ ${s.hourLabel}
             </button>
           `).join('');
           this.bestSlotButtons.querySelectorAll('.slot-chip-btn').forEach(btn => {
@@ -4502,7 +4502,7 @@ class WTBApp {
         this.deadlinePinnedBanner.style.display = 'flex';
         if (this.ddlPinText) {
           const tzLabel = this.getDeadlineTzLabel();
-          this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.deadline.time} in ${tzLabel}</strong> (${this.deadline.date})`;
+          this.ddlPinText.innerHTML = `<strong>${this.deadline.time} in ${tzLabel}</strong> · ${this.deadline.date}`;
         }
       } else {
         this.deadlinePinnedBanner.style.display = 'none';
@@ -4707,7 +4707,7 @@ class WTBApp {
           this.renderRulerHighlights();
           if (this.ddlPinText) {
             const tzLabel = this.getDeadlineTzLabel();
-            this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.deadline.time} in ${tzLabel}</strong> (${this.deadline.date})`;
+            this.ddlPinText.innerHTML = `<strong>${this.deadline.time} in ${tzLabel}</strong> · ${this.deadline.date}`;
           }
         }
       });
@@ -4946,11 +4946,11 @@ class WTBApp {
     if (this.isDeadlineActive) {
       this.deadlineSyncToggleBtn.classList.add('is-active');
       if (this.deadlineSyncBtnText) this.deadlineSyncBtnText.textContent = '✓ Active in Selector';
-      this.deadlineSyncToggleBtn.title = 'Click to exit deadline selector view';
+      this.deadlineSyncToggleBtn.title = 'Exit deadline view';
     } else {
       this.deadlineSyncToggleBtn.classList.remove('is-active');
       if (this.deadlineSyncBtnText) this.deadlineSyncBtnText.textContent = 'Show in Selector';
-      this.deadlineSyncToggleBtn.title = 'Show and highlight this deadline in the timeline selector above';
+      this.deadlineSyncToggleBtn.title = 'View deadline in timeline selector';
     }
   }
 
@@ -5012,7 +5012,7 @@ class WTBApp {
 
       if (this.deadlineSetFromPinBtn) {
         const origText = this.deadlineSetFromPinBtn.innerHTML;
-        this.deadlineSetFromPinBtn.innerHTML = `<span>✓ Set to ${newDate} ${newTime}</span>`;
+        this.deadlineSetFromPinBtn.innerHTML = `<span>✓ Set to ${newTime} (${newDate})</span>`;
         setTimeout(() => {
           this.deadlineSetFromPinBtn.innerHTML = origText;
         }, 1800);
@@ -5033,7 +5033,7 @@ class WTBApp {
       if (this.copySentenceLabel) this.copySentenceLabel.textContent = 'Copied!';
       setTimeout(() => {
         if (this.copySentenceBtn) this.copySentenceBtn.classList.remove('copied');
-        if (this.copySentenceLabel) this.copySentenceLabel.textContent = 'Copy Description';
+        if (this.copySentenceLabel) this.copySentenceLabel.textContent = 'Copy Summary';
       }, 2000);
     };
 
