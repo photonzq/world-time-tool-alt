@@ -260,7 +260,7 @@
         <div class="deadline-header-actions">
           <div id="deadline-countdown-badge" class="deadline-countdown-badge badge-normal">--</div>
           <button type="button" id="deadline-sync-toggle-btn" class="btn btn-sm btn-deadline-sync" title="View deadline in timeline selector">
-            <span class="sync-icon">📍</span>
+            <span class="sync-icon">🎯</span>
             <span id="deadline-sync-btn-text">Show in Selector</span>
           </button>
         </div>
@@ -299,7 +299,10 @@
           <!-- Timezone -->
           <div class="deadline-field">
             <label for="deadline-tz-select" class="deadline-field-label">Target Timezone</label>
-            <select id="deadline-tz-select" class="deadline-tz-select"></select>
+            <div class="deadline-input-combo">
+              <select id="deadline-tz-select" class="deadline-tz-select"></select>
+              <div id="deadline-tz-shortcuts" class="deadline-chip-buttons"></div>
+            </div>
           </div>
         </div>
 

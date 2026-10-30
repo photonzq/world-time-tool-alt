@@ -2160,10 +2160,21 @@ class WTBApp {
       };
 
       copyToClipboard(shareUrl).then(() => {
-        const originalText = this.copyLinkBtn.innerHTML;
-        this.copyLinkBtn.innerHTML = `✓ Copied!`;
-        setTimeout(() => {
-          this.copyLinkBtn.innerHTML = originalText;
+        if (this._copyLinkTimer) clearTimeout(this._copyLinkTimer);
+        const fullSpan = this.copyLinkBtn.querySelector('.btn-text-full');
+        const shortSpan = this.copyLinkBtn.querySelector('.btn-text-short');
+        const origFull = fullSpan ? fullSpan.textContent : 'Link to this view';
+        const origShort = shortSpan ? shortSpan.textContent : 'Link';
+
+        this.copyLinkBtn.classList.add('copied');
+        if (fullSpan) fullSpan.textContent = 'Link copied!';
+        if (shortSpan) shortSpan.textContent = 'Copied!';
+
+        this._copyLinkTimer = setTimeout(() => {
+          this.copyLinkBtn.classList.remove('copied');
+          if (fullSpan) fullSpan.textContent = origFull;
+          if (shortSpan) shortSpan.textContent = origShort;
+          this._copyLinkTimer = null;
         }, 1800);
       }).catch(err => {
         console.warn('Copy link error:', err);
@@ -2747,6 +2758,15 @@ class WTBApp {
       this.pinPresetSegments.querySelectorAll('.pin-preset-btn').forEach(btn => {
         btn.classList.toggle('active', parseInt(btn.dataset.dur, 10) === this.pinDurationMin);
       });
+    }
+
+    if (this.pinLenDec) {
+      this.pinLenDec.disabled = (this.pinDurationMin <= 15);
+      this.pinLenDec.classList.toggle('disabled', this.pinDurationMin <= 15);
+    }
+    if (this.pinLenInc) {
+      this.pinLenInc.disabled = (this.pinDurationMin >= 1440);
+      this.pinLenInc.classList.toggle('disabled', this.pinDurationMin >= 1440);
     }
   }
 
@@ -4568,6 +4588,7 @@ class WTBApp {
     this.deadlineSyncBtnText = document.getElementById('deadline-sync-btn-text');
     this.deadlineSetFromPinBtn = document.getElementById('deadline-set-from-pin-btn');
     this.deadlineLiveSyncCheckbox = document.getElementById('deadline-live-sync-checkbox');
+    this.deadlineTzShortcuts = document.getElementById('deadline-tz-shortcuts');
     this.deadlineConversionsPreview = document.getElementById('deadline-conversions-preview');
     this.deadlinePinnedBanner = document.getElementById('deadline-pinned-banner');
     this.ddlPinText = document.getElementById('ddl-pin-text');
@@ -4575,6 +4596,7 @@ class WTBApp {
 
     this.loadDeadlineState();
     this.populateDeadlineTzSelect();
+    this.populateDeadlineTzShortcuts();
     this.bindDeadlineEvents();
     this.updateDeadlineCountdown();
     this.updateDeadlineSyncButton();
@@ -4683,6 +4705,36 @@ class WTBApp {
     this.deadlineTzSelect.innerHTML = html;
   }
 
+  populateDeadlineTzShortcuts() {
+    if (!this.deadlineTzShortcuts) return;
+    const homeZone = this.getHomeZone();
+    const curVal = (this.deadline.tz && this.deadline.tz !== 'Etc/GMT+12') ? this.deadline.tz : homeZone.iana;
+
+    const shortcuts = [
+      { tz: homeZone.iana, label: 'Home' },
+      { tz: 'UTC', label: 'UTC' }
+    ];
+
+    if (this.trackedZones) {
+      this.trackedZones.forEach(z => {
+        if (z.iana !== homeZone.iana && z.iana !== 'Etc/GMT+12' && z.iana !== 'UTC') {
+          if (shortcuts.length < 5) {
+            let short = z.label.split(',')[0].trim();
+            if (short.length > 8) short = short.slice(0, 7) + '…';
+            shortcuts.push({ tz: z.iana, label: short });
+          }
+        }
+      });
+    }
+
+    const html = shortcuts.map(s => {
+      const active = s.tz === curVal ? 'active' : '';
+      return `<button type="button" class="btn-ddl-preset-tz ${active}" data-tz="${s.tz}" title="Switch target timezone to ${s.label}">${s.label}</button>`;
+    }).join('');
+
+    this.deadlineTzShortcuts.innerHTML = html;
+  }
+
   getDeadlineTzLabel(tz = null) {
     const targetTz = tz || this.deadline.tz || (this.getHomeZone ? this.getHomeZone().iana : 'UTC');
     if (targetTz === 'UTC') return 'UTC';
@@ -4775,8 +4827,60 @@ class WTBApp {
         this.deadline.tz = e.target.value;
         this.saveDeadlineState();
         this.updateDeadlineCountdown();
+        this.updateDeadlinePresetActiveStates();
         if (this.isDeadlineActive) {
           this.showDeadlineInSelector(false);
+        }
+      });
+    }
+
+    // Quick Timezone Shortcut Chips
+    if (this.deadlineTzShortcuts) {
+      this.deadlineTzShortcuts.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-ddl-preset-tz');
+        if (!btn) return;
+        const targetTz = btn.dataset.tz;
+        if (!targetTz) return;
+        this.deadline.tz = targetTz;
+        if (this.deadlineTzSelect) this.deadlineTzSelect.value = targetTz;
+        this.saveDeadlineState();
+        this.updateDeadlineCountdown();
+        this.updateDeadlinePresetActiveStates();
+        if (this.isDeadlineActive) this.showDeadlineInSelector(false);
+      });
+    }
+
+    // Interactive Conversion Chips (Click to copy converted time)
+    if (this.deadlineConversionsPreview) {
+      this.deadlineConversionsPreview.addEventListener('click', (e) => {
+        const chip = e.target.closest('.ddl-chip');
+        if (!chip) return;
+        const copyText = chip.dataset.copy;
+        if (!copyText) return;
+        const fallbackCopy = (text) => {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          } catch (_) {}
+        };
+        const onSuccess = () => {
+          chip.classList.add('copied');
+          setTimeout(() => chip.classList.remove('copied'), 1200);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(copyText).then(onSuccess).catch(() => {
+            fallbackCopy(copyText);
+            onSuccess();
+          });
+        } else {
+          fallbackCopy(copyText);
+          onSuccess();
         }
       });
     }
@@ -4920,7 +5024,7 @@ class WTBApp {
       const isHome = z.iana === homeZone.iana;
       const formatted = formatTimeInZone(z.iana);
       return `
-        <div class="ddl-chip ${isHome ? 'is-home' : ''}">
+        <div class="ddl-chip ${isHome ? 'is-home' : ''}" data-copy="${z.label}: ${formatted}" title="Click to copy time in ${z.label}">
           <span class="ddl-chip-tz">${z.label}${isHome ? ' (Home)' : ''}:</span>
           <strong class="ddl-chip-time">${formatted}</strong>
         </div>
@@ -4947,6 +5051,12 @@ class WTBApp {
     document.querySelectorAll('.btn-ddl-preset-time').forEach(btn => {
       btn.classList.toggle('active', curTime === btn.dataset.time);
     });
+
+    if (this.deadlineTzShortcuts) {
+      this.deadlineTzShortcuts.querySelectorAll('.btn-ddl-preset-tz').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tz === this.deadline.tz);
+      });
+    }
   }
 
   showDeadlineInSelector(scrollIntoView = true) {
@@ -5008,7 +5118,7 @@ class WTBApp {
     if (!this.deadlineSyncToggleBtn) return;
     if (this.isDeadlineActive) {
       this.deadlineSyncToggleBtn.classList.add('is-active');
-      if (this.deadlineSyncBtnText) this.deadlineSyncBtnText.textContent = '✓ Active in Selector';
+      if (this.deadlineSyncBtnText) this.deadlineSyncBtnText.textContent = 'Active in Selector';
       this.deadlineSyncToggleBtn.title = 'Exit deadline view';
     } else {
       this.deadlineSyncToggleBtn.classList.remove('is-active');
@@ -5092,11 +5202,13 @@ class WTBApp {
     if (!text) return;
 
     const onSuccess = () => {
+      if (this._copySentenceTimer) clearTimeout(this._copySentenceTimer);
       if (this.copySentenceBtn) this.copySentenceBtn.classList.add('copied');
       if (this.copySentenceLabel) this.copySentenceLabel.textContent = 'Copied!';
-      setTimeout(() => {
+      this._copySentenceTimer = setTimeout(() => {
         if (this.copySentenceBtn) this.copySentenceBtn.classList.remove('copied');
         if (this.copySentenceLabel) this.copySentenceLabel.textContent = 'Copy Summary';
+        this._copySentenceTimer = null;
       }, 2000);
     };
 

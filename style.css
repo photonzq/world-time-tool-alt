@@ -57,6 +57,15 @@ textarea {
   font-variant-numeric: inherit;
 }
 
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .app-container {
   max-width: 1600px;
   width: 100%;
@@ -74,7 +83,7 @@ textarea {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 10px 20px;
   background: #ffffff;
   border-bottom: 1px solid var(--border-light);
   gap: 12px;
@@ -83,7 +92,7 @@ textarea {
 .brand {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   user-select: none;
   flex-shrink: 0;
 }
@@ -122,13 +131,15 @@ textarea {
   background: #f8fafc;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 0.80rem;
   color: #1e293b;
   flex-shrink: 0;
   user-select: none;
   font-variant-numeric: tabular-nums;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
 }
 
 .top-clock-time-group {
@@ -205,12 +216,16 @@ textarea {
 
 .search-input {
   width: 100%;
-  padding: 8px 12px 8px 34px;
+  height: 32px;
+  padding: 0 12px 0 32px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   outline: none;
-  transition: border-color 0.15s ease;
+  background: #ffffff;
+  color: var(--text-main);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
 }
 
 .search-input:focus {
@@ -348,8 +363,8 @@ textarea {
   justify-content: center;
   gap: 6px;
   padding: 0 12px;
-  height: 34px;
-  font-size: 0.85rem;
+  height: 32px;
+  font-size: 0.82rem;
   font-weight: 500;
   border-radius: 6px;
   border: 1px solid var(--border-color);
@@ -362,6 +377,7 @@ textarea {
   touch-action: manipulation;
   white-space: nowrap;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .btn svg {
@@ -390,12 +406,24 @@ textarea {
   color: #ffffff;
 }
 
+.btn.copied {
+  background: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #065f46 !important;
+  box-shadow: 0 1px 2px rgba(6, 95, 70, 0.08);
+}
+
+.btn.copied svg {
+  color: #059669 !important;
+}
+
 .btn-sm {
   padding: 0 10px;
   height: 28px;
   font-size: 0.78rem;
   white-space: nowrap;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 /* Three-Way Segmented Control: am/pm · 24 · MX */
@@ -405,16 +433,18 @@ textarea {
   background: #f1f5f9;
   border: 1px solid var(--border-color);
   border-radius: 6px;
+  height: 32px;
   padding: 2px;
   gap: 2px;
   flex-shrink: 0;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .format-segment {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 600;
-  padding: 4px 10px !important;
+  padding: 0 10px !important;
   height: 26px !important;
   border: none !important;
   background: transparent !important;
@@ -422,7 +452,7 @@ textarea {
   border-radius: 4px !important;
   cursor: pointer;
   transition: all 0.15s ease;
-  line-height: 1.2;
+  line-height: 26px;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
   box-shadow: none !important;
@@ -465,10 +495,11 @@ textarea {
 }
 
 .date-tab {
-  padding: 5px 12px;
-  font-size: 0.85rem;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 0.82rem;
   font-weight: 500;
-  border-radius: 5px;
+  border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
@@ -478,11 +509,15 @@ textarea {
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .date-tab:hover {
-  background: #e2e8f0;
-  color: var(--text-main);
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .date-tab.active {
@@ -490,7 +525,7 @@ textarea {
   color: #1d4ed8;
   border-color: var(--border-color);
   font-weight: 700;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: inset 0 -2px 0 #2563eb, 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .date-tab.is-today::after {
@@ -500,7 +535,7 @@ textarea {
   height: 5px;
   background: #ef4444;
   border-radius: 50%;
-  margin-left: 4px;
+  margin-left: 5px;
   vertical-align: middle;
 }
 
@@ -508,17 +543,19 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 30px;
   background: #ffffff;
   color: #ef4444;
   border: 1px solid #fca5a5;
   font-weight: 700;
-  font-size: 0.8rem;
-  padding: 4px 10px;
+  font-size: 0.78rem;
+  padding: 0 10px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .btn-today:hover {
@@ -533,6 +570,7 @@ textarea {
   background-color: #ef4444;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 .date-picker-wrapper {
@@ -550,7 +588,7 @@ textarea {
   gap: 8px;
   height: 32px;
   padding: 0 12px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
   border-radius: 6px;
   background: #ffffff;
@@ -560,6 +598,7 @@ textarea {
   white-space: nowrap;
   flex-shrink: 0;
   transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
 .btn-week-cal:hover,
@@ -570,7 +609,7 @@ textarea {
 }
 
 .date-picker-label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   letter-spacing: -0.2px;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
@@ -580,12 +619,17 @@ textarea {
 .date-picker-sep {
   color: #cbd5e1;
   font-weight: 300;
+  font-size: 0.85rem;
+  opacity: 0.7;
 }
-
-
 
 .week-cal-badge {
   color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.74rem;
   font-weight: 700;
   font-feature-settings: "tnum";
 }
@@ -993,6 +1037,25 @@ body.resizing-sidebar {
   .zone-row:hover {
     background-color: rgba(241, 245, 249, 0.4);
   }
+  .zone-row .zone-drag-handle,
+  .zone-row .zone-remove-btn,
+  .zone-row .btn-icon-tiny,
+  .zone-row .zone-home-btn:not(.is-home) {
+    opacity: 0.35;
+    transition: opacity 0.15s ease;
+  }
+  .zone-row:hover .zone-drag-handle,
+  .zone-row:hover .zone-remove-btn,
+  .zone-row:hover .btn-icon-tiny,
+  .zone-row:hover .zone-home-btn:not(.is-home) {
+    opacity: 0.85;
+  }
+  .zone-row .zone-drag-handle:hover,
+  .zone-row .zone-remove-btn:hover,
+  .zone-row .btn-icon-tiny:hover,
+  .zone-row .zone-home-btn:hover {
+    opacity: 1 !important;
+  }
 }
 
 .hour-header-cell.overlap-col {
@@ -1003,8 +1066,11 @@ body.resizing-sidebar {
 .hour-header-cell.overlap-col::after {
   content: "★";
   position: absolute;
-  top: 1px;
-  font-size: 0.65rem;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.60rem;
+  line-height: 1;
   color: #d97706;
 }
 
@@ -1739,7 +1805,7 @@ body.is-row-dragging {
 .pinned-controls-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-light);
@@ -1764,10 +1830,13 @@ body.is-row-dragging {
 .pin-presets-group {
   display: inline-flex;
   align-items: center;
-  background: #ffffff;
+  background: #f1f5f9;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  overflow: hidden;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+  height: 28px;
+  box-sizing: border-box;
 }
 
 .pin-seg-btn,
@@ -1777,41 +1846,54 @@ body.is-row-dragging {
   border: none;
   font-size: 0.74rem;
   font-weight: 600;
-  color: #334155;
-  padding: 3px 7px;
+  color: #475569;
+  padding: 0 8px;
+  height: 22px;
+  line-height: 22px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
-  line-height: 1.2;
-}
-
-.pin-seg-btn:not(:last-child),
-.pin-preset-btn:not(:last-child),
-.pin-step-btn:not(:last-child) {
-  border-right: 1px solid var(--border-light);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .pin-seg-btn:hover,
 .pin-preset-btn:hover,
 .pin-step-btn:hover {
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.6);
   color: #0f172a;
 }
 
 .pin-seg-btn.active,
 .pin-preset-btn.active {
-  background: #2563eb;
-  color: #ffffff;
+  background: #ffffff !important;
+  color: #1e3a8a !important;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.pin-step-btn:disabled,
+.pin-step-btn.disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
 }
 
 .pin-len-display {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: #0f172a;
-  padding: 3px 8px;
+  padding: 0 6px;
+  height: 22px;
+  line-height: 22px;
   min-width: 36px;
   text-align: center;
-  background: #f8fafc;
-  border-right: 1px solid var(--border-light);
+  background: transparent;
+  user-select: none;
 }
 
 .pinned-actions-group {
@@ -2543,7 +2625,8 @@ body.is-row-dragging {
 }
 
 .btn-ddl-preset-date,
-.btn-ddl-preset-time {
+.btn-ddl-preset-time,
+.btn-ddl-preset-tz {
   background: #f1f5f9;
   border: 1px solid var(--border-light);
   border-radius: 4px;
@@ -2555,17 +2638,21 @@ body.is-row-dragging {
   transition: all 0.12s;
   white-space: nowrap;
   touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .btn-ddl-preset-date:hover,
-.btn-ddl-preset-time:hover {
+.btn-ddl-preset-time:hover,
+.btn-ddl-preset-tz:hover {
   background: #e2e8f0;
   color: #0f172a;
   border-color: #cbd5e1;
 }
 
 .btn-ddl-preset-date.active,
-.btn-ddl-preset-time.active {
+.btn-ddl-preset-time.active,
+.btn-ddl-preset-tz.active {
   background: #2563eb !important;
   color: #ffffff !important;
   border-color: #1d4ed8 !important;
@@ -2624,12 +2711,36 @@ body.is-row-dragging {
   font-size: 0.72rem;
   color: #334155;
   white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ddl-chip:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .ddl-chip.is-home {
   background: #eff6ff;
   border-color: #bfdbfe;
   color: #1e40af;
+}
+
+.ddl-chip.is-home:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.ddl-chip.copied {
+  background: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #065f46 !important;
+}
+
+.ddl-chip.copied .ddl-chip-tz {
+  color: #059669 !important;
 }
 
 .ddl-chip-tz {
