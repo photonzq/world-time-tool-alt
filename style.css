@@ -23,7 +23,7 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   --cell-width: 36px;
-  --sidebar-default-width: 260px;
+  --sidebar-default-width: 240px;
   --sidebar-width: var(--sidebar-custom-width, var(--sidebar-default-width));
 }
 
@@ -2467,8 +2467,8 @@ body.is-row-dragging {
 
 .deadline-inputs-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1.3fr 1.3fr 1.4fr;
-  gap: 12px;
+  grid-template-columns: 1fr 1fr 1.35fr;
+  gap: 14px;
   align-items: start;
 }
 
@@ -2714,6 +2714,9 @@ body.is-row-dragging {
   .deadline-inputs-grid {
     grid-template-columns: 1fr 1fr;
   }
+  .deadline-inputs-grid .deadline-field:nth-child(3) {
+    grid-column: 1 / -1;
+  }
   :root {
     --sidebar-width: var(--sidebar-custom-width, 210px) !important;
   }
@@ -2758,6 +2761,9 @@ body.is-row-dragging {
   }
   .deadline-inputs-grid {
     grid-template-columns: 1fr;
+  }
+  .deadline-inputs-grid .deadline-field:nth-child(3) {
+    grid-column: auto;
   }
   .deadline-bar-footer {
     flex-direction: column;

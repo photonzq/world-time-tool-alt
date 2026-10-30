@@ -1594,14 +1594,23 @@ export async function runSelfTests() {
       assert('Countdown badge exists in DOM', Boolean(badge));
       assert('Sync button exists in DOM', Boolean(syncBtn));
 
-      // 60.2 Anywhere on Earth (AoE / UTC-12) calculation accuracy
+      // 60.2 Timezone default & exclusions
+      const homeZone = window.app.getHomeZone();
+      assert('Deadline timezone defaults to Home TZ',
+        window.app.deadline.tz === homeZone.iana,
+        `Expected ${homeZone.iana}, got ${window.app.deadline.tz}`);
+
+      const tzSelect = document.getElementById('deadline-tz-select');
+      const hasAoE = tzSelect && Array.from(tzSelect.options).some(opt => opt.value === 'Etc/GMT+12' || opt.text.includes('AoE'));
+      assert('AoE UTC-12 option is excluded from timezone selector', !hasAoE);
+
       window.app.deadline.date = '2026-11-15';
       window.app.deadline.time = '23:59';
-      window.app.deadline.tz = 'Etc/GMT+12';
-      const aoeInstant = window.app.getDeadlineInstant();
-      assert('AoE 23:59 on Nov 15 corresponds to 11:59:00Z on Nov 16',
-        Boolean(aoeInstant && new Date(aoeInstant.epochMilliseconds).toISOString() === '2026-11-16T11:59:00.000Z'),
-        aoeInstant ? new Date(aoeInstant.epochMilliseconds).toISOString() : 'null');
+      window.app.deadline.tz = 'UTC';
+      const utcInstant = window.app.getDeadlineInstant();
+      assert('UTC 23:59 on Nov 15 corresponds to 23:59:00Z on Nov 15',
+        Boolean(utcInstant && new Date(utcInstant.epochMilliseconds).toISOString() === '2026-11-15T23:59:00.000Z'),
+        utcInstant ? new Date(utcInstant.epochMilliseconds).toISOString() : 'null');
 
       // 60.3 Countdown formatting logic
       window.app.updateDeadlineCountdown();
@@ -1610,7 +1619,6 @@ export async function runSelfTests() {
         badge ? badge.textContent : '');
 
       // 60.4 Two-Way Link 1: Deadline -> Selector Sync
-      window.app.deadline.title = 'Test Paper Submission';
       window.app.showDeadlineInSelector(false);
 
       const rulerPinned = document.getElementById('ruler-pinned');

@@ -1374,10 +1374,10 @@ class WTBApp {
     this.isFirstRender = true;
     this.isDeadlineActive = false;
     this.deadline = {
-      title: 'Paper Submission',
+      title: 'Deadline',
       date: '',
       time: '23:59',
-      tz: 'Etc/GMT+12',
+      tz: '',
       isLiveSync: false
     };
 
@@ -2950,6 +2950,7 @@ class WTBApp {
     if (!this.trackedZones.some(z => z.iana === zone.iana)) {
       this.trackedZones.push(zone);
       this.saveState();
+      if (this.populateDeadlineTzSelect) this.populateDeadlineTzSelect();
       this.render();
     }
   }
@@ -2964,6 +2965,7 @@ class WTBApp {
       this.trackedZones[0].isHome = true;
     }
     this.saveState();
+    if (this.populateDeadlineTzSelect) this.populateDeadlineTzSelect();
     this.render();
   }
 
@@ -2972,6 +2974,7 @@ class WTBApp {
       z.isHome = i === index;
     });
     this.saveState();
+    if (this.populateDeadlineTzSelect) this.populateDeadlineTzSelect();
     this.render();
   }
 
@@ -4087,7 +4090,8 @@ class WTBApp {
           if (this.isDeadlineActive) {
             this.rulerBadgeTime.textContent = '🎯 DDL';
             if (this.rulerTopBadge) {
-              this.rulerTopBadge.title = `Deadline: ${this.deadline.title} (${this.deadline.time} in ${this.getDeadlineTzLabel()})`;
+              const tzLabel = this.getDeadlineTzLabel();
+              this.rulerTopBadge.title = `Deadline: ${this.deadline.time} in ${tzLabel} (${this.deadline.date})`;
             }
           } else {
             const dMin = this.pinDurationMin || 60;
@@ -4497,7 +4501,8 @@ class WTBApp {
       if (this.isDeadlineActive) {
         this.deadlinePinnedBanner.style.display = 'flex';
         if (this.ddlPinText) {
-          this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.escapeDeadlineHtml(this.deadline.title)}</strong> (${this.deadline.time} in ${this.getDeadlineTzLabel()})`;
+          const tzLabel = this.getDeadlineTzLabel();
+          this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.deadline.time} in ${tzLabel}</strong> (${this.deadline.date})`;
         }
       } else {
         this.deadlinePinnedBanner.style.display = 'none';
@@ -4562,10 +4567,16 @@ class WTBApp {
       console.warn('Could not load deadline state:', e);
     }
 
+    const homeZone = this.getHomeZone();
+
+    // Default target timezone: default to home timezone, never AoE
+    if (!this.deadline.tz || this.deadline.tz === 'Etc/GMT+12') {
+      this.deadline.tz = homeZone.iana;
+    }
+
     // Default target date: 7 days from now if empty or invalid
     if (!this.deadline.date) {
       try {
-        const homeZone = this.getHomeZone();
         const todayZdt = Temporal.Now.zonedDateTimeISO(homeZone.iana);
         this.deadline.date = todayZdt.add({ days: 7 }).toPlainDate().toString();
       } catch {
@@ -4575,7 +4586,7 @@ class WTBApp {
       }
     }
 
-    if (this.deadlineTitleInput) this.deadlineTitleInput.value = this.deadline.title || 'Paper Submission';
+    if (this.deadlineTitleInput) this.deadlineTitleInput.value = this.deadline.title || '';
     if (this.deadlineDateInput) this.deadlineDateInput.value = this.deadline.date;
     if (this.deadlineTimeInput) this.deadlineTimeInput.value = this.deadline.time || '23:59';
     if (this.deadlineLiveSyncCheckbox) this.deadlineLiveSyncCheckbox.checked = Boolean(this.deadline.isLiveSync);
@@ -4592,13 +4603,12 @@ class WTBApp {
   populateDeadlineTzSelect() {
     if (!this.deadlineTzSelect) return;
     const homeZone = this.getHomeZone();
-    const curVal = this.deadline.tz || 'Etc/GMT+12';
+    const curVal = (this.deadline.tz && this.deadline.tz !== 'Etc/GMT+12') ? this.deadline.tz : homeZone.iana;
 
     const groups = [
       {
-        label: 'Special & Active',
+        label: 'Primary & Tracked',
         options: [
-          { value: 'Etc/GMT+12', label: 'Anywhere on Earth (AoE, UTC-12)' },
           { value: homeZone.iana, label: `Home: ${homeZone.label} (${homeZone.iana})` },
           { value: 'UTC', label: 'UTC / GMT (Coordinated Universal Time)' }
         ]
@@ -4648,8 +4658,7 @@ class WTBApp {
   }
 
   getDeadlineTzLabel(tz = null) {
-    const targetTz = tz || this.deadline.tz;
-    if (targetTz === 'Etc/GMT+12') return 'AoE (UTC-12)';
+    const targetTz = tz || this.deadline.tz || (this.getHomeZone ? this.getHomeZone().iana : 'UTC');
     if (targetTz === 'UTC') return 'UTC';
     const match = this.trackedZones?.find(z => z.iana === targetTz);
     if (match) return match.label;
@@ -4660,7 +4669,9 @@ class WTBApp {
   getDeadlineInstant() {
     const dateStr = this.deadline.date || this.currentDate;
     const timeStr = this.deadline.time || '23:59';
-    const tz = this.deadline.tz || 'Etc/GMT+12';
+    const homeZone = this.getHomeZone ? this.getHomeZone() : null;
+    const fallbackTz = homeZone ? homeZone.iana : 'UTC';
+    const tz = (this.deadline.tz && this.deadline.tz !== 'Etc/GMT+12') ? this.deadline.tz : fallbackTz;
 
     try {
       const [y, m, d] = dateStr.split('-').map(Number);
@@ -4695,7 +4706,8 @@ class WTBApp {
         if (this.isDeadlineActive) {
           this.renderRulerHighlights();
           if (this.ddlPinText) {
-            this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.escapeDeadlineHtml(this.deadline.title)}</strong> (${this.deadline.time} in ${this.getDeadlineTzLabel()})`;
+            const tzLabel = this.getDeadlineTzLabel();
+            this.ddlPinText.innerHTML = `Showing Deadline in Selector: <strong>${this.deadline.time} in ${tzLabel}</strong> (${this.deadline.date})`;
           }
         }
       });
