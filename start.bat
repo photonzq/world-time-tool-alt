@@ -1,9 +1,9 @@
 @echo off
-title World Time Buddy Launcher
+title World Time Tool Launcher
 cd /d "%~dp0"
 
 echo ===================================================
-echo   Starting World Time Buddy (Edge + Python Server)
+echo   Starting World Time Tool (Edge + Python Server)
 echo ===================================================
 echo.
 echo Opening http://localhost:8080 in Microsoft Edge...

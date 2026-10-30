@@ -394,7 +394,7 @@ window.generateIcsContent = function(startInstant, endInstant, trackedZones, tit
   const dtStart = formatUtcIcs(startMs);
   const dtEnd = formatUtcIcs(endMs);
   const dtStamp = formatUtcIcs(Date.now());
-  const uid = `wtb-${startMs}-${Math.random().toString(36).substring(2, 9)}@worldtimebuddy`;
+  const uid = `wtb-${startMs}-${Math.random().toString(36).substring(2, 9)}@worldtimetool`;
 
   // Multi-zone summary for invite description
   const descLines = ['Time conversions for attendees:'];
@@ -411,14 +411,14 @@ window.generateIcsContent = function(startInstant, endInstant, trackedZones, tit
   });
   if (url) {
     descLines.push('');
-    descLines.push(`View & adjust in World Time Buddy: ${url}`);
+    descLines.push(`View & adjust in World Time Tool: ${url}`);
   }
   const cleanDescription = descLines.join('\\n');
 
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//World Time Buddy Clone//EN',
+    'PRODID:-//World Time Tool//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',

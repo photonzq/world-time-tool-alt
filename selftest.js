@@ -1,5 +1,5 @@
 /**
- * World Time Buddy - Golden Assertion Self-Test Suite
+ * World Time Tool - Golden Assertion Self-Test Suite
  * Run by passing ?selftest=1 in the URL or clicking 'Run Self-Test' in the UI.
  */
 
@@ -1567,7 +1567,7 @@ export async function runSelfTests() {
 
       // 59.4 Footer attribution cleanliness
       const footerEl = document.querySelector('.app-footer');
-      assert('Footer attribution is clean and professional', Boolean(footerEl && !footerEl.textContent.includes('Made with AI tools')));
+      assert('Footer attribution is clean and professional', Boolean(footerEl && !footerEl.textContent.includes('Made with AI tools') && !footerEl.textContent.includes('Buddy') && footerEl.textContent.includes('World Time Tool')));
 
       // Restore app state
       window.app.currentDate = origDate;

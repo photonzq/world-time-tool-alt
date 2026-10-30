@@ -22,7 +22,7 @@
   --border-color: #cbd5e1;
   --border-light: #e2e8f0;
 
-  /* World Time Buddy Palette */
+  /* Color Palette */
   --color-night: #2b4369;
   --color-night-text: #e2e8f0;
   --color-transition: #4e73a6;
@@ -34,6 +34,9 @@
   --color-overlap-bg: #fef3c7;
   --color-highlight-col: rgba(59, 130, 246, 0.18);
   --color-pinned-border: #2563eb;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, "Google Sans", "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   --cell-width: 36px;
   --sidebar-default-width: 260px;
@@ -47,7 +50,7 @@
 }
 
 body {
-  font-family: "Segoe UI Variable Text", "Segoe UI", Roboto, "Google Sans", "Noto Sans", Arial, sans-serif;
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
   -webkit-font-smoothing: antialiased;
@@ -57,6 +60,17 @@ body {
   color: var(--text-main);
   line-height: 1.4;
   padding: 12px;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  font-feature-settings: inherit;
+  font-variant-numeric: inherit;
 }
 
 .app-container {
@@ -572,10 +586,11 @@ body {
 }
 
 .date-picker-label {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.9rem;
   letter-spacing: -0.2px;
   color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 .date-picker-sep {
@@ -3190,7 +3205,7 @@ body.is-row-dragging {
 
     <!-- App Footer / Attribution -->
     <footer class="app-footer">
-      <span>World Time Buddy · Public domain (<a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>)</span>
+      <span>World Time Tool · Public domain (<a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener noreferrer">CC0</a>)</span>
     </footer>
   </div>
 
@@ -3915,7 +3930,7 @@ window.WINDOWS_ZONES = [
   <!-- Inlined Self-Tests -->
   <script>
 /**
- * World Time Buddy - Golden Assertion Self-Test Suite
+ * World Time Tool - Golden Assertion Self-Test Suite
  * Run by passing ?selftest=1 in the URL or clicking 'Run Self-Test' in the UI.
  */
 
@@ -5483,7 +5498,7 @@ async function runSelfTests() {
 
       // 59.4 Footer attribution cleanliness
       const footerEl = document.querySelector('.app-footer');
-      assert('Footer attribution is clean and professional', Boolean(footerEl && !footerEl.textContent.includes('Made with AI tools')));
+      assert('Footer attribution is clean and professional', Boolean(footerEl && !footerEl.textContent.includes('Made with AI tools') && !footerEl.textContent.includes('Buddy') && footerEl.textContent.includes('World Time Tool')));
 
       // Restore app state
       window.app.currentDate = origDate;
@@ -5899,7 +5914,7 @@ window.generateIcsContent = function(startInstant, endInstant, trackedZones, tit
   const dtStart = formatUtcIcs(startMs);
   const dtEnd = formatUtcIcs(endMs);
   const dtStamp = formatUtcIcs(Date.now());
-  const uid = `wtb-${startMs}-${Math.random().toString(36).substring(2, 9)}@worldtimebuddy`;
+  const uid = `wtb-${startMs}-${Math.random().toString(36).substring(2, 9)}@worldtimetool`;
 
   // Multi-zone summary for invite description
   const descLines = ['Time conversions for attendees:'];
@@ -5916,14 +5931,14 @@ window.generateIcsContent = function(startInstant, endInstant, trackedZones, tit
   });
   if (url) {
     descLines.push('');
-    descLines.push(`View & adjust in World Time Buddy: ${url}`);
+    descLines.push(`View & adjust in World Time Tool: ${url}`);
   }
   const cleanDescription = descLines.join('\\n');
 
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//World Time Buddy Clone//EN',
+    'PRODID:-//World Time Tool//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
