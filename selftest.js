@@ -1518,6 +1518,66 @@ export async function runSelfTests() {
     assert('Seasonal Timezone Abbreviation Resolution Suite', false, e.message);
   }
 
+  // 59. UI Layout Integrity & Responsive Sizing Suite
+  try {
+    if (window.app) {
+      const origDate = window.app.currentDate;
+      const origZones = window.app.trackedZones;
+
+      // 59.1 Zero horizontal overflow across responsive widths
+      window.app.currentDate = '2026-10-29';
+      window.app.trackedZones = [
+        { iana: 'America/New_York', label: 'New York', sub: 'United States, Eastern Time', isHome: true },
+        { iana: 'Europe/Zurich', label: 'Zurich', sub: 'Switzerland, Central Europe', isHome: false },
+        { iana: 'Europe/London', label: 'London', sub: 'United Kingdom', isHome: false },
+        { iana: 'Asia/Tokyo', label: 'Tokyo', sub: 'Japan', isHome: false }
+      ];
+
+      for (const w of [200, 240, 260, 300]) {
+        document.documentElement.style.setProperty('--sidebar-custom-width', `${w}px`);
+        window.app.render();
+
+        let hasOverflow = false;
+        document.querySelectorAll('.zone-sidebar, .zone-info, .zone-name-row, .zone-sub-row').forEach(el => {
+          if (el.scrollWidth > el.clientWidth + 1) {
+            hasOverflow = true;
+          }
+        });
+        assert(`No horizontal overflow in sidebar items at width ${w}px`, !hasOverflow);
+      }
+      document.documentElement.style.removeProperty('--sidebar-custom-width');
+
+      // 59.2 DST warning badge icon and text separation
+      window.app.render();
+      const warnBadges = document.querySelectorAll('.zone-dst-warn-badge');
+      assert('DST warning badges have icon and text children', warnBadges.length > 0 && Array.from(warnBadges).every(b => b.querySelector('.dst-warn-icon') && b.querySelector('.dst-warn-text')));
+
+      // 59.3 Pinned controls synchronization with custom duration
+      window.app.pinnedCol = 14;
+      window.app.pinStartMin = 0;
+      window.app.pinDurationMin = 90;
+      window.app.render();
+      window.app.renderRulerHighlights();
+
+      const lenLabel = document.getElementById('pin-len-label');
+      assert('Pin length label updates to 1h 30m for 90m duration', Boolean(lenLabel && lenLabel.textContent === '1h 30m'), lenLabel ? lenLabel.textContent : '');
+
+      const activePreset = document.querySelector('.pin-preset-btn.active');
+      assert('Preset button 1.5h (90m) is active', Boolean(activePreset && activePreset.dataset.dur === '90'), activePreset ? activePreset.dataset.dur : 'none');
+
+      // 59.4 Footer attribution cleanliness
+      const footerEl = document.querySelector('.app-footer');
+      assert('Footer attribution is clean and professional', Boolean(footerEl && !footerEl.textContent.includes('Made with AI tools')));
+
+      // Restore app state
+      window.app.currentDate = origDate;
+      window.app.trackedZones = origZones;
+      window.app.render();
+    }
+  } catch (e) {
+    assert('UI Layout Integrity Suite', false, e.message);
+  }
+
   return results;
 }
 

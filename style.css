@@ -20,7 +20,7 @@
   --color-pinned-border: #2563eb;
 
   --cell-width: 36px;
-  --sidebar-default-width: 235px;
+  --sidebar-default-width: 260px;
   --sidebar-width: var(--sidebar-custom-width, var(--sidebar-default-width));
 }
 
@@ -775,17 +775,24 @@ body {
 /* Imminent DST Clock Change Alert Banner */
 .imminent-dst-banner {
   display: flex;
-  align-items: center;
-  padding: 7px 16px;
+  align-items: flex-start;
+  padding: 8px 16px;
   font-size: 0.80rem;
   background: #fffbeb;
-  border-bottom: 1px solid #fef3c7;
+  border-bottom: 1px solid #fcd34d;
   border-left: 4px solid #f59e0b;
   color: #92400e;
   gap: 10px;
   box-sizing: border-box;
   width: 100%;
   flex-shrink: 0;
+}
+
+.imminent-dst-banner .imminent-dst-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  line-height: 1.2;
+  margin-top: 1px;
 }
 
 .imminent-dst-banner .imminent-dst-content {
@@ -1071,6 +1078,22 @@ body.is-row-dragging {
   user-select: text;
   -webkit-user-select: text;
   box-sizing: border-box;
+  container-type: inline-size;
+}
+
+@container (max-width: 230px) {
+  .zone-country {
+    display: none !important;
+  }
+}
+
+@container (max-width: 195px) {
+  .zone-dst-badge {
+    display: none !important;
+  }
+  .zone-dst-warn-badge .dst-warn-text {
+    display: none !important;
+  }
 }
 
 .zone-meta-left {
@@ -1210,6 +1233,7 @@ body.is-row-dragging {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  flex: 1 1 auto;
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
@@ -1220,6 +1244,7 @@ body.is-row-dragging {
   align-items: center;
   gap: 4px;
   min-width: 0;
+  overflow: hidden;
   margin-top: 2px;
   user-select: text;
   -webkit-user-select: text;
@@ -1242,16 +1267,19 @@ body.is-row-dragging {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 0.60rem;
+  font-size: 0.58rem;
   font-weight: 700;
-  padding: 1px 4px;
+  padding: 1px 3px;
   border-radius: 4px;
   background: #fffbeb;
   color: #b45309;
   border: 1px solid #fcd34d;
   cursor: help;
   white-space: nowrap;
-  flex-shrink: 0;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
   letter-spacing: 0.02em;
 }
 
@@ -1261,12 +1289,24 @@ body.is-row-dragging {
   border-color: #fca5a5;
 }
 
+.zone-dst-warn-badge .dst-warn-icon {
+  flex-shrink: 0;
+}
+
+.zone-dst-warn-badge .dst-warn-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .zone-country {
   font-size: 0.68rem;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1 1 0%;
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
@@ -1769,8 +1809,8 @@ body.is-row-dragging {
 /* DST Drift Alerts Container */
 .pinned-drift-container {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 4px 0 6px 0;
 }
 
@@ -1787,6 +1827,9 @@ body.is-row-dragging {
   padding: 5px 9px;
   border-radius: 4px;
   line-height: 1.35;
+  flex: 1 1 320px;
+  max-width: 620px;
+  box-sizing: border-box;
 }
 
 .drift-alert-pill.alert-critical {
@@ -2283,7 +2326,7 @@ body.is-row-dragging {
 /* Responsive Media Queries */
 @media (max-width: 860px) {
   :root {
-    --sidebar-width: 160px !important;
+    --sidebar-width: var(--sidebar-custom-width, 210px) !important;
   }
   .zone-country {
     display: none;
@@ -2322,7 +2365,7 @@ body.is-row-dragging {
 
 @media (max-width: 640px) {
   :root {
-    --sidebar-width: 130px !important;
+    --sidebar-width: 145px !important;
   }
   body {
     padding: 0;
@@ -2531,35 +2574,40 @@ body.is-row-dragging {
     grid-row: 1 / 3;
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 2px;
     min-width: 0;
+    overflow: hidden;
   }
   .zone-reorder {
     display: flex;
     align-items: center;
-    margin-right: 1px;
+    margin-right: 0;
     flex-shrink: 0;
   }
   .zone-reorder-buttons {
     display: none;
   }
   .zone-drag-handle {
-    width: 14px;
-    height: 36px;
+    width: 10px;
+    height: 28px;
     color: #64748b;
     display: flex;
     align-items: center;
     justify-content: center;
   }
+  .zone-drag-handle svg {
+    width: 6px;
+    height: 10px;
+  }
   .zone-home-btn {
-    min-width: 20px;
-    width: 20px;
-    height: 20px;
-    min-height: 20px;
+    min-width: 15px;
+    width: 15px;
+    height: 15px;
+    min-height: 15px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.82rem;
+    font-size: 0.72rem;
     padding: 0;
     margin-right: 1px;
     flex-shrink: 0;
@@ -2570,22 +2618,27 @@ body.is-row-dragging {
     flex-direction: column;
     justify-content: center;
     min-width: 0;
+    overflow: hidden;
     flex: 1;
     gap: 2px;
   }
   .zone-name-row {
     display: flex;
     align-items: center;
+    gap: 2px;
     min-width: 0;
+    overflow: hidden;
   }
   .zone-city {
-    font-size: 0.78rem;
+    font-size: 0.80rem;
     font-weight: 700;
     color: var(--text-main);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 68px;
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 auto;
     line-height: 1.2;
   }
   .zone-sub-row {
@@ -2593,6 +2646,7 @@ body.is-row-dragging {
     align-items: center;
     gap: 3px;
     min-width: 0;
+    overflow: hidden;
   }
   .zone-offset-badge {
     font-size: 0.62rem;
@@ -2608,22 +2662,30 @@ body.is-row-dragging {
     color: #1e40af;
   }
   .zone-dst-badge {
-    font-size: 0.62rem;
-    font-weight: 600;
-    padding: 1px 3px;
-    border-radius: 3px;
-    background: #f3f4f6;
-    color: #6b7280;
-    flex-shrink: 0;
+    display: none;
   }
   .zone-dst-warn-badge {
-    font-size: 0.54rem;
-    padding: 0 2px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.60rem;
+    padding: 0 3px;
+    border-radius: 3px;
+    line-height: 1.1;
+    flex-shrink: 0;
+  }
+  .zone-dst-warn-badge .dst-warn-text {
+    display: none;
   }
   .imminent-dst-banner {
-    padding: 6px 10px;
+    align-items: flex-start;
+    padding: 7px 10px;
+    border-bottom: 1px solid #fcd34d;
     font-size: 0.74rem;
     gap: 6px;
+  }
+  .imminent-dst-banner .imminent-dst-icon {
+    margin-top: 1px;
+    font-size: 0.85rem;
   }
   .zone-country {
     display: none;
@@ -2853,7 +2915,7 @@ body.is-row-dragging {
 
 @media (max-width: 440px) {
   :root {
-    --sidebar-width: 116px !important;
+    --sidebar-width: 138px !important;
   }
   .timeline-header-left {
     padding: 0 4px;
@@ -2863,8 +2925,8 @@ body.is-row-dragging {
     font-size: 0.54rem;
   }
   .zone-city {
-    max-width: 52px;
-    font-size: 0.74rem;
+    max-width: none;
+    font-size: 0.76rem;
   }
   .zone-offset-badge {
     font-size: 0.56rem;
@@ -2881,6 +2943,6 @@ body.is-row-dragging {
 
 @media (max-width: 360px) {
   :root {
-    --sidebar-width: 108px !important;
+    --sidebar-width: 132px !important;
   }
 }

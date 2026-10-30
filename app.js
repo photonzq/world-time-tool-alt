@@ -3230,7 +3230,7 @@ class WTBApp {
       if (window.getZoneDstTransition) {
         const trans = window.getZoneDstTransition(zone.iana, this.currentDate, 5);
         if (trans) {
-          zoneDstNotice = `<span class="zone-dst-warn-badge ${trans.type}" title="${trans.tooltip}">⚠️ ${trans.badgeText}</span>`;
+          zoneDstNotice = `<span class="zone-dst-warn-badge ${trans.type}" title="${trans.tooltip}"><span class="dst-warn-icon">⚠️</span><span class="dst-warn-text"> ${trans.badgeText}</span></span>`;
         }
       } else {
         try {
@@ -4467,6 +4467,7 @@ class WTBApp {
       this.pinnedSentenceText.textContent = this.generatePinnedSentence(startInstant, endInstant);
     }
 
+    this.updatePinControlsUI();
     this.pinnedSummary.classList.add('visible');
   }
 
