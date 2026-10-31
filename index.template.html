@@ -51,6 +51,7 @@
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
         <input type="text" id="search-input" class="search-input" placeholder="+ Add place or timezone..." autocomplete="off">
+        <kbd class="search-kbd-hint" aria-hidden="true">/</kbd>
         <div id="search-dropdown" class="search-dropdown"></div>
       </div>
 
@@ -133,7 +134,10 @@
         <!-- Header Row -->
         <div class="timeline-header-row">
           <div class="timeline-header-left">
-            <span>Place / Timezone</span>
+            <div class="header-left-titles">
+              <span class="header-left-main">Place / Timezone</span>
+              <span class="header-left-sub">Click or drag hours to compare</span>
+            </div>
             <div id="sidebar-resizer" class="sidebar-resizer" title="Drag to resize sidebar (Double-click to reset)"></div>
           </div>
           <div id="timeline-header-hours" class="timeline-header-hours"></div>

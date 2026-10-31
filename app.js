@@ -3343,7 +3343,7 @@ class WTBApp {
       }
 
       rowsHtml += `
-        <div class="zone-row" data-row="${rowIdx}">
+        <div class="zone-row ${zone.isHome ? 'is-home-row' : ''}" data-row="${rowIdx}">
           <div class="zone-sidebar">
             <div class="zone-meta-left">
               <div class="zone-reorder">
@@ -4169,11 +4169,14 @@ class WTBApp {
         const headerRect = headerCell.getBoundingClientRect();
         const colWidth = headerRect.width;
         const leftOffset = (headerRect.left - contentRect.left) + colWidth * ((this.pinStartMin || 0) / 60);
-        const pinWidth = colWidth * ((this.pinDurationMin || 60) / 60);
+        const rawPinWidth = colWidth * ((this.pinDurationMin || 60) / 60);
+        const maxAvailWidth = Math.max(colWidth * 0.25, contentRect.width - leftOffset);
+        const pinWidth = Math.min(rawPinWidth, maxAvailWidth);
 
         this.rulerPinned.style.left = `${leftOffset}px`;
         this.rulerPinned.style.width = `${pinWidth}px`;
         this.rulerPinned.classList.add('visible');
+        this.rulerPinned.classList.toggle('at-right-edge', leftOffset + pinWidth >= contentRect.width - 8);
 
         this.rulerPinned.classList.toggle('is-deadline-active', Boolean(this.isDeadlineActive));
 
@@ -4204,8 +4207,16 @@ class WTBApp {
           const sidebarWidth = sidebarEl ? sidebarEl.offsetWidth : 168;
           if (leftOffset - sidebarWidth < 14) {
             this.rulerTopBadge.style.left = `${Math.max(14, pinWidth / 2)}px`;
+            this.rulerTopBadge.style.right = 'auto';
+            this.rulerTopBadge.style.transform = 'translateX(-50%)';
+          } else if (leftOffset + pinWidth / 2 > contentRect.width - 28) {
+            this.rulerTopBadge.style.left = 'auto';
+            this.rulerTopBadge.style.right = '0px';
+            this.rulerTopBadge.style.transform = 'none';
           } else {
             this.rulerTopBadge.style.left = '50%';
+            this.rulerTopBadge.style.right = 'auto';
+            this.rulerTopBadge.style.transform = 'translateX(-50%)';
           }
         }
       }
@@ -4760,7 +4771,7 @@ class WTBApp {
         if (z.iana !== homeZone.iana && z.iana !== 'Etc/GMT+12' && z.iana !== 'UTC') {
           if (shortcuts.length < 5) {
             let short = z.label.split(',')[0].trim();
-            if (short.length > 8) short = short.slice(0, 7) + '…';
+            if (short.length > 16) short = short.slice(0, 15) + '…';
             shortcuts.push({ tz: z.iana, label: short });
           }
         }
@@ -4895,8 +4906,20 @@ class WTBApp {
           } catch (_) {}
         };
         const onSuccess = () => {
+          const timeEl = chip.querySelector('.ddl-chip-time');
+          if (timeEl && !chip.dataset.origTime) {
+            chip.dataset.origTime = timeEl.textContent;
+          }
+          if (chip._copyTimer) clearTimeout(chip._copyTimer);
           chip.classList.add('copied');
-          setTimeout(() => chip.classList.remove('copied'), 1200);
+          if (timeEl) timeEl.textContent = '✓ Copied';
+          chip._copyTimer = setTimeout(() => {
+            chip.classList.remove('copied');
+            if (timeEl && chip.dataset.origTime) {
+              timeEl.textContent = chip.dataset.origTime;
+            }
+            chip._copyTimer = null;
+          }, 1200);
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(copyText).then(onSuccess).catch(() => {
@@ -5114,7 +5137,7 @@ class WTBApp {
       const offsetMin = Math.max(0, Math.min(59, Math.round((targetMs - colStartMs) / 60000)));
 
       this.pinnedCol = bestColIdx;
-      this.pinStartMin = [0, 15, 30, 45].reduce((prev, curr) => Math.abs(curr - offsetMin) < Math.abs(prev - offsetMin) ? curr : prev);
+      this.pinStartMin = offsetMin === 59 ? 0 : [0, 15, 30, 45].reduce((prev, curr) => Math.abs(curr - offsetMin) < Math.abs(prev - offsetMin) ? curr : prev);
       this.pinDurationMin = 60;
       this.isDeadlineActive = true;
 
@@ -5164,7 +5187,10 @@ class WTBApp {
     try {
       const ddlZdt = Temporal.Instant.fromEpochMilliseconds(currentInstant.epochMilliseconds).toZonedDateTimeISO(this.deadline.tz);
       const newDate = ddlZdt.toPlainDate().toString();
-      const newTime = `${String(ddlZdt.hour).padStart(2, '0')}:${String(ddlZdt.minute).padStart(2, '0')}`;
+      let newTime = `${String(ddlZdt.hour).padStart(2, '0')}:${String(ddlZdt.minute).padStart(2, '0')}`;
+      if (this.deadline.time === '23:59' && newTime === '23:00' && this.deadline.date === newDate) {
+        newTime = '23:59';
+      }
 
       if (this.deadline.date !== newDate || this.deadline.time !== newTime) {
         this.deadline.date = newDate;

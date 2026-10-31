@@ -233,7 +233,7 @@ textarea {
 .search-input {
   width: 100%;
   height: 32px;
-  padding: 0 12px 0 32px;
+  padding: 0 28px 0 32px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.85rem;
@@ -247,6 +247,31 @@ textarea {
 .search-input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.search-kbd-hint {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+  height: 18px;
+  line-height: 16px;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.15s ease;
+}
+
+.search-input:focus ~ .search-kbd-hint {
+  opacity: 0;
 }
 
 .search-icon {
@@ -850,37 +875,31 @@ textarea {
 /* Imminent DST Clock Change Alert Banner */
 .imminent-dst-banner {
   display: flex;
-  align-items: flex-start;
-  padding: 8px 16px;
-  font-size: 0.80rem;
+  align-items: center;
+  padding: 6px 20px;
+  font-size: 0.76rem;
   background: #fffbeb;
   border-bottom: 1px solid #fcd34d;
   border-left: 4px solid #f59e0b;
   color: #92400e;
-  gap: 10px;
+  gap: 8px;
   box-sizing: border-box;
   width: 100%;
   flex-shrink: 0;
 }
 
 .imminent-dst-banner .imminent-dst-icon {
-  font-size: 1rem;
+  font-size: 0.92rem;
   flex-shrink: 0;
-  line-height: 1.2;
-  margin-top: 1px;
+  line-height: 1;
 }
 
 .imminent-dst-banner .imminent-dst-content {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  line-height: 1.4;
-}
-
-.imminent-dst-banner .imminent-dst-icon {
-  font-size: 1rem;
-  flex-shrink: 0;
+  gap: 6px;
+  line-height: 1.35;
 }
 
 .imminent-dst-banner .imminent-dst-title {
@@ -939,15 +958,43 @@ textarea {
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-size: 0.80rem;
+  font-weight: 700;
+  color: var(--text-main);
   border-right: 2px solid var(--border-color);
   background: #f8fafc;
   position: sticky;
   left: 0;
   z-index: 50;
   box-sizing: border-box;
+}
+
+.header-left-titles {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.header-left-main {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-left-sub {
+  font-size: 0.64rem;
+  font-weight: 500;
+  color: #94a3b8;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-resizer {
@@ -1176,6 +1223,11 @@ body.is-row-dragging {
   -webkit-user-select: text;
   box-sizing: border-box;
   container-type: inline-size;
+}
+
+.zone-row.is-home-row .zone-sidebar {
+  box-shadow: inset 3px 0 0 #2563eb;
+  background: linear-gradient(90deg, #f8fbff 0%, #ffffff 42%);
 }
 
 @container (max-width: 230px) {
@@ -1677,6 +1729,14 @@ body.is-row-dragging {
 
 .ruler-handle-end {
   right: -7px;
+}
+
+.ruler-pinned-column.at-right-edge .ruler-handle-end {
+  right: -2px;
+}
+
+.ruler-pinned-column.at-right-edge .ruler-handle-end::after {
+  right: 0;
 }
 
 .ruler-handle-grip {
@@ -2221,10 +2281,32 @@ body.is-row-dragging {
   font-feature-settings: "tnum";
 }
 
+.pinned-chip .pinned-tz-code {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
 .pinned-chip .pinned-date {
   font-weight: 400;
   font-size: 0.72rem;
   opacity: 0.85;
+}
+
+.pinned-chip .date-diff-pill {
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+  line-height: 1.25;
+  flex-shrink: 0;
+}
+
+.pinned-chip.status-night .date-diff-pill {
+  background: rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
 }
 
 .pinned-status-dot {
@@ -2819,6 +2901,7 @@ body.is-row-dragging {
 
 .ruler-pinned-column.is-deadline-active .ruler-handle-grip {
   background: #e11d48 !important;
+  border-color: #ffffff !important;
 }
 
 /* App Footer / Attribution */
@@ -3098,11 +3181,11 @@ body.is-row-dragging {
     line-height: 1.3;
     border-right: 2px solid var(--border-color);
   }
-  .timeline-header-left::after {
-    content: "Tap hour to compare";
-    font-size: 0.60rem;
-    font-weight: 400;
-    color: var(--text-muted);
+  .header-left-main {
+    font-size: 0.72rem;
+  }
+  .header-left-sub {
+    font-size: 0.58rem;
   }
   .zone-sidebar {
     width: var(--sidebar-width);
@@ -3419,7 +3502,10 @@ body.is-row-dragging {
     border-radius: 10px;
     padding: 10px 12px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
   }
   .pinned-sentence-prefix {
@@ -3455,6 +3541,7 @@ body.is-row-dragging {
   }
   .pinned-sentence-text {
     order: 3;
+    flex: 1 1 100%;
     width: 100%;
     font-size: 0.82rem;
     line-height: 1.5;
@@ -3536,6 +3623,7 @@ body.is-row-dragging {
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
         <input type="text" id="search-input" class="search-input" placeholder="+ Add place or timezone..." autocomplete="off">
+        <kbd class="search-kbd-hint" aria-hidden="true">/</kbd>
         <div id="search-dropdown" class="search-dropdown"></div>
       </div>
 
@@ -3618,7 +3706,10 @@ body.is-row-dragging {
         <!-- Header Row -->
         <div class="timeline-header-row">
           <div class="timeline-header-left">
-            <span>Place / Timezone</span>
+            <div class="header-left-titles">
+              <span class="header-left-main">Place / Timezone</span>
+              <span class="header-left-sub">Click or drag hours to compare</span>
+            </div>
             <div id="sidebar-resizer" class="sidebar-resizer" title="Drag to resize sidebar (Double-click to reset)"></div>
           </div>
           <div id="timeline-header-hours" class="timeline-header-hours"></div>
@@ -9609,7 +9700,7 @@ class WTBApp {
       }
 
       rowsHtml += `
-        <div class="zone-row" data-row="${rowIdx}">
+        <div class="zone-row ${zone.isHome ? 'is-home-row' : ''}" data-row="${rowIdx}">
           <div class="zone-sidebar">
             <div class="zone-meta-left">
               <div class="zone-reorder">
@@ -10435,11 +10526,14 @@ class WTBApp {
         const headerRect = headerCell.getBoundingClientRect();
         const colWidth = headerRect.width;
         const leftOffset = (headerRect.left - contentRect.left) + colWidth * ((this.pinStartMin || 0) / 60);
-        const pinWidth = colWidth * ((this.pinDurationMin || 60) / 60);
+        const rawPinWidth = colWidth * ((this.pinDurationMin || 60) / 60);
+        const maxAvailWidth = Math.max(colWidth * 0.25, contentRect.width - leftOffset);
+        const pinWidth = Math.min(rawPinWidth, maxAvailWidth);
 
         this.rulerPinned.style.left = `${leftOffset}px`;
         this.rulerPinned.style.width = `${pinWidth}px`;
         this.rulerPinned.classList.add('visible');
+        this.rulerPinned.classList.toggle('at-right-edge', leftOffset + pinWidth >= contentRect.width - 8);
 
         this.rulerPinned.classList.toggle('is-deadline-active', Boolean(this.isDeadlineActive));
 
@@ -10470,8 +10564,16 @@ class WTBApp {
           const sidebarWidth = sidebarEl ? sidebarEl.offsetWidth : 168;
           if (leftOffset - sidebarWidth < 14) {
             this.rulerTopBadge.style.left = `${Math.max(14, pinWidth / 2)}px`;
+            this.rulerTopBadge.style.right = 'auto';
+            this.rulerTopBadge.style.transform = 'translateX(-50%)';
+          } else if (leftOffset + pinWidth / 2 > contentRect.width - 28) {
+            this.rulerTopBadge.style.left = 'auto';
+            this.rulerTopBadge.style.right = '0px';
+            this.rulerTopBadge.style.transform = 'none';
           } else {
             this.rulerTopBadge.style.left = '50%';
+            this.rulerTopBadge.style.right = 'auto';
+            this.rulerTopBadge.style.transform = 'translateX(-50%)';
           }
         }
       }
@@ -11026,7 +11128,7 @@ class WTBApp {
         if (z.iana !== homeZone.iana && z.iana !== 'Etc/GMT+12' && z.iana !== 'UTC') {
           if (shortcuts.length < 5) {
             let short = z.label.split(',')[0].trim();
-            if (short.length > 8) short = short.slice(0, 7) + '…';
+            if (short.length > 16) short = short.slice(0, 15) + '…';
             shortcuts.push({ tz: z.iana, label: short });
           }
         }
@@ -11161,8 +11263,20 @@ class WTBApp {
           } catch (_) {}
         };
         const onSuccess = () => {
+          const timeEl = chip.querySelector('.ddl-chip-time');
+          if (timeEl && !chip.dataset.origTime) {
+            chip.dataset.origTime = timeEl.textContent;
+          }
+          if (chip._copyTimer) clearTimeout(chip._copyTimer);
           chip.classList.add('copied');
-          setTimeout(() => chip.classList.remove('copied'), 1200);
+          if (timeEl) timeEl.textContent = '✓ Copied';
+          chip._copyTimer = setTimeout(() => {
+            chip.classList.remove('copied');
+            if (timeEl && chip.dataset.origTime) {
+              timeEl.textContent = chip.dataset.origTime;
+            }
+            chip._copyTimer = null;
+          }, 1200);
         };
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(copyText).then(onSuccess).catch(() => {
@@ -11380,7 +11494,7 @@ class WTBApp {
       const offsetMin = Math.max(0, Math.min(59, Math.round((targetMs - colStartMs) / 60000)));
 
       this.pinnedCol = bestColIdx;
-      this.pinStartMin = [0, 15, 30, 45].reduce((prev, curr) => Math.abs(curr - offsetMin) < Math.abs(prev - offsetMin) ? curr : prev);
+      this.pinStartMin = offsetMin === 59 ? 0 : [0, 15, 30, 45].reduce((prev, curr) => Math.abs(curr - offsetMin) < Math.abs(prev - offsetMin) ? curr : prev);
       this.pinDurationMin = 60;
       this.isDeadlineActive = true;
 
@@ -11430,7 +11544,10 @@ class WTBApp {
     try {
       const ddlZdt = Temporal.Instant.fromEpochMilliseconds(currentInstant.epochMilliseconds).toZonedDateTimeISO(this.deadline.tz);
       const newDate = ddlZdt.toPlainDate().toString();
-      const newTime = `${String(ddlZdt.hour).padStart(2, '0')}:${String(ddlZdt.minute).padStart(2, '0')}`;
+      let newTime = `${String(ddlZdt.hour).padStart(2, '0')}:${String(ddlZdt.minute).padStart(2, '0')}`;
+      if (this.deadline.time === '23:59' && newTime === '23:00' && this.deadline.date === newDate) {
+        newTime = '23:59';
+      }
 
       if (this.deadline.date !== newDate || this.deadline.time !== newTime) {
         this.deadline.date = newDate;
