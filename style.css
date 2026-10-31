@@ -2445,17 +2445,6 @@ body.is-row-dragging {
   line-height: 1.2;
 }
 
-.deadline-preview-badge {
-  font-size: 0.60rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: #dbeafe;
-  color: #1e40af;
-  padding: 2px 6px;
-  border-radius: 4px;
-  letter-spacing: 0.04em;
-}
-
 .deadline-subtitle {
   font-size: 0.74rem;
   color: var(--text-muted);
@@ -2569,7 +2558,6 @@ body.is-row-dragging {
   letter-spacing: 0.03em;
 }
 
-.deadline-text-input,
 .deadline-date-input,
 .deadline-time-input,
 .deadline-tz-select {
@@ -2604,7 +2592,6 @@ body.is-row-dragging {
   appearance: none;
 }
 
-.deadline-text-input:focus,
 .deadline-date-input:focus,
 .deadline-time-input:focus,
 .deadline-tz-select:focus {

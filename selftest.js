@@ -1677,11 +1677,36 @@ export async function runSelfTests() {
       const chip2359 = document.querySelector('.btn-ddl-preset-time[data-time="23:59"]');
       assert('Active preset chip has .active class for 23:59', Boolean(chip2359 && chip2359.classList.contains('active')));
 
+      // 60.11 Live sync updates deadline on setPinStartMin & shiftMeeting
+      window.app.currentDate = '2026-10-29';
+      window.app.deadline.date = '2026-10-29';
+      window.app.deadline.time = '14:00';
+      window.app.deadline.tz = 'America/New_York';
+      window.app.deadline.isLiveSync = true;
+      window.app.showDeadlineInSelector(false);
+      window.app.setPinStartMin(30);
+      assert('Live sync updates deadline time on setPinStartMin(30)', window.app.deadline.time === '14:30', `Got ${window.app.deadline.time}`);
+      window.app.shiftMeeting(1);
+      assert('Live sync updates deadline time on shiftMeeting(1)', window.app.deadline.time === '15:30', `Got ${window.app.deadline.time}`);
+      window.app.deadline.isLiveSync = false;
+
+      // 60.12 Rapid setDeadlineFromSelector preserves SVG icon
+      window.app.setDeadlineFromSelector();
+      window.app.setDeadlineFromSelector();
+      const setPinBtn = document.getElementById('deadline-set-from-pin-btn');
+      assert('Set from Selection button preserves SVG icon on rapid clicks', Boolean(setPinBtn && setPinBtn.querySelector('svg')));
+
+      // 60.13 Timezone shortcuts update when home zone changes
+      window.app.setHomeZone(1);
+      const homeShortcut = document.querySelector('#deadline-tz-shortcuts .btn-ddl-preset-tz');
+      assert('Home timezone shortcut updates data-tz when home zone changes', Boolean(homeShortcut && homeShortcut.dataset.tz === window.app.getHomeZone().iana));
+
       // Restore state
       window.app.currentDate = origDate;
       window.app.trackedZones = origZones;
       window.app.deadline = origDeadline;
       window.app.isDeadlineActive = origIsActive;
+      window.app.refreshDeadlineZonesUI();
       window.app.render();
       window.app.updateDeadlineCountdown();
       window.app.updateDeadlineSyncButton();

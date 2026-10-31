@@ -2184,6 +2184,8 @@ class WTBApp {
     // Hash change listener (for browser back/forward and direct URL hash paste)
     window.addEventListener('hashchange', () => {
       this.loadState();
+      this.refreshDeadlineZonesUI();
+      this.updatePinControlsUI();
       this.render();
       this.renderRulerHighlights();
     });
@@ -2197,10 +2199,17 @@ class WTBApp {
           localStorage.removeItem('wtb_state');
           window.location.hash = '';
         } catch (e) {}
+        if (this.isDeadlineActive) {
+          this.exitDeadlineSelectorView();
+        }
         this.trackedZones = this.getDefaultZones();
         this.pinnedCol = null;
+        this.pinStartMin = 0;
+        this.pinDurationMin = 60;
         this.currentDate = this.getTodayDateString(this.getHomeZone().iana);
         if (this.datePickerLabel) { const parts = this.parseDateString(this.currentDate); this.datePickerLabel.textContent = `${String(parts.d).padStart(2, '0')} . ${String(parts.mo).padStart(2, '0')} . ${parts.y}`; }
+        this.updatePinControlsUI();
+        this.refreshDeadlineZonesUI();
         this.saveState();
         this.render();
       });
@@ -2270,7 +2279,7 @@ class WTBApp {
     // Keyboard Shortcuts: ArrowLeft/Right to shift meeting, [/] for duration, T for today, / for search, C for copy
     window.addEventListener('keydown', (e) => {
       const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
-      if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) {
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable)) {
         if (e.key === 'Escape' && this.searchInput) {
           this.searchInput.blur();
           if (this.searchDropdown) this.searchDropdown.classList.remove('open');
@@ -2678,6 +2687,9 @@ class WTBApp {
 
   setPinStartMin(min) {
     if (![0, 15, 30, 45].includes(min)) return;
+    if (this.isDeadlineActive && !this.deadline.isLiveSync && min !== this.pinStartMin) {
+      this.exitDeadlineSelectorView();
+    }
     this.pinStartMin = min;
     this.updatePinControlsUI();
     this.saveState();
@@ -2693,6 +2705,9 @@ class WTBApp {
   }
 
   shiftMeeting(deltaHours) {
+    if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+      this.exitDeadlineSelectorView();
+    }
     const homeZone = this.getHomeZone();
     const columnInstants = window.computeColumns(homeZone.iana, this.currentDate);
     const numCols = columnInstants.length || 24;
@@ -2717,6 +2732,9 @@ class WTBApp {
   }
 
   stepDate(deltaDays) {
+    if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+      this.exitDeadlineSelectorView();
+    }
     try {
       const base = Temporal.PlainDate.from(this.currentDate);
       const nextDate = base.add({ days: deltaDays }).toString();
@@ -2788,10 +2806,18 @@ class WTBApp {
     window.downloadIcsFile(filename, ics);
 
     if (this.addToCalendarBtn) {
-      const origText = this.addToCalendarBtn.innerHTML;
-      this.addToCalendarBtn.innerHTML = `✓ Downloaded .ics`;
-      setTimeout(() => {
-        this.addToCalendarBtn.innerHTML = origText;
+      if (this._icsBtnTimer) clearTimeout(this._icsBtnTimer);
+      const spanEl = this.addToCalendarBtn.querySelector('span');
+      this.addToCalendarBtn.classList.add('copied');
+      if (spanEl) {
+        spanEl.textContent = '✓ Downloaded .ics';
+      }
+      this._icsBtnTimer = setTimeout(() => {
+        this.addToCalendarBtn.classList.remove('copied');
+        if (spanEl) {
+          spanEl.textContent = 'Add to calendar';
+        }
+        this._icsBtnTimer = null;
       }, 2000);
     }
   }
@@ -2976,11 +3002,17 @@ class WTBApp {
     this.searchDropdown.classList.add('open');
   }
 
+  refreshDeadlineZonesUI() {
+    if (this.populateDeadlineTzSelect) this.populateDeadlineTzSelect();
+    if (this.populateDeadlineTzShortcuts) this.populateDeadlineTzShortcuts();
+    if (this.updateDeadlineCountdown) this.updateDeadlineCountdown();
+  }
+
   addZone(zone) {
     if (!this.trackedZones.some(z => z.iana === zone.iana)) {
       this.trackedZones.push(zone);
       this.saveState();
-      if (this.populateDeadlineTzSelect) this.populateDeadlineTzSelect();
+      this.refreshDeadlineZonesUI();
       this.render();
     }
   }
@@ -2995,8 +3027,12 @@ class WTBApp {
       this.trackedZones[0].isHome = true;
     }
     this.saveState();
-    if (this.populateDeadlineTzSelect) this.populateDeadlineTzSelect();
-    this.render();
+    this.refreshDeadlineZonesUI();
+    if (removed.isHome && this.isDeadlineActive) {
+      this.showDeadlineInSelector(false);
+    } else {
+      this.render();
+    }
   }
 
   setHomeZone(index) {
@@ -3004,8 +3040,12 @@ class WTBApp {
       z.isHome = i === index;
     });
     this.saveState();
-    if (this.populateDeadlineTzSelect) this.populateDeadlineTzSelect();
-    this.render();
+    this.refreshDeadlineZonesUI();
+    if (this.isDeadlineActive) {
+      this.showDeadlineInSelector(false);
+    } else {
+      this.render();
+    }
   }
 
   moveZone(index, direction) {
@@ -3015,6 +3055,7 @@ class WTBApp {
     this.trackedZones[index] = this.trackedZones[target];
     this.trackedZones[target] = temp;
     this.saveState();
+    this.refreshDeadlineZonesUI();
     this.render();
   }
 
@@ -3026,6 +3067,7 @@ class WTBApp {
     const [moved] = this.trackedZones.splice(fromIndex, 1);
     this.trackedZones.splice(toIndex, 0, moved);
     this.saveState();
+    this.refreshDeadlineZonesUI();
     this.render();
   }
 
@@ -3832,6 +3874,9 @@ class WTBApp {
         const newDuration = origEndTotalMin - newStartMin;
 
         if (newCol !== this.pinnedCol || newStartOffset !== this.pinStartMin || newDuration !== this.pinDurationMin) {
+          if ((newCol !== this.pinnedCol || newStartOffset !== this.pinStartMin) && this.isDeadlineActive && !this.deadline.isLiveSync) {
+            this.exitDeadlineSelectorView();
+          }
           this.pinnedCol = newCol;
           this.pinStartMin = newStartOffset;
           this.pinDurationMin = newDuration;
@@ -3893,6 +3938,9 @@ class WTBApp {
         const deltaCols = Math.round(deltaX / colWidth);
         const newCol = Math.max(0, Math.min(23, origCol + deltaCols));
         if (newCol !== this.pinnedCol) {
+          if (this.isDeadlineActive && !this.deadline.isLiveSync) {
+            this.exitDeadlineSelectorView();
+          }
           this.pinnedCol = newCol;
           this.renderRulerHighlights();
           this.updatePinControlsUI();
@@ -4543,6 +4591,10 @@ class WTBApp {
       this.pinnedSentenceText.textContent = this.generatePinnedSentence(startInstant, endInstant);
     }
 
+    if (this.isDeadlineActive && this.deadline.isLiveSync) {
+      this.syncDeadlineFromCurrentPin();
+    }
+
     if (this.deadlinePinnedBanner) {
       if (this.isDeadlineActive) {
         this.deadlinePinnedBanner.style.display = 'flex';
@@ -4553,10 +4605,6 @@ class WTBApp {
       } else {
         this.deadlinePinnedBanner.style.display = 'none';
       }
-    }
-
-    if (this.isDeadlineActive && this.deadline.isLiveSync) {
-      this.syncDeadlineFromCurrentPin();
     }
 
     this.updatePinControlsUI();
@@ -4571,15 +4619,8 @@ class WTBApp {
   // Deadline Countdown & Timezone Calculator Implementation
   // ==========================================================================
 
-  escapeDeadlineHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, m => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    })[m]);
-  }
-
   initDeadlineFeature() {
     this.deadlineSection = document.getElementById('deadline-section');
-    this.deadlineTitleInput = document.getElementById('deadline-title-input');
     this.deadlineDateInput = document.getElementById('deadline-date-input');
     this.deadlineTimeInput = document.getElementById('deadline-time-input');
     this.deadlineTzSelect = document.getElementById('deadline-tz-select');
@@ -4634,7 +4675,6 @@ class WTBApp {
       }
     }
 
-    if (this.deadlineTitleInput) this.deadlineTitleInput.value = this.deadline.title || '';
     if (this.deadlineDateInput) this.deadlineDateInput.value = this.deadline.date;
     if (this.deadlineTimeInput) this.deadlineTimeInput.value = this.deadline.time || '23:59';
     if (this.deadlineLiveSyncCheckbox) this.deadlineLiveSyncCheckbox.checked = Boolean(this.deadline.isLiveSync);
@@ -4781,21 +4821,6 @@ class WTBApp {
   }
 
   bindDeadlineEvents() {
-    if (this.deadlineTitleInput) {
-      this.deadlineTitleInput.addEventListener('input', (e) => {
-        this.deadline.title = e.target.value.trim() || 'Deadline';
-        this.saveDeadlineState();
-        this.updateDeadlineCountdown();
-        if (this.isDeadlineActive) {
-          this.renderRulerHighlights();
-          if (this.ddlPinText) {
-            const tzLabel = this.getDeadlineTzLabel();
-            this.ddlPinText.innerHTML = `<strong>${this.deadline.time} in ${tzLabel}</strong> · ${this.deadline.date}`;
-          }
-        }
-      });
-    }
-
     if (this.deadlineDateInput) {
       this.deadlineDateInput.addEventListener('change', (e) => {
         if (e.target.value) {
@@ -5184,10 +5209,18 @@ class WTBApp {
       this.updateDeadlineCountdown();
 
       if (this.deadlineSetFromPinBtn) {
-        const origText = this.deadlineSetFromPinBtn.innerHTML;
-        this.deadlineSetFromPinBtn.innerHTML = `<span>✓ Set to ${newTime} (${newDate})</span>`;
-        setTimeout(() => {
-          this.deadlineSetFromPinBtn.innerHTML = origText;
+        if (this._setFromPinTimer) clearTimeout(this._setFromPinTimer);
+        const spanEl = this.deadlineSetFromPinBtn.querySelector('span');
+        this.deadlineSetFromPinBtn.classList.add('copied');
+        if (spanEl) {
+          spanEl.textContent = `✓ Set to ${newTime} (${newDate})`;
+        }
+        this._setFromPinTimer = setTimeout(() => {
+          this.deadlineSetFromPinBtn.classList.remove('copied');
+          if (spanEl) {
+            spanEl.textContent = 'Set from Selection';
+          }
+          this._setFromPinTimer = null;
         }, 1800);
       }
     } catch (e) {
